@@ -1,0 +1,191 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="api.c" />
+    <ClCompile Include="api_internal.cpp" />
+    <ClCompile Include="compat\gettimeofday.c">
+      <Filter>compat</Filter>
+    </ClCompile>
+    <ClCompile Include="cuda\cuda.cpp">
+      <Filter>cuda</Filter>
+    </ClCompile>
+    <ClCompile Include="cuda\driver-cuda.cpp">
+      <Filter>cuda</Filter>
+    </ClCompile>
+    <ClCompile Include="opencl\driver-opencl.c">
+      <Filter>opencl</Filter>
+    </ClCompile>
+    <ClCompile Include="opencl\ocl.c">
+      <Filter>opencl</Filter>
+    </ClCompile>
+    <ClCompile Include="scrypt-jane\scrypt-jane.cpp">
+      <Filter>scrypt-jane</Filter>
+    </ClCompile>
+    <ClCompile Include="util.c" />
+    <ClCompile Include="opencl\ICD\windows\icd_windows.c">
+      <Filter>opencl\ICD\windows</Filter>
+    </ClCompile>
+    <ClCompile Include="opencl\ICD\windows\icd_windows_dxgk.c">
+      <Filter>opencl\ICD\windows</Filter>
+    </ClCompile>
+    <ClCompile Include="opencl\ICD\windows\icd_windows_envvars.c">
+      <Filter>opencl\ICD\windows</Filter>
+    </ClCompile>
+    <ClCompile Include="opencl\ICD\icd.c">
+      <Filter>opencl\ICD</Filter>
+    </ClCompile>
+    <ClCompile Include="opencl\ICD\icd_dispatch.c">
+      <Filter>opencl\ICD</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="api.h" />
+    <ClInclude Include="api_internal.h" />
+    <ClInclude Include="compat\spacemesh-config.h" />
+    <ClInclude Include="compat\sys\time.h">
+      <Filter>compat\sys</Filter>
+    </ClInclude>
+    <ClInclude Include="compat\compat.h">
+      <Filter>compat</Filter>
+    </ClInclude>
+    <ClInclude Include="compat\unistd.h">
+      <Filter>compat</Filter>
+    </ClInclude>
+    <ClInclude Include="cuda\cuda_helper.h">
+      <Filter>cuda</Filter>
+    </ClInclude>
+    <ClInclude Include="cuda\keccak.h">
+      <Filter>cuda</Filter>
+    </ClInclude>
+    <ClInclude Include="cuda\salsa_kernel.h">
+      <Filter>cuda</Filter>
+    </ClInclude>
+    <ClInclude Include="cuda\titan_kernel.h">
+      <Filter>cuda</Filter>
+    </ClInclude>
+    <ClInclude Include="opencl\driver-opencl.h">
+      <Filter>opencl</Filter>
+    </ClInclude>
+    <ClInclude Include="opencl\ocl.h">
+      <Filter>opencl</Filter>
+    </ClInclude>
+    <ClInclude Include="scrypt-jane\scrypt-jane.h">
+      <Filter>scrypt-jane</Filter>
+    </ClInclude>
+    <ClInclude Include="scrypt-jane\scrypt-jane-chacha.h">
+      <Filter>scrypt-jane</Filter>
+    </ClInclude>
+    <ClInclude Include="scrypt-jane\scrypt-jane-mix_chacha.h">
+      <Filter>scrypt-jane</Filter>
+    </ClInclude>
+    <ClInclude Include="scrypt-jane\scrypt-jane-portable.h">
+      <Filter>scrypt-jane</Filter>
+    </ClInclude>
+    <ClInclude Include="scrypt-jane\scrypt-jane-portable-x86.h">
+      <Filter>scrypt-jane</Filter>
+    </ClInclude>
+    <ClInclude Include="scrypt-jane\scrypt-jane-romix-basic.h">
+      <Filter>scrypt-jane</Filter>
+    </ClInclude>
+    <ClInclude Include="scrypt-jane\scrypt-jane-romix-template.h">
+      <Filter>scrypt-jane</Filter>
+    </ClInclude>
+    <ClInclude Include="opencl\CL\cl.h">
+      <Filter>opencl\CL</Filter>
+    </ClInclude>
+    <ClInclude Include="opencl\CL\cl_d3d10.h">
+      <Filter>opencl\CL</Filter>
+    </ClInclude>
+    <ClInclude Include="opencl\CL\cl_d3d11.h">
+      <Filter>opencl\CL</Filter>
+    </ClInclude>
+    <ClInclude Include="opencl\CL\cl_dx9_media_sharing.h">
+      <Filter>opencl\CL</Filter>
+    </ClInclude>
+    <ClInclude Include="opencl\CL\cl_egl.h">
+      <Filter>opencl\CL</Filter>
+    </ClInclude>
+    <ClInclude Include="opencl\CL\cl_ext.h">
+      <Filter>opencl\CL</Filter>
+    </ClInclude>
+    <ClInclude Include="opencl\CL\cl_gl.h">
+      <Filter>opencl\CL</Filter>
+    </ClInclude>
+    <ClInclude Include="opencl\CL\cl_gl_ext.h">
+      <Filter>opencl\CL</Filter>
+    </ClInclude>
+    <ClInclude Include="opencl\CL\cl_platform.h">
+      <Filter>opencl\CL</Filter>
+    </ClInclude>
+    <ClInclude Include="opencl\CL\opencl.h">
+      <Filter>opencl\CL</Filter>
+    </ClInclude>
+    <ClInclude Include="cuda\cuda.h">
+      <Filter>cuda</Filter>
+    </ClInclude>
+    <ClInclude Include="util.h" />
+    <ClInclude Include="opencl\ICD\windows\icd_windows.h">
+      <Filter>opencl\ICD\windows</Filter>
+    </ClInclude>
+    <ClInclude Include="opencl\ICD\windows\icd_windows_dxgk.h">
+      <Filter>opencl\ICD\windows</Filter>
+    </ClInclude>
+    <ClInclude Include="opencl\ICD\icd.h">
+      <Filter>opencl\ICD</Filter>
+    </ClInclude>
+    <ClInclude Include="opencl\ICD\icd_dispatch.h">
+      <Filter>opencl\ICD</Filter>
+    </ClInclude>
+    <ClInclude Include="opencl\ICD\icd_envvars.h">
+      <Filter>opencl\ICD</Filter>
+    </ClInclude>
+    <ClInclude Include="opencl\ICD\icd_platform.h">
+      <Filter>opencl\ICD</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="compat">
+      <UniqueIdentifier>{b0602c62-526e-48d5-b97a-2b8ca912d3ad}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="compat\sys">
+      <UniqueIdentifier>{4b55393e-2e41-4181-9bee-57d38bec9e38}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="cuda">
+      <UniqueIdentifier>{3533db7d-3c9e-48b7-9d2d-9f961c5bd585}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="opencl">
+      <UniqueIdentifier>{057febfb-8b43-4be7-b0b8-e35e29c4c008}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="scrypt-jane">
+      <UniqueIdentifier>{41645aaf-17db-49ce-bd6a-7ce315ee4bf1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="opencl\CL">
+      <UniqueIdentifier>{60330206-02d3-4e82-8c70-893c0a328473}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="opencl\ICD">
+      <UniqueIdentifier>{45b44934-f7e4-4731-a415-4dcd0ae810f3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="opencl\ICD\linux">
+      <UniqueIdentifier>{368cbaa4-a315-4d70-be10-0f0ce4f31787}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="opencl\ICD\windows">
+      <UniqueIdentifier>{d122a6e5-963d-4e3a-91b9-85c8d01ed087}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="cuda\keccak.cu">
+      <Filter>cuda</Filter>
+    </CudaCompile>
+    <CudaCompile Include="cuda\salsa_kernel.cu">
+      <Filter>cuda</Filter>
+    </CudaCompile>
+    <CudaCompile Include="cuda\titan_kernel.cu">
+      <Filter>cuda</Filter>
+    </CudaCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="opencl\ICD\icd_cmake_config.h.in">
+      <Filter>opencl\ICD</Filter>
+    </None>
+  </ItemGroup>
+</Project>
