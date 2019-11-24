@@ -17,4 +17,13 @@
 5. Run test: Debug menu -> Start Without Debugging.
 
 ## Initial Benchmarks
-Will be added soone here!
+
+|Date      |Reporter|impl     |cpu / gpu                       |notes                                 |kh/s |mh/s|x factor over 1 4ghz cpu native thread|x factor over 12 4ghz cpu native threads|
+|----------|--------|---------|--------------------------------|--------------------------------------|-----|----|--------------------------------------|----------------------------------------|
+|11/19/2019|ae      |go-scrypt|mbp + Intel i9 @ 2.9ghz - 1 core|go scrypt crypto lib (not scrypt-jane)|7    |0.01|1                                     |1                                       |
+|11/19/2019|ae      |sm-scrypt|Ryzen 5 2600x @ 4ghz - 1 core   |scrypt-jane c code                    |7    |0.01|1                                     |1                                       |
+|11/19/2019|ae      |sm-scrypt|Nvidia Gefroce RTX 2070 8GB     |pre-optimized prototype               |1,920|1.92|290                                   |24.17                                   |
+|11/19/2019|ae      |sm-scrypt|AMD Radeon RX 580               |pre-optimized prototype               |500  |0.50|76                                    |6.29                                    |
+|11/19/2019|ar      |sm-scrypt|Nvidia GTX 1060 6G              |pre-optimized prototype               |979  |0.98|148                                   |12.32                                   |
+|11/19/2019|ar      |sm-scrypt|AMD Radeon 570 4GB              |pre-optimized prototype               |355  |0.36|54                                    |4.47                                    |
+
