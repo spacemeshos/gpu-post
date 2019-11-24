@@ -18,6 +18,8 @@
 
 ## Initial Benchmarks
 
+Scrypt Benchmarks (n=512, r=1, p=1) 1 byte per leaf, batch of 250K leaves per API call.
+
 |Date      |Reporter|impl     |cpu / gpu                       |notes                                 |kh/s |mh/s|x factor over 1 4ghz cpu native thread|x factor over 12 4ghz cpu native threads|
 |----------|--------|---------|--------------------------------|--------------------------------------|-----|----|--------------------------------------|----------------------------------------|
 |11/19/2019|ae      |go-scrypt|mbp + Intel i9 @ 2.9ghz - 1 core|go scrypt crypto lib (not scrypt-jane)|7    |0.01|1                                     |1                                       |
