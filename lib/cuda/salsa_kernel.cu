@@ -46,9 +46,9 @@ int       MAXWARPS[MAX_GPUDEVICES];
 uint32_t* h_V[MAX_GPUDEVICES][TOTAL_WARP_LIMIT * 64];          // NOTE: the *64 prevents buffer overflow for --keccak
 uint32_t  h_V_extra[MAX_GPUDEVICES][TOTAL_WARP_LIMIT * 64];    //       with really large kernel launch configurations
 
-int find_optimal_blockcount(struct cgpu_info *cgpu, KernelInterface* &kernel, uint32_t N, bool &concurrent, int &wpb);
+int find_optimal_blockcount(struct cgpu_info *cgpu, KernelInterface* &kernel, uint32_t N, uint32_t r, uint32_t p, bool &concurrent, int &wpb);
 
-_cudaState *initCuda(struct cgpu_info *cgpu, uint32_t N)
+_cudaState *initCuda(struct cgpu_info *cgpu, uint32_t N, uint32_t r, uint32_t p)
 {
 	_cudaState *cudaState = (_cudaState *)calloc(1, sizeof(_cudaState));
 	int GRID_BLOCKS, WARPS_PER_BLOCK;
@@ -61,15 +61,14 @@ _cudaState *initCuda(struct cgpu_info *cgpu, uint32_t N)
 
 	KernelInterface *kernel;
 	bool concurrent;
-	GRID_BLOCKS = find_optimal_blockcount(cgpu, kernel, N, concurrent, WARPS_PER_BLOCK);
+	GRID_BLOCKS = find_optimal_blockcount(cgpu, kernel, N, r, p, concurrent, WARPS_PER_BLOCK);
 
 	if (GRID_BLOCKS == 0) {
 		return 0;
 	}
 
 	unsigned int THREADS_PER_WU = kernel->threads_per_wu();
-	unsigned int mem_size = WU_PER_LAUNCH * sizeof(uint32_t) * 32;
-//	unsigned int state_size = WU_PER_LAUNCH * sizeof(uint32_t) * 8;
+	unsigned int mem_size = WU_PER_LAUNCH * sizeof(uint32_t) * 32 * r;
 	unsigned int labels_size = WU_PER_LAUNCH;
 
 	// allocate device memory for scrypt_core inputs and outputs
@@ -149,7 +148,7 @@ inline int _ConvertSMVer2Cores(int major, int minor)
 	return 128;
 }
 
-int find_optimal_blockcount(struct cgpu_info *cgpu, KernelInterface* &kernel, uint32_t N, bool &concurrent, int &WARPS_PER_BLOCK)
+int find_optimal_blockcount(struct cgpu_info *cgpu, KernelInterface* &kernel, uint32_t N, uint32_t r, uint32_t p, bool &concurrent, int &WARPS_PER_BLOCK)
 {
 	int optimal_blocks = 0;
 
@@ -183,14 +182,9 @@ int find_optimal_blockcount(struct cgpu_info *cgpu, KernelInterface* &kernel, ui
 	unsigned int THREADS_PER_WU = kernel->threads_per_wu();
 	unsigned int LOOKUP_GAP = cgpu->lookup_gap;
 	unsigned int BACKOFF = cgpu->backoff;
-	double szPerWarp = (double)(SCRATCH * WU_PER_WARP * sizeof(uint32_t));
+	double szPerWarp = (double)(r * SCRATCH * WU_PER_WARP * sizeof(uint32_t));
 	//applog(LOG_INFO, "WU_PER_WARP=%u, THREADS_PER_WU=%u, LOOKUP_GAP=%u, BACKOFF=%u, SCRATCH=%u", WU_PER_WARP, THREADS_PER_WU, LOOKUP_GAP, BACKOFF, SCRATCH);
 	applog(LOG_INFO, "GPU #%d: %d hashes / %.1f MB per warp.", cgpu->driver_id, WU_PER_WARP, szPerWarp / (1024.0 * 1024.0));
-
-	// compute highest MAXWARPS numbers for kernels allowing cudaBindTexture to succeed
-	int MW_1D_4 = 134217728 / (SCRATCH * WU_PER_WARP / 4); // for uint4_t textures
-	int MW_1D_2 = 134217728 / (SCRATCH * WU_PER_WARP / 2); // for uint2_t textures
-	int MW_1D = kernel->get_texel_width() == 2 ? MW_1D_2 : MW_1D_4;
 
 	uint32_t *d_V = NULL;
 	{
@@ -227,10 +221,10 @@ int find_optimal_blockcount(struct cgpu_info *cgpu, KernelInterface* &kernel, ui
 
 		// now allocate a buffer for determined MAXWARPS setting
 		cudaGetLastError(); // clear the error state
-		cudaMalloc((void **)&d_V, (size_t)SCRATCH * WU_PER_WARP * MAXWARPS[cgpu->driver_id] * sizeof(uint32_t));
+		cudaMalloc((void **)&d_V, (size_t)r * SCRATCH * WU_PER_WARP * MAXWARPS[cgpu->driver_id] * sizeof(uint32_t));
 		if (cudaGetLastError() == cudaSuccess) {
 			for (int i = 0; i < MAXWARPS[cgpu->driver_id]; ++i) {
-				h_V[cgpu->driver_id][i] = d_V + SCRATCH * WU_PER_WARP * i;
+				h_V[cgpu->driver_id][i] = d_V + r * SCRATCH * WU_PER_WARP * i;
 			}
 		}
 		else
@@ -315,10 +309,10 @@ int find_optimal_blockcount(struct cgpu_info *cgpu, KernelInterface* &kernel, ui
 			checkCudaErrors(cgpu->driver_id, cudaFree(d_V)); d_V = NULL;
 
 			cudaGetLastError(); // clear the error state
-			cudaMalloc((void **)&d_V, (size_t)SCRATCH * WU_PER_WARP * MAXWARPS[cgpu->driver_id] * sizeof(uint32_t));
+			cudaMalloc((void **)&d_V, (size_t)r * SCRATCH * WU_PER_WARP * MAXWARPS[cgpu->driver_id] * sizeof(uint32_t));
 			if (cudaGetLastError() == cudaSuccess) {
 				for (int i = 0; i < MAXWARPS[cgpu->driver_id]; ++i) {
-					h_V[cgpu->driver_id][i] = d_V + SCRATCH * WU_PER_WARP * i;
+					h_V[cgpu->driver_id][i] = d_V + r * SCRATCH * WU_PER_WARP * i;
 				}
 				// update pointers to scratch buffer in constant memory after reallocation
 				kernel->set_scratchbuf_constants(MAXWARPS[cgpu->driver_id], h_V[cgpu->driver_id]);
@@ -331,17 +325,6 @@ int find_optimal_blockcount(struct cgpu_info *cgpu, KernelInterface* &kernel, ui
 	}
 
 	return optimal_blocks;
-}
-
-void cuda_scrypt_HtoD(_cudaState *cudaState, uint32_t *X, int stream)
-{
-	unsigned int GRID_BLOCKS = cudaState->context_blocks;
-	unsigned int WARPS_PER_BLOCK = cudaState->context_wpb;
-	unsigned int THREADS_PER_WU = cudaState->context_kernel->threads_per_wu();
-	unsigned int mem_size = WU_PER_LAUNCH * sizeof(uint32_t) * 32;
-
-	// copy host memory to device
-	cudaMemcpyAsync(cudaState->context_idata[stream], X, mem_size, cudaMemcpyHostToDevice, cudaState->context_streams[stream]);
 }
 
 void cuda_scrypt_serialize(struct cgpu_info *cgpu, _cudaState *cudaState, int stream)
@@ -365,7 +348,7 @@ void cuda_scrypt_flush(_cudaState *cudaState, int stream)
 	cudaStreamSynchronize(cudaState->context_streams[stream]);
 }
 
-void cuda_scrypt_core(struct cgpu_info *cgpu, _cudaState *cudaState, int stream, unsigned int N)
+void cuda_scrypt_core(struct cgpu_info *cgpu, _cudaState *cudaState, int stream, unsigned int N, unsigned int r, unsigned int p)
 {
 	unsigned int GRID_BLOCKS = cudaState->context_blocks;
 	unsigned int WARPS_PER_BLOCK = cudaState->context_wpb;
@@ -378,7 +361,7 @@ void cuda_scrypt_core(struct cgpu_info *cgpu, _cudaState *cudaState, int stream,
 
 	cudaState->context_kernel->run_kernel(grid, threads, WARPS_PER_BLOCK, cudaState->cuda_id,
 		cudaState->context_streams[stream], cudaState->context_idata[stream], cudaState->context_odata[stream],
-		N, cgpu->batchsize, LOOKUP_GAP, opt_benchmark
+		N, r, p, cgpu->batchsize, LOOKUP_GAP, opt_benchmark
 	);
 }
 

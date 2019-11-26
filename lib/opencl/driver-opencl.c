@@ -53,18 +53,16 @@ be32enc_vect(uint32_t *dst, const uint32_t *src, uint32_t len)
 
 static void opencl_shutdown(struct cgpu_info *cgpu);
 
-static cl_int queue_scrypt_kernel(_clState *clState, uint8_t *pdata, uint64_t start_pos, uint32_t N)
+static cl_int queue_scrypt_kernel(_clState *clState, uint8_t *pdata, uint64_t start_pos, uint32_t N, int nBuf)
 {
 	cl_kernel *kernel = &clState->kernel;
 	unsigned int num = 0;
 	cl_int status = 0;
 
-	clState->cldata = pdata;
-        
-	status = clEnqueueWriteBuffer(clState->commandQueue, clState->CLbuffer0, CL_TRUE, 0, 80, clState->cldata, 0, NULL, NULL);
+	status = clEnqueueWriteBuffer(clState->commandQueue, clState->CLbuffer0, CL_TRUE, 0, 72, pdata, 0, NULL, NULL);
 
 	CL_SET_ARG(clState->CLbuffer0);
-	CL_SET_ARG(clState->outputBuffer);
+	CL_SET_ARG(clState->outputBuffer[nBuf]);
 	CL_SET_ARG(clState->padbuffer8);
 	CL_SET_ARG(N);
 	CL_SET_ARG(start_pos);
@@ -201,9 +199,9 @@ static void reinit_opencl_device(struct cgpu_info *gpu)
 
 static uint32_t *blank_res;
 
-static bool opencl_prepare(struct cgpu_info *cgpu, unsigned N)
+static bool opencl_prepare(struct cgpu_info *cgpu, unsigned N, uint32_t r, uint32_t p)
 {
-	if (N != cgpu->N) {
+	if (N != cgpu->N || r != cgpu->r || p != cgpu->p) {
 		char name[256];
 		strcpy(name, "");
 		applog(LOG_INFO, "Init GPU thread for GPU %i, platform GPU %i, pci [%d:%d]", cgpu->id, cgpu->driver_id, cgpu->pci_bus_id, cgpu->pci_device_id);
@@ -224,6 +222,8 @@ static bool opencl_prepare(struct cgpu_info *cgpu, unsigned N)
 			cgpu->kname = "scrypt-chacha";
 		}
 		cgpu->N = N;
+		cgpu->r = r;
+		cgpu->p = p;
 		applog(LOG_INFO, "initCl() finished. Found %s", name);
 	}
 	return true;
@@ -235,9 +235,11 @@ static bool opencl_init(struct cgpu_info *cgpu)
 	return true;
 }
 
-static int64_t opencl_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uint64_t start_position, uint64_t end_position, uint8_t *output, uint32_t N, struct timeval *tv_start, struct timeval *tv_end)
+#define	USE_ASYNC_BUFFER_READ	1
+
+static int64_t opencl_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uint64_t start_position, uint64_t end_position, uint8_t *output, uint32_t N, uint32_t r, uint32_t p, struct timeval *tv_start, struct timeval *tv_end)
 {
-	if (opencl_prepare(cgpu, N))
+	if (opencl_prepare(cgpu, N, r, p))
 	{
 		_clState *clState = (_clState *)cgpu->device_data;
 		const cl_kernel *kernel = &clState->kernel;
@@ -245,19 +247,23 @@ static int64_t opencl_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, u
 		cl_int status;
 		size_t globalThreads[1] = { cgpu->thread_concurrency };
 		size_t localThreads[1] = { clState->wsize };
+		bool firstBuffer = true;
+		bool running = false;
 
 		gettimeofday(tv_start, NULL);
 
 		uint64_t n = start_position;
-		size_t outLength = end_position - start_position + 1;
-
-//		set_threads_hashes(1, (unsigned int)clState->compute_shaders, &hashes, globalThreads, (unsigned int)localThreads[0], &cgpu->intensity, &cgpu->xintensity, &cgpu->rawintensity);
+		size_t positions = end_position - start_position + 1;
 
 		do {
-			status = queue_scrypt_kernel(clState, pdata, n, N);
+			status = queue_scrypt_kernel(clState, pdata, n, N, (firstBuffer ? 0 : 1));
 			if (unlikely(status != CL_SUCCESS)) {
 				applog(LOG_ERR, "Error: clSetKernelArg of all params failed.");
 				return -1;
+			}
+
+			if (globalThreads[0] > positions) {
+				globalThreads[0] = clState->wsize * ((positions + clState->wsize - 1) / clState->wsize);
 			}
 
 			status = clEnqueueNDRangeKernel(clState->commandQueue, *kernel, 1, NULL, globalThreads, localThreads, 0, NULL, NULL);
@@ -268,21 +274,44 @@ static int64_t opencl_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, u
 			}
 
 			n += cgpu->thread_concurrency;
-
-			status = clEnqueueReadBuffer(clState->commandQueue, clState->outputBuffer, CL_TRUE, 0, min(cgpu->thread_concurrency, outLength), output, 0, NULL, NULL);
+#if USE_ASYNC_BUFFER_READ
+			if (clState->outputEvent[(firstBuffer ? 0 : 1)]) {
+				clReleaseEvent(clState->outputEvent[(firstBuffer ? 0 : 1)]);
+				clState->outputEvent[(firstBuffer ? 0 : 1)] = NULL;
+			}
+			status = clEnqueueReadBuffer(clState->commandQueue, clState->outputBuffer[(firstBuffer ? 0 : 1)], CL_FALSE, 0, min(cgpu->thread_concurrency, positions), output, 0, NULL, &clState->outputEvent[(firstBuffer ? 0 : 1)]);
+#else
+			status = clEnqueueReadBuffer(clState->commandQueue, clState->outputBuffer[(firstBuffer ? 0 : 1)], CL_TRUE, 0, min(cgpu->thread_concurrency, positions), output, 0, NULL, NULL);
+#endif
 			if (unlikely(status != CL_SUCCESS)) {
 				applog(LOG_ERR, "Error: clEnqueueReadBuffer failed error %d. (clEnqueueReadBuffer)", status);
 				return -1;
 			}
+#if USE_ASYNC_BUFFER_READ
+			firstBuffer = !firstBuffer;
 
-			/* This finish flushes the readbuffer set with CL_FALSE in clEnqueueReadBuffer */
+			if (running) {
+				clWaitForEvents(1, &clState->outputEvent[(firstBuffer ? 0 : 1)]);
+			}
+			else {
+				running = true;
+				clFlush(clState->commandQueue);
+			}
+#else
 			clFinish(clState->commandQueue);
-
+#endif
 			output += cgpu->thread_concurrency;
-			outLength -= cgpu->thread_concurrency;
+			positions -= cgpu->thread_concurrency;
 
 		} while (n <= end_position && !abort_flag);
-
+#if USE_ASYNC_BUFFER_READ
+		if (running) {
+			clWaitForEvents(1, &clState->outputEvent[(firstBuffer ? 0 : 1)]);
+			clFinish(clState->commandQueue);
+			clReleaseEvent(clState->outputEvent[0]);
+			clReleaseEvent(clState->outputEvent[1]);
+		}
+#endif
 		gettimeofday(tv_end, NULL);
 
 		return 0;

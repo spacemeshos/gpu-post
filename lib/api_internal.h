@@ -320,7 +320,7 @@ struct device_drv {
 
 	bool(*init)(struct cgpu_info *);
 
-	int64_t(*scrypt_positions)(struct cgpu_info *, uint8_t *pdata, uint64_t start_pos, uint64_t end_position, uint8_t *out, uint32_t N, struct timeval *tv_start, struct timeval *tv_end); // (thr, pdata, start_pos, end_position, out, N, tv_start, tv_end)
+	int64_t(*scrypt_positions)(struct cgpu_info *, uint8_t *pdata, uint64_t start_pos, uint64_t end_position, uint8_t *out, uint32_t N, uint32_t r, uint32_t p, struct timeval *tv_start, struct timeval *tv_end); // (thr, pdata, start_pos, end_position, out, N, r, p, tv_start, tv_end)
 
 	void(*shutdown)(struct cgpu_info *);
 
@@ -344,9 +344,11 @@ struct cgpu_info {
 
 	uint64_t gpu_max_alloc;
 
-	unsigned N;
+	uint32_t N;
+	uint32_t r;
+	uint32_t p;
 	int opt_lg, lookup_gap;
-	size_t thread_concurrency;
+	uint32_t thread_concurrency;
 	size_t buffer_size;
 
 #ifdef HAVE_CUDA

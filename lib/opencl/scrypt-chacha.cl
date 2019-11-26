@@ -204,6 +204,14 @@ scrypt_hash_update_128(scrypt_hash_state *S, const uint4 *in4) {
 }
 
 static void
+scrypt_hash_update_4_after_72(scrypt_hash_state *S, uint in) {
+	// assume that leftover = 0
+	/* handle the previous data */
+	S->buffer4[0] = (uint4)(in, 0x01, 0, 0);
+	//S->leftover += 1;
+}
+
+static void
 scrypt_hash_update_4_after_80(scrypt_hash_state *S, uint in) {
 	// assume that leftover = 2
 	/* handle the previous data */
@@ -236,6 +244,35 @@ static void
 scrypt_hash_finish_80_after_64(scrypt_hash_state *S, uint4 *hash4) {
 	// assume that leftover = 16
 	S->buffer4[4].xy = (uint2)(0x01, 0x80000000);
+	
+	keccak_block(S, S->buffer4);
+	
+	#pragma unroll
+	for (uint i = 0; i < 4; i++) {
+		hash4[i] = S->state4[i];
+	}
+}
+
+static uchar
+scrypt_hash_finish_80_after_64_1(scrypt_hash_state *S) {
+	// assume that leftover = 16
+	S->buffer4[4].xy = (uint2)(0x01, 0x80000000);
+	
+	keccak_block(S, S->buffer4);
+
+	return S->state4[0].x;
+}
+
+static void
+scrypt_hash_finish_80_after_72_4(scrypt_hash_state *S, uint4 *hash4) {
+	uint i;
+	// assume that leftover = 1
+	//S->buffer4[0].y = 0x01; // done already in scrypt_hash_update_4_after_80
+	#pragma unroll
+	for (i = 1; i < 4; i++) {
+		S->buffer4[i] = ZERO;
+	}
+	S->buffer4[4].xy = (uint2)(0, 0x80000000);
 	
 	keccak_block(S, S->buffer4);
 	
@@ -319,8 +356,11 @@ scrypt_hmac_init(scrypt_hmac_state *st, const uint4 *key) {
 	uint i;
 
 	/* if it's > blocksize bytes, hash it */
-	scrypt_hash_80(pad4, key);
-	pad4[4].xy = ZERO_UINT2;
+	#pragma unroll
+	for (i = 0; i < 4; i++) {
+		pad4[i] = key[i];
+	}
+	pad4[4].xy = key[4].xy;
 
 	/* inner = (key ^ 0x36) */
 	/* h(inner || ...) */
@@ -354,6 +394,12 @@ scrypt_hmac_update_128(scrypt_hmac_state *st, const uint4 *m) {
 }
 
 static void
+scrypt_hmac_update_4_after_72(scrypt_hmac_state *st, uint m) {
+	/* h(inner || m...) */
+	scrypt_hash_update_4_after_72(&st->inner, m);
+}
+
+static void
 scrypt_hmac_update_4_after_80(scrypt_hmac_state *st, uint m) {
 	/* h(inner || m...) */
 	scrypt_hash_update_4_after_80(&st->inner, m);
@@ -369,22 +415,22 @@ static void
 scrypt_hmac_finish_128B(scrypt_hmac_state *st, uint4 *mac) {
 	/* h(inner || m) */
 	uint4 innerhash[4];
-	scrypt_hash_finish_80_after_80_4(&st->inner, innerhash);
+	scrypt_hash_finish_80_after_72_4(&st->inner, innerhash);
 
 	/* h(outer || h(inner || m)) */
 	scrypt_hash_update_64(&st->outer, innerhash);
 	scrypt_hash_finish_80_after_64(&st->outer, mac);
 }
 
-static void
-scrypt_hmac_finish_32B(scrypt_hmac_state *st, uint4 *mac) {
+static uchar
+scrypt_hmac_finish_32B(scrypt_hmac_state *st) {
 	/* h(inner || m) */
 	uint4 innerhash[4];
 	scrypt_hash_finish_80_after_128_4(&st->inner, innerhash);
 
 	/* h(outer || h(inner || m)) */
 	scrypt_hash_update_64(&st->outer, innerhash);
-	scrypt_hash_finish_80_after_64(&st->outer, mac);
+	return scrypt_hash_finish_80_after_64_1(&st->outer);
 }
 
 static void
@@ -408,7 +454,7 @@ __constant uint be1 = 0x01000000;
 __constant uint be2 = 0x02000000;
 
 static void
-scrypt_pbkdf2_128B(const uint4 *password, const uint4 *salt, uint4 *out4) {
+scrypt_pbkdf2_128B(const uint4 *password, uint4 *out4) {
 	scrypt_hmac_state hmac_pw, work;
 	uint4 ti4[4];
 	uint i;
@@ -418,37 +464,33 @@ scrypt_pbkdf2_128B(const uint4 *password, const uint4 *salt, uint4 *out4) {
 	/* hmac(password, ...) */
 	scrypt_hmac_init(&hmac_pw, password);
 
-	/* hmac(password, salt...) */
-	scrypt_hmac_update_80(&hmac_pw, salt);
+	/* U1 = hmac(password, salt || be(i)) */
+	/* U32TO8_BE(be, i); */
+	//work = hmac_pw;
+	scrypt_copy_hmac_state_128B(&work, &hmac_pw);
+	scrypt_hmac_update_4_after_72(&work, be1);
+	scrypt_hmac_finish_128B(&work, ti4);
 
-		/* U1 = hmac(password, salt || be(i)) */
-		/* U32TO8_BE(be, i); */
-		//work = hmac_pw;
-		scrypt_copy_hmac_state_128B(&work, &hmac_pw);
-		scrypt_hmac_update_4_after_80(&work, be1);
-		scrypt_hmac_finish_128B(&work, ti4);
-
-		#pragma unroll
-		for (i = 0; i < 4; i++) {
-			out4[i] = ti4[i];
-		}
+	#pragma unroll
+	for (i = 0; i < 4; i++) {
+		out4[i] = ti4[i];
+	}
 		
-		/* U1 = hmac(password, salt || be(i)) */
-		/* U32TO8_BE(be, i); */
-		// work = hmac_pw;
-		scrypt_hmac_update_4_after_80(&hmac_pw, be2);
-		scrypt_hmac_finish_128B(&hmac_pw, ti4);
+	/* U1 = hmac(password, salt || be(i)) */
+	/* U32TO8_BE(be, i); */
+	// work = hmac_pw;
+	scrypt_hmac_update_4_after_72(&hmac_pw, be2);
+	scrypt_hmac_finish_128B(&hmac_pw, ti4);
 
-		#pragma unroll
-		for (i = 0; i < 4; i++) {
-			out4[i + 4] = ti4[i];
-		}
+	#pragma unroll
+	for (i = 0; i < 4; i++) {
+		out4[i + 4] = ti4[i];
+	}
 }
 
-static void
-scrypt_pbkdf2_32B(const uint4 *password, const uint4 *salt, uint4 *out4) {
+static uchar
+scrypt_pbkdf2_32B(const uint4 *password, const uint4 *salt) {
 	scrypt_hmac_state hmac_pw;
-	uint4 ti4[4];
 	
 	/* bytes must be <= (0xffffffff - (SCRYPT_HASH_DIGEST_SIZE - 1)), which they will always be under scrypt */
 
@@ -458,15 +500,10 @@ scrypt_pbkdf2_32B(const uint4 *password, const uint4 *salt, uint4 *out4) {
 	/* hmac(password, salt...) */
 	scrypt_hmac_update_128(&hmac_pw, salt);
 
-		/* U1 = hmac(password, salt || be(i)) */
-		/* U32TO8_BE(be, i); */
-		scrypt_hmac_update_4_after_128(&hmac_pw, be1);
-		scrypt_hmac_finish_32B(&hmac_pw, ti4);
-
-		#pragma unroll
-		for (uint i = 0; i < 2; i++) {
-			out4[i] = ti4[i];
-		}
+	/* U1 = hmac(password, salt || be(i)) */
+	/* U32TO8_BE(be, i); */
+	scrypt_hmac_update_4_after_128(&hmac_pw, be1);
+	return scrypt_hmac_finish_32B(&hmac_pw);
 }
 
 __constant uint4 MASK_2 = (uint4) (1, 2, 3, 0);
@@ -654,22 +691,15 @@ scrypt_ROMix(uint4 *restrict X/*[chunkWords]*/, __global uint4 *restrict lookup/
 	/* implicit */
 }
 
-__constant uint ES[2] = { 0x00FF00FF, 0xFF00FF00 };
-#define FOUND (0xFF)
-#define SETFOUND(Xnonce) output[output[FOUND]++] = Xnonce
-#define EndianSwap(n) (rotate(n & Es2[0].x, 24U)|rotate(n & Es2[0].y, 8U))
-
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
-__kernel void search(__global const uint4 * restrict input,
-volatile __global uchar * restrict output, __global uchar * restrict padcache, const uint N, const ulong nonceBase)
+__kernel void search(__global const uint4 * restrict input, volatile __global uchar * restrict output, __global uchar * restrict padcache, const uint N, const ulong nonceBase)
 {
 	uint4 password[5];
 	uint4 X[8];
-	uint output_hash[8] __attribute__ ((aligned (16)));
 	const uint gid = get_global_id(0);
 	uint Nfactor = 0;
 	uint tmp = N >> 1;
-	uint nonce = nonceBase + gid;
+	ulong nonce = nonceBase + gid;
 	
 	/* Determine the Nfactor */
 	while ((tmp & 1) == 0) {
@@ -682,16 +712,14 @@ volatile __global uchar * restrict output, __global uchar * restrict padcache, c
 	password[2] = input[2];
 	password[3] = input[3];
 	password[4] = input[4];
-	password[4].w = nonce;
+	password[2].xy = as_uint2(nonce);
 	
 	/* 1: X = PBKDF2(password, salt) */
-	scrypt_pbkdf2_128B(password, password, X);
+	scrypt_pbkdf2_128B(password, X);
 
 	/* 2: X = ROMix(X) */
 	scrypt_ROMix(X, (__global uint4 *)padcache, N, gid, Nfactor);
 
 	/* 3: Out = PBKDF2(password, X) */
-	scrypt_pbkdf2_32B(password, X, (uint4 *)output_hash);
-
-	output[gid] = output_hash[0];
+	output[gid] = scrypt_pbkdf2_32B(password, X);
 }

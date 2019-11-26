@@ -27,12 +27,13 @@ typedef struct {
 	cl_kernel kernel;
 	cl_command_queue commandQueue;
 	cl_program program;
-	cl_mem outputBuffer;
+
+	cl_mem outputBuffer[2];
+	cl_event outputEvent[2];
 
 	cl_mem CLbuffer0;
 	cl_mem padbuffer8;
 	size_t padbufsize;
-	void * cldata;
 
 	bool hasBitAlign;
 	bool hasOpenCL11plus;

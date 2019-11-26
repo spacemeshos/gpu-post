@@ -679,19 +679,16 @@ void TitanKernel::set_scratchbuf_constants(int MAXWARPS, uint32_t** h_V)
 }
 
 bool TitanKernel::run_kernel(dim3 grid, dim3 threads, int WARPS_PER_BLOCK, int gpu_id, cudaStream_t stream,
-	uint32_t* d_idata, uint32_t* d_odata, unsigned int N, unsigned int batch, unsigned int LOOKUP_GAP, bool benchmark)
+	uint32_t* d_idata, uint32_t* d_odata, unsigned int N, unsigned int r, unsigned int p, unsigned int batch, unsigned int LOOKUP_GAP, bool benchmark)
 {
 	bool success = true;
 
-	// make some constants available to kernel, update only initially and when changing
-	static uint32_t prev_N[MAX_GPUDEVICES] = { 0 };
-
-	if (N != prev_N[gpu_id]) {
+	if (N != _prev_N) {
 		uint32_t h_N = N;
 		uint32_t h_N_1 = N-1;
-		uint32_t h_SCRATCH = SCRATCH;
-		uint32_t h_SCRATCH_WU_PER_WARP = (SCRATCH * WU_PER_WARP);
-		uint32_t h_SCRATCH_WU_PER_WARP_1 = (SCRATCH * WU_PER_WARP) - 1;
+		uint32_t h_SCRATCH = r * SCRATCH;
+		uint32_t h_SCRATCH_WU_PER_WARP = (h_SCRATCH * WU_PER_WARP);
+		uint32_t h_SCRATCH_WU_PER_WARP_1 = (h_SCRATCH * WU_PER_WARP) - 1;
 
 		cudaMemcpyToSymbolAsync(c_N, &h_N, sizeof(uint32_t), 0, cudaMemcpyHostToDevice, stream);
 		cudaMemcpyToSymbolAsync(c_N_1, &h_N_1, sizeof(uint32_t), 0, cudaMemcpyHostToDevice, stream);
@@ -699,34 +696,39 @@ bool TitanKernel::run_kernel(dim3 grid, dim3 threads, int WARPS_PER_BLOCK, int g
 		cudaMemcpyToSymbolAsync(c_SCRATCH_WU_PER_WARP, &h_SCRATCH_WU_PER_WARP, sizeof(uint32_t), 0, cudaMemcpyHostToDevice, stream);
 		cudaMemcpyToSymbolAsync(c_SCRATCH_WU_PER_WARP_1, &h_SCRATCH_WU_PER_WARP_1, sizeof(uint32_t), 0, cudaMemcpyHostToDevice, stream);
 
-		prev_N[gpu_id] = N;
+		_prev_N = N;
 	}
 
-	// First phase: Sequential writes to scratchpad.
+	for (unsigned i = 0; i < p; i++)
+	{
+		// First phase: Sequential writes to scratchpad.
 
-	unsigned int pos = 0;
-	do {
-		if (LOOKUP_GAP == 1) {
-			titan_scrypt_core_kernelA<SIMPLE> <<< grid, threads, 0, stream >>>(d_idata, pos, min(pos+batch, N));
-		} else {
-			titan_scrypt_core_kernelA_LG<SIMPLE> <<< grid, threads, 0, stream >>>(d_idata, pos, min(pos+batch, N), LOOKUP_GAP);
-		}
-		pos += batch;
+		unsigned int pos = 0;
+		do {
+			if (LOOKUP_GAP == 1) {
+				titan_scrypt_core_kernelA<SIMPLE> << < grid, threads, 0, stream >> > (d_idata, pos, min(pos + batch, N));
+			}
+			else {
+				titan_scrypt_core_kernelA_LG<SIMPLE> << < grid, threads, 0, stream >> > (d_idata, pos, min(pos + batch, N), LOOKUP_GAP);
+			}
+			pos += batch;
 
-	} while (pos < N);
+		} while (pos < N);
 
-	// Second phase: Random read access from scratchpad.
+		// Second phase: Random read access from scratchpad.
 
-	pos = 0;
-	do {
-		if (LOOKUP_GAP == 1)  {
-			titan_scrypt_core_kernelB<SIMPLE> <<< grid, threads, 0, stream >>>(d_odata, pos, min(pos+batch, N));
-		} else {
-			titan_scrypt_core_kernelB_LG<SIMPLE> <<< grid, threads, 0, stream >>>(d_odata, pos, min(pos+batch, N), LOOKUP_GAP);
-		}
-		pos += batch;
+		pos = 0;
+		do {
+			if (LOOKUP_GAP == 1) {
+				titan_scrypt_core_kernelB<SIMPLE> << < grid, threads, 0, stream >> > (d_odata, pos, min(pos + batch, N));
+			}
+			else {
+				titan_scrypt_core_kernelB_LG<SIMPLE> << < grid, threads, 0, stream >> > (d_odata, pos, min(pos + batch, N), LOOKUP_GAP);
+			}
+			pos += batch;
 
-	} while (pos < N);
+		} while (pos < N);
+	}
 
 	return success;
 }

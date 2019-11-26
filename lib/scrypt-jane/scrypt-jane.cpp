@@ -55,8 +55,9 @@ static void keccak_block(scrypt_hash_state *S, const uint8_t *in)
 	uint64_t *s = S->state, t[5], u[5], v, w;
 
 	/* absorb input */
-	for (i = 0; i < SCRYPT_HASH_BLOCK_SIZE / 8; i++, in += 8)
+	for (i = 0; i < SCRYPT_HASH_BLOCK_SIZE / 8; i++, in += 8) {
 		s[i] ^= U8TO64_LE(in);
+	}
 
 	for (i = 0; i < 24; i++) {
 		/* theta: c = a[0,i] ^ a[1,i] ^ .. a[4,i] */
@@ -133,8 +134,9 @@ static void scrypt_hash_update(scrypt_hash_state *S, const uint8_t *in, size_t i
 		want = (want < inlen) ? want : inlen;
 		memcpy(S->buffer + S->leftover, in, want);
 		S->leftover += (uint32_t)want;
-		if (S->leftover < SCRYPT_HASH_BLOCK_SIZE)
+		if (S->leftover < SCRYPT_HASH_BLOCK_SIZE) {
 			return;
+		}
 		in += want;
 		inlen -= want;
 		keccak_block(S, S->buffer);
@@ -149,8 +151,9 @@ static void scrypt_hash_update(scrypt_hash_state *S, const uint8_t *in, size_t i
 
 	/* handle leftover data */
 	S->leftover = (uint32_t)inlen;
-	if (S->leftover)
+	if (S->leftover) {
 		memcpy(S->buffer, in, S->leftover);
+	}
 }
 
 static void scrypt_hash_finish(scrypt_hash_state *S, uint8_t *hash)
@@ -338,20 +341,20 @@ static void scrypt_jane_hash_1_1(const uchar *password, size_t password_len, con
 	uchar *out, uint32_t bytes, uint8_t *X, uint8_t *Y, uint8_t *V)
 {
 	uint32_t chunk_bytes, i;
-	const uint32_t p = SCRYPT_P;
+	const uint32_t p = 1;
 
 #if !defined(SCRYPT_CHOOSE_COMPILETIME)
 	scrypt_ROMixfn scrypt_ROMix = scrypt_getROMix();
 #endif
 
-	chunk_bytes = SCRYPT_BLOCK_BYTES * SCRYPT_R * 2;
+	chunk_bytes = SCRYPT_BLOCK_BYTES * 1 * 2;
 
 	/* 1: X = PBKDF2(password, salt) */
 	scrypt_pbkdf2_1(password, password_len, salt, salt_len, X, chunk_bytes * p);
 
 	/* 2: X = ROMix(X) */
 	for (i = 0; i < p; i++) {
-		scrypt_ROMix_1((scrypt_mix_word_t *)(X + (chunk_bytes * i)), (scrypt_mix_word_t *)Y, (scrypt_mix_word_t *)V, N);
+		scrypt_ROMix_1((scrypt_mix_word_t *)(X + (chunk_bytes * i)), (scrypt_mix_word_t *)Y, (scrypt_mix_word_t *)V, N, 1);
 	}
 
 	/* 3: Out = PBKDF2(password, X) */
@@ -364,22 +367,22 @@ static void scrypt_jane_hash_1_1(const uchar *password, size_t password_len, con
 }
 
 /* for cpu hash test */
-void scryptjane_hash(void* output, const void* input, uint32_t Nsize)
+void scryptjane_hash(void* output, const void* input, uint32_t N, uint32_t r, uint32_t p)
 {
 	uint64_t chunk_bytes;
 	uint8_t *X, *Y;
 	scrypt_aligned_alloc YX, V;
 
-	chunk_bytes = 2ULL * SCRYPT_BLOCK_BYTES * SCRYPT_R;
-	V  = scrypt_alloc(Nsize * chunk_bytes);
-	YX = scrypt_alloc((SCRYPT_P + 1) * chunk_bytes);
+	chunk_bytes = 2ULL * SCRYPT_BLOCK_BYTES * r;
+	V  = scrypt_alloc(N * chunk_bytes);
+	YX = scrypt_alloc((p + 1) * chunk_bytes);
 
-	memset(V.ptr, 0, (size_t) (Nsize * chunk_bytes));
+	memset(V.ptr, 0, (size_t) (N * chunk_bytes));
 
 	Y = YX.ptr;
 	X = Y + chunk_bytes;
 
-	scrypt_jane_hash_1_1((uchar*)input, 80, (uchar*)input, 80, (uint32_t) Nsize, (uchar*)output, 32, X, Y, V.ptr);
+	scrypt_jane_hash_1_1((uchar*)input, 80, (uchar*)input, 80, (uint32_t)N, (uchar*)output, 32, X, Y, V.ptr);
 
 	scrypt_free(&V);
 	scrypt_free(&YX);
@@ -409,17 +412,17 @@ static void reinit_cpu_device(struct cgpu_info *gpu)
 {
 }
 
-static _cpuState * initCpu(struct cgpu_info *cgpu, unsigned N)
+static _cpuState * initCpu(struct cgpu_info *cgpu, unsigned N, uint32_t r, uint32_t p)
 {
 	_cpuState *cpuState = (_cpuState *)calloc(1, sizeof(_cpuState));
 	if (cpuState) {
-		cpuState->chunk_bytes = 2ULL * SCRYPT_BLOCK_BYTES * SCRYPT_R;
+		cpuState->chunk_bytes = 2ULL * SCRYPT_BLOCK_BYTES * r;
 		cpuState->V = scrypt_alloc(N * cpuState->chunk_bytes);
 		if (!cpuState->V.ptr) {
 			free(cpuState);
 			return NULL;
 		}
-		cpuState->YX = scrypt_alloc((SCRYPT_P + 1) * cpuState->chunk_bytes);
+		cpuState->YX = scrypt_alloc((p + 1) * cpuState->chunk_bytes);
 		if (!cpuState->YX.ptr) {
 			free(cpuState);
 			scrypt_free(&cpuState->V);
@@ -432,13 +435,13 @@ static _cpuState * initCpu(struct cgpu_info *cgpu, unsigned N)
 	return cpuState;
 }
 
-static bool cpu_prepare(struct cgpu_info *cgpu, unsigned N)
+static bool cpu_prepare(struct cgpu_info *cgpu, unsigned N, uint32_t r, uint32_t p)
 {
-	if (N != cgpu->N) {
+	if (N != cgpu->N || r != cgpu->r || p != cgpu->p) {
 		if (cgpu->device_data) {
 			cpu_shutdown(cgpu);
 		}
-		cgpu->device_data = initCpu(cgpu, N);
+		cgpu->device_data = initCpu(cgpu, N, r, p);
 		if (!cgpu->device_data) {
 			applog(LOG_ERR, "Failed to init CPU, disabling device %d", cgpu->id);
 			cgpu->deven = DEV_DISABLED;
@@ -446,6 +449,8 @@ static bool cpu_prepare(struct cgpu_info *cgpu, unsigned N)
 			return false;
 		}
 		cgpu->N = N;
+		cgpu->r = r;
+		cgpu->p = p;
 		applog(LOG_INFO, "initCpu() finished.");
 	}
 	return true;
@@ -457,9 +462,9 @@ static bool cpu_init(struct cgpu_info *cgpu)
 	return true;
 }
 
-static int64_t cpu_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uint64_t start_position, uint64_t end_position, uint8_t *output, uint32_t N, struct timeval *tv_start, struct timeval *tv_end)
+static int64_t cpu_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uint64_t start_position, uint64_t end_position, uint8_t *output, uint32_t N, uint32_t r, uint32_t p, struct timeval *tv_start, struct timeval *tv_end)
 {
-	if (cpu_prepare(cgpu, N))
+	if (cpu_prepare(cgpu, N, r, p))
 	{
 		_cpuState *cpuState = (_cpuState *)cgpu->device_data;
 		uint64_t n = start_position;
@@ -467,9 +472,25 @@ static int64_t cpu_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uint
 		gettimeofday(tv_start, NULL);
 
 		do {
-			((uint32_t*)pdata)[19] = n;
-//			scrypt_jane_hash_1_1((uchar*)pdata, 72, NULL, 0, (uint32_t)N, (uchar*)output, 1, cpuState->X, cpuState->Y, cpuState->V.ptr);
-			scrypt_jane_hash_1_1((uchar*)pdata, 80, (uchar*)pdata, 80, (uint32_t)N, (uchar*)output, 1, cpuState->X, cpuState->Y, cpuState->V.ptr);
+//			((uint32_t*)pdata)[19] = n;
+			((uint64_t*)pdata)[4] = n;
+			if (1 == r && 1 == p) {
+				scrypt_jane_hash_1_1((uchar*)pdata, 72, NULL, 0, (uint32_t)N, (uchar*)output, 1, cpuState->X, cpuState->Y, cpuState->V.ptr);
+			}
+			else {
+				uint32_t i;
+
+				/* 1: X = PBKDF2(password, salt) */
+				scrypt_pbkdf2_1((uchar*)pdata, 72, NULL, 0, cpuState->X, cpuState->chunk_bytes * p);
+
+				/* 2: X = ROMix(X) */
+				for (i = 0; i < p; i++) {
+					scrypt_ROMix_1((scrypt_mix_word_t *)(cpuState->X + (cpuState->chunk_bytes * i)), (scrypt_mix_word_t *)cpuState->Y, (scrypt_mix_word_t *)cpuState->V.ptr, N, r);
+				}
+
+				/* 3: Out = PBKDF2(password, X) */
+				scrypt_pbkdf2_1((uchar*)pdata, 72, cpuState->X, cpuState->chunk_bytes * p, (uchar*)output, 1);
+			}
 			output++;
 			n++;
 		} while (n <= end_position && !abort_flag);

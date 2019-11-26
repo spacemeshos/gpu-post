@@ -285,7 +285,7 @@ _clState *initCl(struct cgpu_info *cgpu, char *name, size_t nameSize)
 	// if we do not have TC and we do not have BS, then calculate some conservative numbers
 	if (!cgpu->buffer_size) {
 		unsigned int base_alloc = (int)(cgpu->gpu_max_alloc * 88 / 100 / 1024 / 1024 / 8) * 8 * 1024 * 1024;
-		cgpu->thread_concurrency = base_alloc / 128 / ipt;
+		cgpu->thread_concurrency = (uint32_t)(base_alloc / 128 / ipt);
 		cgpu->buffer_size = base_alloc / 1024 / 1024;
 		applog(LOG_DEBUG, "88%% Max Allocation: %u", base_alloc);
 		applog(LOG_NOTICE, "GPU %d: selecting buffer_size of %zu", cgpu->driver_id, cgpu->buffer_size);
@@ -405,7 +405,7 @@ _clState *initCl(struct cgpu_info *cgpu, char *name, size_t nameSize)
 		applog(LOG_WARNING, "Maximum buffer memory device %d supports says %lu", cgpu->driver_id, (long unsigned int)(cgpu->gpu_max_alloc));
 		applog(LOG_WARNING, "Your scrypt settings come to %d", (int)bufsize);
 	}
-	applog(LOG_INFO, "Creating scrypt buffer sized %d", (int)bufsize);
+	applog(LOG_INFO, "Creating scrypt buffer sized %u", (unsigned int)bufsize);
 	clState->padbufsize = bufsize;
 
 	/* This buffer is weird and might work to some degree even if
@@ -424,7 +424,13 @@ _clState *initCl(struct cgpu_info *cgpu, char *name, size_t nameSize)
 		return NULL;
 	}
 
-	clState->outputBuffer = clCreateBuffer(clState->context, CL_MEM_WRITE_ONLY, cgpu->thread_concurrency, NULL, &status);
+	clState->outputBuffer[0] = clCreateBuffer(clState->context, CL_MEM_WRITE_ONLY, cgpu->thread_concurrency, NULL, &status);
+	if (status != CL_SUCCESS) {
+		applog(LOG_ERR, "Error %d: clCreateBuffer (outputBuffer)", status);
+		return NULL;
+	}
+
+	clState->outputBuffer[1] = clCreateBuffer(clState->context, CL_MEM_WRITE_ONLY, cgpu->thread_concurrency, NULL, &status);
 	if (status != CL_SUCCESS) {
 		applog(LOG_ERR, "Error %d: clCreateBuffer (outputBuffer)", status);
 		return NULL;
