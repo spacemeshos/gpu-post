@@ -523,7 +523,10 @@ void titan_scrypt_core_kernelA(const uint32_t *d_idata, int begin, int end)
 		load_key(d_idata, b, bx);
 		write_keys_direct<SCHEME>(b, bx, start);
 		++i;
-	} else read_keys_direct<SCHEME>(b, bx, start+32*(i-1));
+	}
+	else {
+		read_keys_direct<SCHEME>(b, bx, start + 32 * (i - 1));
+	}
 
 	while (i < end) {
 		block_mixer(b, bx, x1, x2, x3);
