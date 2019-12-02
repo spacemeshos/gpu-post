@@ -16,7 +16,6 @@
 
 #include "api_internal.h"
 #include "nvml.h"
-
 #include "cuda_runtime.h"
 
 static bool substringsearch(const char *haystack, const char *needle, int &match)

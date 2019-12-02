@@ -32,7 +32,7 @@
 #ifdef __APPLE__
 
 #else
-#include <CL/cl.h>
+#include "CL/cl.h"
 #endif  
 
 #ifdef __cplusplus

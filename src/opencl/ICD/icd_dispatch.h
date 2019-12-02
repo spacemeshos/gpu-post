@@ -44,21 +44,21 @@
 #endif
 
  // cl.h
-#include <CL/cl.h>
+#include "CL/cl.h"
 
 // cl_gl.h and required files
 #ifdef _WIN32
 #include <windows.h>
 #include <d3d9.h>
 #include <d3d10_1.h>
-#include <CL/cl_d3d10.h>
-#include <CL/cl_d3d11.h>
-#include <CL/cl_dx9_media_sharing.h>
+#include "CL/cl_d3d10.h"
+#include "CL/cl_d3d11.h"
+#include "CL/cl_dx9_media_sharing.h"
 #endif
-#include <CL/cl_gl.h>
-#include <CL/cl_gl_ext.h>
-#include <CL/cl_ext.h>
-#include <CL/cl_egl.h>
+#include "CL/cl_gl.h"
+#include "CL/cl_gl_ext.h"
+#include "CL/cl_ext.h"
+#include "CL/cl_egl.h"
 
 /*
  *

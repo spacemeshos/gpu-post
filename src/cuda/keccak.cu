@@ -256,7 +256,7 @@ uint8_t keccak_hash_1_finish64(keccak_hash_state *S)
 }
 
 __device__
-uint8_t keccak_hash_finish(keccak_hash_state *S, uint32_t buffered, uint32_t *hash)
+void keccak_hash_finish(keccak_hash_state *S, uint32_t buffered, uint32_t *hash)
 {
 	uint32_t i = buffered / 4;
 	S->buffer[i] = 0x01;
@@ -388,7 +388,6 @@ void cuda_pre_keccak512(uint32_t *g_idata, uint64_t nonce, uint32_t r)
 {
 	uint32_t i, blocks;
 	uint32_t data[20];
-	uint8_t be[4];
 
 	const uint32_t thread = (blockIdx.x * blockDim.x) + threadIdx.x;
 	nonce   += thread;

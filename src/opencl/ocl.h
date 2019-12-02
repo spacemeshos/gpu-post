@@ -18,8 +18,8 @@
 #ifdef __APPLE_CC__
 #include <OpenCL/opencl.h>
 #else
-#include <CL/cl.h>
-#include <CL/cl_ext.h>
+#include "CL/cl.h"
+#include "CL/cl_ext.h"
 #endif
 
 typedef struct {

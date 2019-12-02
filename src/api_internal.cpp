@@ -79,10 +79,6 @@ void proper_exit(int reason)
 	abort_flag = true;
 	usleep(200 * 1000);
 
-#ifdef WIN32
-	timeEndPeriod(1); // else never executed
-#endif
-
 	exit(reason);
 }
 

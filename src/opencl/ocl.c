@@ -32,10 +32,12 @@
 #include <unistd.h>
 
 #include "api_internal.h"
+#include "ocl.h"
 #include "ICD/icd_dispatch.h"
+#include "scrypt-chacha-cl.inl"
 
 #define	SCRYPT_CHACHA_KERNNAME	"scrypt-chacha"
-
+#if 0
 char *file_contents(const char *filename, int *length)
 {
 	char *fullpath = alloca(PATH_MAX);
@@ -74,7 +76,7 @@ char *file_contents(const char *filename, int *length)
 
 	return (char*)buffer;
 }
-
+#endif
 _clState *initCl(struct cgpu_info *cgpu, char *name, size_t nameSize)
 {
 	_clState *clState = calloc(1, sizeof(_clState));
@@ -298,15 +300,12 @@ _clState *initCl(struct cgpu_info *cgpu, char *name, size_t nameSize)
 	}
 
 	int pl;
-	char *source = file_contents(filename, &pl);
-	size_t sourceSize[] = {(size_t)pl};
+	const char *source = scrypt_chacha_cl;
+	size_t sourceSize[] = {sizeof(scrypt_chacha_cl)};
+
 	cl_uint slot, cpnd;
 
 	slot = cpnd = 0;
-
-	if (!source) {
-		return NULL;
-	}
 
 	/////////////////////////////////////////////////////////////////
 	// Load CL file, build CL program object, create CL kernel object
@@ -362,8 +361,6 @@ _clState *initCl(struct cgpu_info *cgpu, char *name, size_t nameSize)
 	 * from source. */
 	goto built;
 #endif
-
-	free(source);
 
 	applog(LOG_INFO, "Initialising kernel %s with%s bitalign, 1 vectors and worksize %d",
 	       filename, clState->hasBitAlign ? "" : "out", (int)(clState->wsize));
