@@ -9,8 +9,6 @@
  * any later version.  See COPYING for more details.
  */
 
-#include <spacemesh-config.h>
-
 #include <string.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -20,8 +18,9 @@
 #ifndef WIN32
 #include <sys/resource.h>
 #endif
-
+#ifdef WIN32
 #include "compat.h"
+#endif
 #include "api_internal.h"
 #include "driver-opencl.h"
 #include "ocl.h"
@@ -217,9 +216,6 @@ static bool opencl_prepare(struct cgpu_info *cgpu, unsigned N, uint32_t r, uint3
 		}
 		if (!cgpu->name) {
 			cgpu->name = strdup(name);
-		}
-		if (!cgpu->kname) {
-			cgpu->kname = "scrypt-chacha";
 		}
 		cgpu->N = N;
 		cgpu->r = r;

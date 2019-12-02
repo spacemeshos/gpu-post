@@ -21,7 +21,6 @@ if (MSVC)
         ${SOURCES}
         compat/compat.h
         compat/gettimeofday.c
-        compat/spacemesh-config.h
         compat/unistd.h
         compat/sys/time.h
     )

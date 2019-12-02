@@ -1,5 +1,5 @@
 /* determine os */
-#if defined(_WIN32)	|| defined(_WIN64) || defined(__TOS_WIN__) || defined(__WINDOWS__)
+#if defined(WIN32)	|| defined(_WIN32)	|| defined(_WIN64) || defined(__TOS_WIN__) || defined(__WINDOWS__)
 	#include <windows.h>
 	#include <wincrypt.h>
 	#define OS_WINDOWS

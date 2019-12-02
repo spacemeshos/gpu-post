@@ -13,14 +13,6 @@
 #include <stdio.h>
 #include <sys/types.h>
 
-#ifdef WIN32
-	#include <winsock2.h>
-#else
-	#include <sys/socket.h>
-	#include <netinet/in.h>
-	#include <netdb.h>
-#endif
-
 #include <time.h>
 #include <sys/time.h>
 #ifdef WIN32
@@ -36,47 +28,6 @@
 #include "ICD/icd_dispatch.h"
 #include "scrypt-chacha-cl.inl"
 
-#define	SCRYPT_CHACHA_KERNNAME	"scrypt-chacha"
-#if 0
-char *file_contents(const char *filename, int *length)
-{
-	char *fullpath = alloca(PATH_MAX);
-	void *buffer;
-	FILE *f;
-
-	strcpy(fullpath, ""/*opt_kernel_path*/);
-	strcat(fullpath, filename);
-
-	/* Try in the optional kernel path or installed prefix first */
-	f = fopen(fullpath, "rb");
-	if (!f) {
-		/* Then try from the path cgminer was called */
-//		strcpy(fullpath, cgminer_path);
-		strcat(fullpath, filename);
-		f = fopen(fullpath, "rb");
-	}
-	/* Finally try opening it directly */
-	if (!f) {
-		f = fopen(filename, "rb");
-	}
-
-	if (!f) {
-		applog(LOG_ERR, "Unable to open %s or %s for reading", filename, fullpath);
-		return NULL;
-	}
-
-	fseek(f, 0, SEEK_END);
-	*length = ftell(f);
-	fseek(f, 0, SEEK_SET);
-
-	buffer = malloc(*length+1);
-	*length = (int)fread(buffer, 1, *length, f);
-	fclose(f);
-	((char*)buffer)[*length] = '\0';
-
-	return (char*)buffer;
-}
-#endif
 _clState *initCl(struct cgpu_info *cgpu, char *name, size_t nameSize)
 {
 	_clState *clState = calloc(1, sizeof(_clState));
@@ -267,10 +218,6 @@ _clState *initCl(struct cgpu_info *cgpu, char *name, size_t nameSize)
 	}
 	applog(LOG_DEBUG, "Max mem alloc size is %lu", (long unsigned int)(cgpu->gpu_max_alloc));
 
-	char filename[255];
-
-	strcpy(filename, SCRYPT_CHACHA_KERNNAME".cl");
-
 	clState->wsize = 64;
 
 	if (!cgpu->opt_lg) {
@@ -299,7 +246,6 @@ _clState *initCl(struct cgpu_info *cgpu, char *name, size_t nameSize)
 		applog(LOG_DEBUG, "GPU %d: setting thread_concurrency to %d based on buffer size %d and lookup gap %d", cgpu->driver_id, (int)(cgpu->thread_concurrency), (int)(cgpu->buffer_size), (int)(cgpu->lookup_gap));
 	}
 
-	int pl;
 	const char *source = scrypt_chacha_cl;
 	size_t sourceSize[] = {sizeof(scrypt_chacha_cl)};
 
@@ -362,8 +308,8 @@ _clState *initCl(struct cgpu_info *cgpu, char *name, size_t nameSize)
 	goto built;
 #endif
 
-	applog(LOG_INFO, "Initialising kernel %s with%s bitalign, 1 vectors and worksize %d",
-	       filename, clState->hasBitAlign ? "" : "out", (int)(clState->wsize));
+	applog(LOG_INFO, "Initialising kernel with %s bitalign, 1 vectors and worksize %d",
+	       clState->hasBitAlign ? "" : "out", (int)(clState->wsize));
 
 	if (!prog_built) {
 		/* create a cl program executable for all the devices specified */

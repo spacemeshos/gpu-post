@@ -9,8 +9,6 @@
  * any later version.  See COPYING for more details.
  */
 
-#include <spacemesh-config.h>
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -32,30 +30,7 @@ void applog(int prio, const char *fmt, ...)
 
 	va_start(ap, fmt);
 
-#ifdef HAVE_SYSLOG_H
-	if (use_syslog) {
-		va_list ap2;
-		char *buf;
-		int len;
-
-		/* custom colors to syslog prio */
-		if (prio > LOG_DEBUG) {
-			switch (prio) {
-				case LOG_BLUE: prio = LOG_NOTICE; break;
-			}
-		}
-
-		va_copy(ap2, ap);
-		len = vsnprintf(NULL, 0, fmt, ap2) + 1;
-		va_end(ap2);
-		buf = (char*) alloca(len);
-		if (vsnprintf(buf, len, fmt, ap) >= 0)
-			syslog(prio, "%s", buf);
-	}
-#else
-	if (0) {}
-#endif
-	else {
+	{
 		const char* color = "";
 		const time_t now = time(NULL);
 		char *f;

@@ -5,8 +5,6 @@
 extern "C" {
 #endif
 
-#include <spacemesh-config.h>
-
 #include <stdbool.h>
 #include <inttypes.h>
 #ifdef WIN32
@@ -18,35 +16,18 @@ extern "C" {
 #include <sys/time.h>
 
 #ifdef _MSC_VER
-#undef HAVE_ALLOCA_H
-#undef HAVE_SYSLOG_H
-#endif
-
-#ifdef STDC_HEADERS
-# include <stdlib.h>
-# include <stddef.h>
+#include <malloc.h>
+#define alloca _alloca
 #else
-# ifdef HAVE_STDLIB_H
-#  include <stdlib.h>
-# endif
+#include <alloca.h>
 #endif
 
-#ifdef HAVE_ALLOCA_H
-# include <alloca.h>
-#elif !defined alloca
-# ifdef __GNUC__
-#  define alloca __builtin_alloca
-# elif defined _AIX
-#  define alloca __alloca
-# elif defined _MSC_VER
-#  include <malloc.h>
-#  define alloca _alloca
-# elif !defined HAVE_ALLOCA
-void *alloca (size_t);
-# endif
-#endif
+#include <stdlib.h>
+#include <stddef.h>
 
+#ifdef WIN32
 #include "compat.h"
+#endif
 
 #ifdef __INTELLISENSE__
 /* should be in stdint.h but... */
@@ -72,11 +53,6 @@ typedef char *  va_list;
 #include "opencl/ocl.h"
 #endif /* HAVE_OPENCL */
 
-#ifdef HAVE_SYSLOG_H
-#include <syslog.h>
-#define LOG_BLUE 0x10
-#define LOG_RAW  0x99
-#else
 enum {
 	LOG_ERR,
 	LOG_WARNING,
@@ -87,7 +63,6 @@ enum {
 	LOG_BLUE = 0x10,
 	LOG_RAW  = 0x99
 };
-#endif
 
 typedef unsigned char uchar;
 
@@ -177,29 +152,20 @@ static inline void swab256(void *dest_p, const void *src_p)
 	dest[7] = swab32(src[0]);
 }
 
-#ifdef HAVE_SYS_ENDIAN_H
-#include <sys/endian.h>
-#endif
-
-#if !HAVE_DECL_BE32DEC
 static inline uint32_t be32dec(const void *pp)
 {
 	const uint8_t *p = (uint8_t const *)pp;
 	return ((uint32_t)(p[3]) + ((uint32_t)(p[2]) << 8) +
 	    ((uint32_t)(p[1]) << 16) + ((uint32_t)(p[0]) << 24));
 }
-#endif
 
-#if !HAVE_DECL_LE32DEC
 static inline uint32_t le32dec(const void *pp)
 {
 	const uint8_t *p = (uint8_t const *)pp;
 	return ((uint32_t)(p[0]) + ((uint32_t)(p[1]) << 8) +
 	    ((uint32_t)(p[2]) << 16) + ((uint32_t)(p[3]) << 24));
 }
-#endif
 
-#if !HAVE_DECL_BE32ENC
 static inline void be32enc(void *pp, uint32_t x)
 {
 	uint8_t *p = (uint8_t *)pp;
@@ -208,9 +174,7 @@ static inline void be32enc(void *pp, uint32_t x)
 	p[1] = (x >> 16) & 0xff;
 	p[0] = (x >> 24) & 0xff;
 }
-#endif
 
-#if !HAVE_DECL_LE32ENC
 static inline void le32enc(void *pp, uint32_t x)
 {
 	uint8_t *p = (uint8_t *)pp;
@@ -219,41 +183,32 @@ static inline void le32enc(void *pp, uint32_t x)
 	p[2] = (x >> 16) & 0xff;
 	p[3] = (x >> 24) & 0xff;
 }
-#endif
 
-#if !HAVE_DECL_BE16DEC
 static inline uint16_t be16dec(const void *pp)
 {
 	const uint8_t *p = (uint8_t const *)pp;
 	return ((uint16_t)(p[1]) + ((uint16_t)(p[0]) << 8));
 }
-#endif
 
-#if !HAVE_DECL_BE16ENC
 static inline void be16enc(void *pp, uint16_t x)
 {
 	uint8_t *p = (uint8_t *)pp;
 	p[1] = x & 0xff;
 	p[0] = (x >> 8) & 0xff;
 }
-#endif
 
-#if !HAVE_DECL_LE16DEC
 static inline uint16_t le16dec(const void *pp)
 {
 	const uint8_t *p = (uint8_t const *)pp;
 	return ((uint16_t)(p[0]) + ((uint16_t)(p[1]) << 8));
 }
-#endif
 
-#if !HAVE_DECL_LE16ENC
 static inline void le16enc(void *pp, uint16_t x)
 {
 	uint8_t *p = (uint8_t *)pp;
 	p[0] = x & 0xff;
 	p[1] = (x >> 8) & 0xff;
 }
-#endif
 
 extern void applog(int prio, const char *fmt, ...);
 extern void gpulog(int prio, int thr_id, const char *fmt, ...);
@@ -362,7 +317,6 @@ struct cgpu_info {
 
 #ifdef HAVE_OPENCL
 	unsigned int platform;
-	const char *kname;
 #endif
 
 	bool available;
