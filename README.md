@@ -22,7 +22,7 @@
 1. Open project folder into Visual Studio 2017: `File -> Open -> Folder`.
 2. Set "x64-Release" Project Settings.
 3. Build: `CMake -> Rebuild All`.
-4. Run test: `CMake -> Debug from Build Folder -> gpu-setup-test.exe
+4. Run test: `CMake -> Debug from Build Folder -> gpu-setup-test.exe`
 
 ### Linux
 1. Create build directory:
