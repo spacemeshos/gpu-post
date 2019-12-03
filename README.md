@@ -4,16 +4,54 @@
 - A c libraray implementing the POST API setup method for cpu, cuda and openCL compute platforms.
 
 ## System Requirements
+
+### Windows
 - Windows 10 Pro.
 - Microsoft Visual Studio 2017 (any edition should be okay. Visual Studio 2019 is not supported. You may also need to install specific versions of the Windows SDK when prompted when attempting to build for the first time.
 - NVIDIA GPU Computing Toolkit 10.0 (but not later versions), and an NVIDIA GPU supporting CUDA 10.0 computation for CUDA testing.
 - An AMD GPU supporting OpenCL 2.0 or newer for OpenCL testing.
 
+### Linux
+- Modern 64-bit Linux, such as Ubuntu, Debian.
+- NVIDIA GPU Computing Toolkit 9 or 10, and an NVIDIA GPU supporting CUDA 9 or 10 computation for CUDA testing.
+- An AMD GPU supporting OpenCL 2.0 or newer for OpenCL testing.
+
 ## Biulding
-1. Open project folder into Visual Studio 2017: File menu -> Open -> Folder.
+
+### Windows
+1. Open project folder into Visual Studio 2017: `File -> Open -> Folder`.
 2. Set "x64-Release" Project Settings.
-3. Build: CMake menu -> Rebuild All.
-4. Run test: CMake menu -> Debug from Build Folder -> test.exe
+3. Build: `CMake -> Rebuild All`.
+4. Run test: `CMake -> Debug from Build Folder -> gpu-setup-test.exe
+
+### Linux
+1. Create build directory:
+```
+  cd gpu-post
+  mkdir build
+  cd build
+```
+2. Configure:
+```
+  cmake ..
+```
+3. Build:
+```
+  make
+```
+4. Run test:
+```  
+  ./test/gpu-setup-test
+```
+
+For configure with CUDA 9:
+```
+  cmake .. -DCMAKE_C_COMPILER=gcc-6 -DCMAKE_CXX_COMPILER=g++-6
+```
+You may need to set CUDA_TOOLKIT_ROOT_DIR:
+```
+  cmake .. -DCMAKE_C_COMPILER=gcc-6 -DCMAKE_CXX_COMPILER=g++-6 -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-9.0
+```
 
 ## Initial Benchmarks
 
