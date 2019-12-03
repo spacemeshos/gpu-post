@@ -13,6 +13,9 @@
 x64/
 x86/
 
+# Linux build directory
+build/
+
 # Visual Studo cache/options directory
 .vs/
 
