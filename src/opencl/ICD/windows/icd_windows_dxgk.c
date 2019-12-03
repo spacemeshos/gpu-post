@@ -17,7 +17,7 @@
  */
 
 #include "../icd.h"
-#include "ICD/icd_windows_dxgk.h"
+#include "icd_windows_dxgk.h"
 
 #if defined(OPENCL_ICD_LOADER_REQUIRE_WDK)
 #include <windows.h>
