@@ -18,9 +18,6 @@
 #ifndef WIN32
 #include <sys/resource.h>
 #endif
-#ifdef WIN32
-#include "compat.h"
-#endif
 #include "api_internal.h"
 #include "driver-opencl.h"
 #include "ocl.h"

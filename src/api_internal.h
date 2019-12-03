@@ -27,6 +27,8 @@ extern "C" {
 
 #ifdef WIN32
 #include "compat.h"
+#else
+#include "compat/compat.h"
 #endif
 
 #ifdef __INTELLISENSE__
@@ -43,15 +45,6 @@ typedef unsigned __int16 uint8_t;
 typedef unsigned __int32 time_t;
 typedef char *  va_list;
 #endif
-
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ > 0
-# undef _ALIGN
-# define _ALIGN(x) __align__(x)
-#endif
-
-#ifdef HAVE_OPENCL
-#include "opencl/ocl.h"
-#endif /* HAVE_OPENCL */
 
 enum {
 	LOG_ERR,
