@@ -2,7 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#ifdef WIN32
 #include <conio.h>
+#endif
 
 #define	LABELS_COUNT	250000
 
@@ -49,8 +51,10 @@ int main()
 	free(out[1]);
 	free(out[2]);
 
+#ifdef WIN32
 	printf("\nPress any key to continue...\n");
 	_getch();
+#endif
 	
 	return 0;
 }
