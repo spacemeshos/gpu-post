@@ -28,7 +28,7 @@
 #include "ICD/icd_dispatch.h"
 #include "scrypt-chacha-cl.inl"
 
-_clState *initCl(struct cgpu_info *cgpu, char *name, size_t nameSize)
+_clState *initCl(struct cgpu_info *cgpu, char *name, size_t nameSize, cl_uint hash_len_bits)
 {
 	_clState *clState = calloc(1, sizeof(_clState));
 	bool patchbfi = false, prog_built = false;
@@ -73,11 +73,13 @@ _clState *initCl(struct cgpu_info *cgpu, char *name, size_t nameSize)
 
 	applog(LOG_INFO, "CL Platform vendor: %s", pbuff);
 	status = clGetPlatformInfo(platform, CL_PLATFORM_NAME, sizeof(pbuff), pbuff, NULL);
-	if (status == CL_SUCCESS)
+	if (status == CL_SUCCESS) {
 		applog(LOG_INFO, "CL Platform name: %s", pbuff);
+	}
 	status = clGetPlatformInfo(platform, CL_PLATFORM_VERSION, sizeof(vbuff), vbuff, NULL);
-	if (status == CL_SUCCESS)
+	if (status == CL_SUCCESS) {
 		applog(LOG_INFO, "CL Platform version: %s", vbuff);
+	}
 
 	status = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 0, NULL, &numDevices);
 	if (status != CL_SUCCESS) {
@@ -141,9 +143,7 @@ _clState *initCl(struct cgpu_info *cgpu, char *name, size_t nameSize)
 	/////////////////////////////////////////////////////////////////
 
 	clState->commandQueue = clState->context->dispatch->clCreateCommandQueue(clState->context, devices[cgpu->driver_id], CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, &status);
-//		clCreateCommandQueue(clState->context, devices[cgpu->driver_id], CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, &status);
 	if (status != CL_SUCCESS) { /* Try again without OOE enable */
-//		clState->commandQueue = clCreateCommandQueue(clState->context, devices[cgpu->driver_id], 0, &status);
 		clState->commandQueue = clState->context->dispatch->clCreateCommandQueue(clState->context, devices[cgpu->driver_id], 0, &status);
 	}
 	if (status != CL_SUCCESS) {
@@ -327,7 +327,25 @@ _clState *initCl(struct cgpu_info *cgpu, char *name, size_t nameSize)
 	}
 
 	/* get a kernel object handle for a kernel with the given name */
-	clState->kernel = clCreateKernel(clState->program, "search", &status);
+	clState->kernel[8] = clCreateKernel(clState->program, "search8", &status);
+	if (status != CL_SUCCESS) {
+		applog(LOG_ERR, "Error %d: Creating Kernel from program. (clCreateKernel)", status);
+		return NULL;
+	}
+
+	clState->kernel[4] = clCreateKernel(clState->program, "search4", &status);
+	if (status != CL_SUCCESS) {
+		applog(LOG_ERR, "Error %d: Creating Kernel from program. (clCreateKernel)", status);
+		return NULL;
+	}
+
+	clState->kernel[2] = clCreateKernel(clState->program, "search2", &status);
+	if (status != CL_SUCCESS) {
+		applog(LOG_ERR, "Error %d: Creating Kernel from program. (clCreateKernel)", status);
+		return NULL;
+	}
+
+	clState->kernel[1] = clCreateKernel(clState->program, "search1", &status);
 	if (status != CL_SUCCESS) {
 		applog(LOG_ERR, "Error %d: Creating Kernel from program. (clCreateKernel)", status);
 		return NULL;
@@ -367,13 +385,15 @@ _clState *initCl(struct cgpu_info *cgpu, char *name, size_t nameSize)
 		return NULL;
 	}
 
-	clState->outputBuffer[0] = clCreateBuffer(clState->context, CL_MEM_WRITE_ONLY, cgpu->thread_concurrency, NULL, &status);
+	cl_uint chunkSize = (cgpu->thread_concurrency * hash_len_bits + 7) / 8;
+
+	clState->outputBuffer[0] = clCreateBuffer(clState->context, CL_MEM_WRITE_ONLY, chunkSize, NULL, &status);
 	if (status != CL_SUCCESS) {
 		applog(LOG_ERR, "Error %d: clCreateBuffer (outputBuffer)", status);
 		return NULL;
 	}
 
-	clState->outputBuffer[1] = clCreateBuffer(clState->context, CL_MEM_WRITE_ONLY, cgpu->thread_concurrency, NULL, &status);
+	clState->outputBuffer[1] = clCreateBuffer(clState->context, CL_MEM_WRITE_ONLY, chunkSize, NULL, &status);
 	if (status != CL_SUCCESS) {
 		applog(LOG_ERR, "Error %d: clCreateBuffer (outputBuffer)", status);
 		return NULL;

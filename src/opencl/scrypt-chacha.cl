@@ -691,12 +691,14 @@ scrypt_ROMix(uint4 *restrict X/*[chunkWords]*/, __global uint4 *restrict lookup/
 	/* implicit */
 }
 
-__attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
-__kernel void search(__global const uint4 * restrict input, volatile __global uchar * restrict output, __global uchar * restrict padcache, const uint N, const ulong nonceBase)
+__attribute__((reqd_work_group_size(64, 1, 1)))
+__kernel void search8(__global const uint4 * restrict input, volatile __global uchar * restrict output, __global uchar * restrict padcache, const uint N, const ulong nonceBase)
 {
+	__local uint labels[64];
 	uint4 password[5];
 	uint4 X[8];
 	const uint gid = get_global_id(0);
+	const uint lid = get_local_id(0);
 	uint Nfactor = 0;
 	uint tmp = N >> 1;
 	ulong nonce = nonceBase + gid;
@@ -721,5 +723,439 @@ __kernel void search(__global const uint4 * restrict input, volatile __global uc
 	scrypt_ROMix(X, (__global uint4 *)padcache, N, gid, Nfactor);
 
 	/* 3: Out = PBKDF2(password, X) */
-	output[gid] = scrypt_pbkdf2_32B(password, X);
+	labels[lid] = scrypt_pbkdf2_32B(password, X);
+
+	barrier(CLK_LOCAL_MEM_FENCE); 
+
+	if (0 == lid) {
+		uint8 buffer;
+
+		output += gid * 64 / 64;
+
+		buffer.s0  = labels[0];
+		buffer.s0 |= labels[1] << 8;
+		buffer.s0 |= labels[2] << 16;
+		buffer.s0 |= labels[3] << 24;
+
+		buffer.s1  = labels[4];
+		buffer.s1 |= labels[5] << 8;
+		buffer.s1 |= labels[6] << 16;
+		buffer.s1 |= labels[7] << 24;
+
+		buffer.s2  = labels[8];
+		buffer.s2 |= labels[9] << 8;
+		buffer.s2 |= labels[10] << 16;
+		buffer.s2 |= labels[11] << 24;
+
+		buffer.s3  = labels[12];
+		buffer.s3 |= labels[13] << 8;
+		buffer.s3 |= labels[14] << 16;
+		buffer.s3 |= labels[15] << 24;
+
+		buffer.s4  = labels[16];
+		buffer.s4 |= labels[17] << 8;
+		buffer.s4 |= labels[18] << 16;
+		buffer.s4 |= labels[19] << 24;
+
+		buffer.s5  = labels[20];
+		buffer.s5 |= labels[21] << 8;
+		buffer.s5 |= labels[22] << 16;
+		buffer.s5 |= labels[23] << 24;
+
+		buffer.s6  = labels[24];
+		buffer.s6 |= labels[25] << 8;
+		buffer.s6 |= labels[26] << 16;
+		buffer.s6 |= labels[27] << 24;
+
+		buffer.s7  = labels[28];
+		buffer.s7 |= labels[29] << 8;
+		buffer.s7 |= labels[30] << 16;
+		buffer.s7 |= labels[31] << 24;
+
+		*(__global uint8*)output = buffer;
+		output += 32;
+
+		buffer.s0  = labels[32];
+		buffer.s0 |= labels[33] << 8;
+		buffer.s0 |= labels[34] << 16;
+		buffer.s0 |= labels[35] << 24;
+
+		buffer.s1  = labels[36];
+		buffer.s1 |= labels[37] << 8;
+		buffer.s1 |= labels[38] << 16;
+		buffer.s1 |= labels[39] << 24;
+
+		buffer.s2  = labels[40];
+		buffer.s2 |= labels[41] << 8;
+		buffer.s2 |= labels[42] << 16;
+		buffer.s2 |= labels[43] << 24;
+
+		buffer.s3  = labels[44];
+		buffer.s3 |= labels[45] << 8;
+		buffer.s3 |= labels[46] << 16;
+		buffer.s3 |= labels[47] << 24;
+
+		buffer.s4  = labels[48];
+		buffer.s4 |= labels[49] << 8;
+		buffer.s4 |= labels[50] << 16;
+		buffer.s4 |= labels[51] << 24;
+
+		buffer.s5  = labels[52];
+		buffer.s5 |= labels[53] << 8;
+		buffer.s5 |= labels[54] << 16;
+		buffer.s5 |= labels[55] << 24;
+
+		buffer.s6  = labels[56];
+		buffer.s6 |= labels[57] << 8;
+		buffer.s6 |= labels[58] << 16;
+		buffer.s6 |= labels[59] << 24;
+
+		buffer.s7  = labels[60];
+		buffer.s7 |= labels[61] << 8;
+		buffer.s7 |= labels[62] << 16;
+		buffer.s7 |= labels[63] << 24;
+
+		*(__global uint8*)output = buffer;
+	}
+}
+
+__attribute__((reqd_work_group_size(64, 1, 1)))
+__kernel void search4(__global const uint4 * restrict input, volatile __global uchar * restrict output, __global uchar * restrict padcache, const uint N, const ulong nonceBase)
+{
+	__local uint labels[64];
+	uint4 password[5];
+	uint4 X[8];
+	const uint gid = get_global_id(0);
+	const uint lid = get_local_id(0);
+	uint Nfactor = 0;
+	uint tmp = N >> 1;
+	ulong nonce = nonceBase + gid;
+	
+	/* Determine the Nfactor */
+	while ((tmp & 1) == 0) {
+		tmp >>= 1;
+		Nfactor++;
+	}
+	
+	password[0] = input[0];
+	password[1] = input[1];
+	password[2] = input[2];
+	password[3] = input[3];
+	password[4] = input[4];
+	password[2].xy = as_uint2(nonce);
+	
+	/* 1: X = PBKDF2(password, salt) */
+	scrypt_pbkdf2_128B(password, X);
+
+	/* 2: X = ROMix(X) */
+	scrypt_ROMix(X, (__global uint4 *)padcache, N, gid, Nfactor);
+
+	/* 3: Out = PBKDF2(password, X) */
+	labels[lid] = scrypt_pbkdf2_32B(password, X) & 0x0f;
+
+	barrier(CLK_LOCAL_MEM_FENCE); 
+
+	if (0 == lid) {
+		uint8 buffer;
+
+		output += gid * 32 / 64;
+
+		buffer.s0  = labels[0];
+		buffer.s0 |= labels[1] << 4;
+		buffer.s0 |= labels[2] << 8;
+		buffer.s0 |= labels[3] << 12;
+		buffer.s0 |= labels[4] << 16;
+		buffer.s0 |= labels[5] << 20;
+		buffer.s0 |= labels[6] << 24;
+		buffer.s0 |= labels[7] << 28;
+
+		buffer.s1  = labels[8];
+		buffer.s1 |= labels[9] << 4;
+		buffer.s1 |= labels[10] << 8;
+		buffer.s1 |= labels[11] << 12;
+		buffer.s1 |= labels[12] << 16;
+		buffer.s1 |= labels[13] << 20;
+		buffer.s1 |= labels[14] << 24;
+		buffer.s1 |= labels[15] << 28;
+		
+		buffer.s2  = labels[16];
+		buffer.s2 |= labels[17] << 4;
+		buffer.s2 |= labels[18] << 8;
+		buffer.s2 |= labels[19] << 12;
+		buffer.s2 |= labels[20] << 16;
+		buffer.s2 |= labels[21] << 20;
+		buffer.s2 |= labels[22] << 24;
+		buffer.s2 |= labels[23] << 28;
+
+		buffer.s3  = labels[24];
+		buffer.s3 |= labels[25] << 4;
+		buffer.s3 |= labels[26] << 8;
+		buffer.s3 |= labels[27] << 12;
+		buffer.s3 |= labels[28] << 16;
+		buffer.s3 |= labels[29] << 20;
+		buffer.s3 |= labels[30] << 24;
+		buffer.s3 |= labels[31] << 28;
+
+		buffer.s4  = labels[32];
+		buffer.s4 |= labels[33] << 4;
+		buffer.s4 |= labels[34] << 8;
+		buffer.s4 |= labels[35] << 12;
+		buffer.s4 |= labels[36] << 16;
+		buffer.s4 |= labels[37] << 20;
+		buffer.s4 |= labels[38] << 24;
+		buffer.s4 |= labels[39] << 28;
+
+		buffer.s5  = labels[40];
+		buffer.s5 |= labels[41] << 4;
+		buffer.s5 |= labels[42] << 8;
+		buffer.s5 |= labels[43] << 12;
+		buffer.s5 |= labels[44] << 16;
+		buffer.s5 |= labels[45] << 20;
+		buffer.s5 |= labels[46] << 24;
+		buffer.s5 |= labels[47] << 28;
+
+		buffer.s6  = labels[48];
+		buffer.s6 |= labels[49] << 4;
+		buffer.s6 |= labels[50] << 8;
+		buffer.s6 |= labels[51] << 12;
+		buffer.s6 |= labels[52] << 16;
+		buffer.s6 |= labels[53] << 20;
+		buffer.s6 |= labels[54] << 24;
+		buffer.s6 |= labels[55] << 28;
+
+		buffer.s7  = labels[56];
+		buffer.s7 |= labels[57] << 4;
+		buffer.s7 |= labels[58] << 8;
+		buffer.s7 |= labels[59] << 12;
+		buffer.s7 |= labels[60] << 16;
+		buffer.s7 |= labels[61] << 20;
+		buffer.s7 |= labels[62] << 24;
+		buffer.s7 |= labels[63] << 28;
+
+		*(__global uint8*)output = buffer;
+	}
+}
+
+__attribute__((reqd_work_group_size(64, 1, 1)))
+__kernel void search2(__global const uint4 * restrict input, volatile __global uchar * restrict output, __global uchar * restrict padcache, const uint N, const ulong nonceBase)
+{
+	__local uint labels[64];
+	uint4 password[5];
+	uint4 X[8];
+	const uint gid = get_global_id(0);
+	const uint lid = get_local_id(0);
+	uint Nfactor = 0;
+	uint tmp = N >> 1;
+	ulong nonce = nonceBase + gid;
+	
+	/* Determine the Nfactor */
+	while ((tmp & 1) == 0) {
+		tmp >>= 1;
+		Nfactor++;
+	}
+	
+	password[0] = input[0];
+	password[1] = input[1];
+	password[2] = input[2];
+	password[3] = input[3];
+	password[4] = input[4];
+	password[2].xy = as_uint2(nonce);
+	
+	/* 1: X = PBKDF2(password, salt) */
+	scrypt_pbkdf2_128B(password, X);
+
+	/* 2: X = ROMix(X) */
+	scrypt_ROMix(X, (__global uint4 *)padcache, N, gid, Nfactor);
+
+	/* 3: Out = PBKDF2(password, X) */
+	labels[lid] = scrypt_pbkdf2_32B(password, X) & 0x03;
+
+	barrier(CLK_LOCAL_MEM_FENCE); 
+
+	if (0 == lid) {
+		uint4 buffer;
+
+		output += gid * 16 / 64;
+
+		buffer.s0  = labels[0];
+		buffer.s0 |= labels[1] << 2;
+		buffer.s0 |= labels[2] << 4;
+		buffer.s0 |= labels[3] << 6;
+		buffer.s0 |= labels[4] << 8;
+		buffer.s0 |= labels[5] << 10;
+		buffer.s0 |= labels[6] << 12;
+		buffer.s0 |= labels[7] << 14;
+		buffer.s0 |= labels[8] << 16;
+		buffer.s0 |= labels[9] << 18;
+		buffer.s0 |= labels[10] << 20;
+		buffer.s0 |= labels[11] << 22;
+		buffer.s0 |= labels[12] << 24;
+		buffer.s0 |= labels[13] << 26;
+		buffer.s0 |= labels[14] << 28;
+		buffer.s0 |= labels[15] << 30;
+		
+		buffer.s1  = labels[16];
+		buffer.s1 |= labels[17] << 2;
+		buffer.s1 |= labels[18] << 4;
+		buffer.s1 |= labels[19] << 6;
+		buffer.s1 |= labels[20] << 8;
+		buffer.s1 |= labels[21] << 10;
+		buffer.s1 |= labels[22] << 12;
+		buffer.s1 |= labels[23] << 14;
+		buffer.s1 |= labels[24] << 16;
+		buffer.s1 |= labels[25] << 18;
+		buffer.s1 |= labels[26] << 20;
+		buffer.s1 |= labels[27] << 22;
+		buffer.s1 |= labels[28] << 24;
+		buffer.s1 |= labels[29] << 26;
+		buffer.s1 |= labels[30] << 28;
+		buffer.s1 |= labels[31] << 30;
+
+		buffer.s2  = labels[32];
+		buffer.s2 |= labels[33] << 2;
+		buffer.s2 |= labels[34] << 4;
+		buffer.s2 |= labels[35] << 6;
+		buffer.s2 |= labels[36] << 8;
+		buffer.s2 |= labels[37] << 10;
+		buffer.s2 |= labels[38] << 12;
+		buffer.s2 |= labels[39] << 14;
+		buffer.s2 |= labels[40] << 16;
+		buffer.s2 |= labels[41] << 18;
+		buffer.s2 |= labels[42] << 20;
+		buffer.s2 |= labels[43] << 22;
+		buffer.s2 |= labels[44] << 24;
+		buffer.s2 |= labels[45] << 26;
+		buffer.s2 |= labels[46] << 28;
+		buffer.s2 |= labels[47] << 30;
+
+		buffer.s3  = labels[48];
+		buffer.s3 |= labels[49] << 2;
+		buffer.s3 |= labels[50] << 4;
+		buffer.s3 |= labels[51] << 6;
+		buffer.s3 |= labels[52] << 8;
+		buffer.s3 |= labels[53] << 10;
+		buffer.s3 |= labels[54] << 12;
+		buffer.s3 |= labels[55] << 14;
+		buffer.s3 |= labels[56] << 16;
+		buffer.s3 |= labels[57] << 18;
+		buffer.s3 |= labels[58] << 20;
+		buffer.s3 |= labels[59] << 22;
+		buffer.s3 |= labels[60] << 24;
+		buffer.s3 |= labels[61] << 26;
+		buffer.s3 |= labels[62] << 28;
+		buffer.s3 |= labels[63] << 30;
+
+		*(__global uint4*)output = buffer;
+	}
+}
+
+__attribute__((reqd_work_group_size(64, 1, 1)))
+__kernel void search1(__global const uint4 * restrict input, volatile __global uchar * restrict output, __global uchar * restrict padcache, const uint N, const ulong nonceBase)
+{
+	__local uint labels[64];
+	uint4 password[5];
+	uint4 X[8];
+	const uint gid = get_global_id(0);
+	const uint lid = get_local_id(0);
+	uint Nfactor = 0;
+	uint tmp = N >> 1;
+	ulong nonce = nonceBase + gid;
+	
+	/* Determine the Nfactor */
+	while ((tmp & 1) == 0) {
+		tmp >>= 1;
+		Nfactor++;
+	}
+	
+	password[0] = input[0];
+	password[1] = input[1];
+	password[2] = input[2];
+	password[3] = input[3];
+	password[4] = input[4];
+	password[2].xy = as_uint2(nonce);
+	
+	/* 1: X = PBKDF2(password, salt) */
+	scrypt_pbkdf2_128B(password, X);
+
+	/* 2: X = ROMix(X) */
+	scrypt_ROMix(X, (__global uint4 *)padcache, N, gid, Nfactor);
+
+	/* 3: Out = PBKDF2(password, X) */
+	labels[lid] = scrypt_pbkdf2_32B(password, X) & 0x01;
+
+	barrier(CLK_LOCAL_MEM_FENCE); 
+
+	if (0 == lid) {
+		uint2 buffer;
+
+		output += gid * 8 / 64;
+
+		buffer.s0  = labels[0];
+		buffer.s0 |= labels[1] << 1;
+		buffer.s0 |= labels[2] << 2;
+		buffer.s0 |= labels[3] << 3;
+		buffer.s0 |= labels[4] << 4;
+		buffer.s0 |= labels[5] << 5;
+		buffer.s0 |= labels[6] << 6;
+		buffer.s0 |= labels[7] << 7;
+		buffer.s0 |= labels[8] << 8;
+		buffer.s0 |= labels[9] << 9;
+		buffer.s0 |= labels[10] << 10;
+		buffer.s0 |= labels[11] << 11;
+		buffer.s0 |= labels[12] << 12;
+		buffer.s0 |= labels[13] << 13;
+		buffer.s0 |= labels[14] << 14;
+		buffer.s0 |= labels[15] << 15;
+		buffer.s0 |= labels[16] << 16;
+		buffer.s0 |= labels[17] << 17;
+		buffer.s0 |= labels[18] << 18;
+		buffer.s0 |= labels[19] << 19;
+		buffer.s0 |= labels[20] << 20;
+		buffer.s0 |= labels[21] << 21;
+		buffer.s0 |= labels[22] << 22;
+		buffer.s0 |= labels[23] << 23;
+		buffer.s0 |= labels[24] << 24;
+		buffer.s0 |= labels[25] << 25;
+		buffer.s0 |= labels[26] << 26;
+		buffer.s0 |= labels[27] << 27;
+		buffer.s0 |= labels[28] << 28;
+		buffer.s0 |= labels[29] << 29;
+		buffer.s0 |= labels[30] << 30;
+		buffer.s0 |= labels[31] << 31;
+
+		buffer.s1  = labels[32];
+		buffer.s1 |= labels[33] << 1;
+		buffer.s1 |= labels[34] << 2;
+		buffer.s1 |= labels[35] << 3;
+		buffer.s1 |= labels[36] << 4;
+		buffer.s1 |= labels[37] << 5;
+		buffer.s1 |= labels[38] << 6;
+		buffer.s1 |= labels[39] << 7;
+		buffer.s1 |= labels[40] << 8;
+		buffer.s1 |= labels[41] << 9;
+		buffer.s1 |= labels[42] << 10;
+		buffer.s1 |= labels[43] << 11;
+		buffer.s1 |= labels[44] << 12;
+		buffer.s1 |= labels[45] << 13;
+		buffer.s1 |= labels[46] << 14;
+		buffer.s1 |= labels[47] << 15;
+		buffer.s1 |= labels[48] << 16;
+		buffer.s1 |= labels[49] << 17;
+		buffer.s1 |= labels[50] << 18;
+		buffer.s1 |= labels[51] << 19;
+		buffer.s1 |= labels[52] << 20;
+		buffer.s1 |= labels[53] << 21;
+		buffer.s1 |= labels[54] << 22;
+		buffer.s1 |= labels[55] << 23;
+		buffer.s1 |= labels[56] << 24;
+		buffer.s1 |= labels[57] << 25;
+		buffer.s1 |= labels[58] << 26;
+		buffer.s1 |= labels[59] << 27;
+		buffer.s1 |= labels[60] << 28;
+		buffer.s1 |= labels[61] << 29;
+		buffer.s1 |= labels[62] << 30;
+		buffer.s1 |= labels[63] << 31;
+
+		*(__global uint2*)output = buffer;
+	}
 }

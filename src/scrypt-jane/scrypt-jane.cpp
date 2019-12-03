@@ -170,6 +170,17 @@ static void scrypt_hash_finish(scrypt_hash_state *S, uint8_t *hash)
 	}
 }
 
+static uint8_t scrypt_hash_finish_1(scrypt_hash_state *S)
+{
+	size_t i;
+
+	S->buffer[S->leftover] = 0x01;
+	memset(S->buffer + (S->leftover + 1), 0, SCRYPT_HASH_BLOCK_SIZE - (S->leftover + 1));
+	S->buffer[SCRYPT_HASH_BLOCK_SIZE - 1] |= 0x80;
+	keccak_block(S, S->buffer);
+	return S->state[0];
+}
+
 // ---------------------------- END keccak functions ------------------------------------
 
 // ---------------------------- BEGIN PBKDF2 functions ------------------------------------
@@ -235,12 +246,18 @@ static void scrypt_hmac_finish(scrypt_hmac_state *st, scrypt_hash_digest mac)
 	scrypt_hash_finish(&st->outer, mac);
 }
 
-/*
- * Special version where N = 1
- *  - mikaelh
- */
-static void scrypt_pbkdf2_1(const uint8_t *password, size_t password_len,
-	const uint8_t *salt, size_t salt_len, uint8_t *out, uint64_t bytes)
+static uint8_t scrypt_hmac_finish_1(scrypt_hmac_state *st)
+{
+	/* h(inner || m) */
+	scrypt_hash_digest innerhash;
+	scrypt_hash_finish(&st->inner, innerhash);
+
+	/* h(outer || h(inner || m)) */
+	scrypt_hash_update(&st->outer, innerhash, sizeof(innerhash));
+	return scrypt_hash_finish_1(&st->outer);
+}
+
+static void scrypt_pbkdf2(const uint8_t *password, size_t password_len, const uint8_t *salt, size_t salt_len, uint8_t *out, uint64_t bytes)
 {
 	scrypt_hmac_state hmac_pw, hmac_pw_salt, work;
 	scrypt_hash_digest ti, u;
@@ -271,6 +288,28 @@ static void scrypt_pbkdf2_1(const uint8_t *password, size_t password_len,
 		out += SCRYPT_HASH_DIGEST_SIZE;
 		bytes -= SCRYPT_HASH_DIGEST_SIZE;
 	}
+}
+
+static uint8_t scrypt_pbkdf2_1(const uint8_t *password, size_t password_len, const uint8_t *salt, size_t salt_len)
+{
+	scrypt_hmac_state hmac_pw, hmac_pw_salt, work;
+	static uint8_t be[4] = { 0, 0, 0, 1 };
+
+	/* bytes must be <= (0xffffffff - (SCRYPT_HASH_DIGEST_SIZE - 1)), which they will always be under scrypt */
+
+	/* hmac(password, ...) */
+	scrypt_hmac_init(&hmac_pw, password, password_len);
+
+	/* hmac(password, salt...) */
+	hmac_pw_salt = hmac_pw;
+	if (salt_len && salt) {
+		scrypt_hmac_update(&hmac_pw_salt, salt, salt_len);
+	}
+
+	/* U1 = hmac(password, salt || be(1)) */
+	work = hmac_pw_salt;
+	scrypt_hmac_update(&work, be, 4);
+	return scrypt_hmac_finish_1(&work);
 }
 
 // ---------------------------- END PBKDF2 functions ------------------------------------
@@ -337,8 +376,7 @@ static void scrypt_free(scrypt_aligned_alloc *aa)
 }
 #endif
 
-static void scrypt_jane_hash_1_1(const uchar *password, size_t password_len, const uchar*salt, size_t salt_len, uint32_t N,
-	uchar *out, uint32_t bytes, uint8_t *X, uint8_t *Y, uint8_t *V)
+static uint8_t scrypt_jane_hash_1_1(const uchar *password, size_t password_len, const uchar*salt, size_t salt_len, uint32_t N, uint8_t *X, uint8_t *Y, uint8_t *V)
 {
 	uint32_t chunk_bytes, i;
 	const uint32_t p = 1;
@@ -350,7 +388,7 @@ static void scrypt_jane_hash_1_1(const uchar *password, size_t password_len, con
 	chunk_bytes = SCRYPT_BLOCK_BYTES * 1 * 2;
 
 	/* 1: X = PBKDF2(password, salt) */
-	scrypt_pbkdf2_1(password, password_len, salt, salt_len, X, chunk_bytes * p);
+	scrypt_pbkdf2(password, password_len, salt, salt_len, X, chunk_bytes * p);
 
 	/* 2: X = ROMix(X) */
 	for (i = 0; i < p; i++) {
@@ -358,34 +396,7 @@ static void scrypt_jane_hash_1_1(const uchar *password, size_t password_len, con
 	}
 
 	/* 3: Out = PBKDF2(password, X) */
-	scrypt_pbkdf2_1(password, password_len, X, chunk_bytes * p, out, (size_t) bytes);
-
-#ifdef SCRYPT_PREVENT_STATE_LEAK
-	/* This is an unnecessary security feature - mikaelh */
-	scrypt_ensure_zero(Y, (p + 1) * chunk_bytes);
-#endif
-}
-
-/* for cpu hash test */
-void scryptjane_hash(void* output, const void* input, uint32_t N, uint32_t r, uint32_t p)
-{
-	uint64_t chunk_bytes;
-	uint8_t *X, *Y;
-	scrypt_aligned_alloc YX, V;
-
-	chunk_bytes = 2ULL * SCRYPT_BLOCK_BYTES * r;
-	V  = scrypt_alloc(N * chunk_bytes);
-	YX = scrypt_alloc((p + 1) * chunk_bytes);
-
-	memset(V.ptr, 0, (size_t) (N * chunk_bytes));
-
-	Y = YX.ptr;
-	X = Y + chunk_bytes;
-
-	scrypt_jane_hash_1_1((uchar*)input, 80, (uchar*)input, 80, (uint32_t)N, (uchar*)output, 32, X, Y, V.ptr);
-
-	scrypt_free(&V);
-	scrypt_free(&YX);
+	return scrypt_pbkdf2_1(password, password_len, X, chunk_bytes * p);
 }
 
 static void cpu_shutdown(struct cgpu_info *cgpu);
@@ -462,26 +473,30 @@ static bool cpu_init(struct cgpu_info *cgpu)
 	return true;
 }
 
-static int64_t cpu_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uint64_t start_position, uint64_t end_position, uint8_t *output, uint32_t N, uint32_t r, uint32_t p, struct timeval *tv_start, struct timeval *tv_end)
+static int64_t cpu_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uint64_t start_position, uint64_t end_position, uint8_t hash_len_bits, uint8_t *output, uint32_t N, uint32_t r, uint32_t p, struct timeval *tv_start, struct timeval *tv_end)
 {
 	if (cpu_prepare(cgpu, N, r, p))
 	{
 		_cpuState *cpuState = (_cpuState *)cgpu->device_data;
 		uint64_t n = start_position;
+		uint8_t label_mask = (1 << hash_len_bits) - 1;
+		uint32_t available = 8;
+		uint8_t label;
 
 		gettimeofday(tv_start, NULL);
 
+		*output = 0;
+
 		do {
-//			((uint32_t*)pdata)[19] = n;
 			((uint64_t*)pdata)[4] = n;
 			if (1 == r && 1 == p) {
-				scrypt_jane_hash_1_1((uchar*)pdata, 72, NULL, 0, (uint32_t)N, (uchar*)output, 1, cpuState->X, cpuState->Y, cpuState->V.ptr);
+				label = scrypt_jane_hash_1_1((uchar*)pdata, 72, NULL, 0, (uint32_t)N, cpuState->X, cpuState->Y, cpuState->V.ptr);
 			}
 			else {
 				uint32_t i;
 
 				/* 1: X = PBKDF2(password, salt) */
-				scrypt_pbkdf2_1((uchar*)pdata, 72, NULL, 0, cpuState->X, cpuState->chunk_bytes * p);
+				scrypt_pbkdf2((uchar*)pdata, 72, NULL, 0, cpuState->X, cpuState->chunk_bytes * p);
 
 				/* 2: X = ROMix(X) */
 				for (i = 0; i < p; i++) {
@@ -489,9 +504,28 @@ static int64_t cpu_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uint
 				}
 
 				/* 3: Out = PBKDF2(password, X) */
-				scrypt_pbkdf2_1((uchar*)pdata, 72, cpuState->X, cpuState->chunk_bytes * p, (uchar*)output, 1);
+				label = scrypt_pbkdf2_1((uchar*)pdata, 72, cpuState->X, cpuState->chunk_bytes * p);
 			}
-			output++;
+			if (8 == hash_len_bits) {
+				*output++ = label;
+			}
+			else {
+				label &= label_mask;
+				if (available >= hash_len_bits) {
+					label <<= 8 - available;
+					*output |= label;
+					available -= hash_len_bits;
+					if (0 == available) {
+						available = 8;
+						output++;
+					}
+				}
+				else {
+					*output++ |= label << (8 - available);
+					*output = label >> available;
+					available = 8 - (hash_len_bits - available);
+				}
+			}
 			n++;
 		} while (n <= end_position && !abort_flag);
 

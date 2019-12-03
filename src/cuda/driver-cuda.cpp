@@ -81,14 +81,14 @@ static void reinit_cuda_device(struct cgpu_info *gpu)
 {
 }
 
-static bool cuda_prepare(struct cgpu_info *cgpu, unsigned N, uint32_t r, uint32_t p)
+static bool cuda_prepare(struct cgpu_info *cgpu, unsigned N, uint32_t r, uint32_t p, uint32_t hash_len_bits)
 {
 	if (N != cgpu->N || r != cgpu->r || p != cgpu->p) {
 		applog(LOG_INFO, "Init GPU thread for GPU %i, platform GPU %i, pci [%d:%d]", cgpu->id, cgpu->driver_id, cgpu->pci_bus_id, cgpu->pci_device_id);
 		if (cgpu->device_data) {
 			cuda_shutdown(cgpu);
 		}
-		cgpu->device_data = initCuda(cgpu, N, r, p);
+		cgpu->device_data = initCuda(cgpu, N, r, p, hash_len_bits);
 		if (!cgpu->device_data) {
 			applog(LOG_ERR, "Failed to init GPU, disabling device %d", cgpu->id);
 			cgpu->deven = DEV_DISABLED;
@@ -115,9 +115,9 @@ static bool cuda_init(struct cgpu_info *cgpu)
 
 #define	PREIMAGE_SIZE	72
 
-static int64_t cuda_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uint64_t start_position, uint64_t end_position, uint8_t *output, uint32_t N, uint32_t r, uint32_t p, struct timeval *tv_start, struct timeval *tv_end)
+static int64_t cuda_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uint64_t start_position, uint64_t end_position, uint8_t hash_len_bits, uint8_t *output, uint32_t N, uint32_t r, uint32_t p, struct timeval *tv_start, struct timeval *tv_end)
 {
-	if (cuda_prepare(cgpu, N, r, p))
+	if (cuda_prepare(cgpu, N, r, p, hash_len_bits))
 	{
 		_cudaState *cudaState = (_cudaState *)cgpu->device_data;
 
@@ -146,7 +146,8 @@ static int64_t cuda_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uin
 		int cur = 0, nxt = 1; // streams
 		int iteration = 0;
 		uint8_t *out = output;
-		uint64_t outLength = end_position - start_position + 1;
+		uint64_t chunkSize = (cgpu->thread_concurrency * hash_len_bits) / 8;
+		uint64_t outLength = ((end_position - start_position + 1) * hash_len_bits + 7) / 8;
 
 		do {
 			nonce[nxt] = n;
@@ -159,23 +160,29 @@ static int64_t cuda_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uin
 			}
 
 			cuda_scrypt_serialize(cgpu, cudaState, nxt);
-			pre_keccak512(cudaState, nxt, nonce[nxt], cgpu->thread_concurrency, r);
-			cuda_scrypt_core(cgpu, cudaState, nxt, N, r, p);
+			if (1 == r && 1 == p) {
+				pre_keccak512_1_1(cudaState, nxt, nonce[nxt], cgpu->thread_concurrency);
+				cuda_scrypt_core(cgpu, cudaState, nxt, N, r, p);
+			}
+			else {
+				pre_keccak512(cudaState, nxt, nonce[nxt], cgpu->thread_concurrency, r);
+				cuda_scrypt_core(cgpu, cudaState, nxt, N, r, p);
+			}
 			if (!cuda_scrypt_sync(cgpu, cudaState, nxt)) {
 				break;
 			}
 
-			post_keccak512(cudaState, nxt, nonce[nxt], cgpu->thread_concurrency, r);
+			post_keccak512(cudaState, nxt, nonce[nxt], cgpu->thread_concurrency, r, hash_len_bits);
 			cuda_scrypt_done(cudaState, nxt);
 
-			cuda_scrypt_DtoH(cudaState, hash[nxt], nxt);
+			cuda_scrypt_DtoH(cudaState, hash[nxt], nxt, chunkSize);
 			if (!cuda_scrypt_sync(cgpu, cudaState, nxt)) {
 				break;
 			}
 
-			memcpy(out, hash[nxt], min(cgpu->thread_concurrency, outLength));
-			out += cgpu->thread_concurrency;
-			outLength -= cgpu->thread_concurrency;
+			memcpy(out, hash[nxt], min(chunkSize, outLength));
+			out += chunkSize;
+			outLength -= chunkSize;
 
 			cur = (cur + 1) & 1;
 			nxt = (nxt + 1) & 1;

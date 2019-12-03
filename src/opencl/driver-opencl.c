@@ -49,9 +49,9 @@ be32enc_vect(uint32_t *dst, const uint32_t *src, uint32_t len)
 
 static void opencl_shutdown(struct cgpu_info *cgpu);
 
-static cl_int queue_scrypt_kernel(_clState *clState, uint8_t *pdata, uint64_t start_pos, uint32_t N, int nBuf)
+static cl_int queue_scrypt_kernel(_clState *clState, uint8_t *pdata, uint64_t start_pos, uint32_t N, int nBuf, uint32_t hash_len_bits)
 {
-	cl_kernel *kernel = &clState->kernel;
+	cl_kernel *kernel = &clState->kernel[hash_len_bits];
 	unsigned int num = 0;
 	cl_int status = 0;
 
@@ -195,7 +195,7 @@ static void reinit_opencl_device(struct cgpu_info *gpu)
 
 static uint32_t *blank_res;
 
-static bool opencl_prepare(struct cgpu_info *cgpu, unsigned N, uint32_t r, uint32_t p)
+static bool opencl_prepare(struct cgpu_info *cgpu, unsigned N, uint32_t r, uint32_t p, cl_uint hash_len_bits)
 {
 	if (N != cgpu->N || r != cgpu->r || p != cgpu->p) {
 		char name[256];
@@ -204,7 +204,7 @@ static bool opencl_prepare(struct cgpu_info *cgpu, unsigned N, uint32_t r, uint3
 		if (cgpu->device_data) {
 			opencl_shutdown(cgpu);
 		}
-		cgpu->device_data = initCl(cgpu, name, sizeof(name));
+		cgpu->device_data = initCl(cgpu, name, sizeof(name), hash_len_bits);
 		if (!cgpu->device_data) {
 			applog(LOG_ERR, "Failed to init GPU, disabling device %d", cgpu->id);
 			cgpu->deven = DEV_DISABLED;
@@ -230,12 +230,12 @@ static bool opencl_init(struct cgpu_info *cgpu)
 
 #define	USE_ASYNC_BUFFER_READ	1
 
-static int64_t opencl_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uint64_t start_position, uint64_t end_position, uint8_t *output, uint32_t N, uint32_t r, uint32_t p, struct timeval *tv_start, struct timeval *tv_end)
+static int64_t opencl_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uint64_t start_position, uint64_t end_position, uint8_t hash_len_bits, uint8_t *output, uint32_t N, uint32_t r, uint32_t p, struct timeval *tv_start, struct timeval *tv_end)
 {
-	if (opencl_prepare(cgpu, N, r, p))
+	if (opencl_prepare(cgpu, N, r, p, hash_len_bits))
 	{
 		_clState *clState = (_clState *)cgpu->device_data;
-		const cl_kernel *kernel = &clState->kernel;
+		const cl_kernel *kernel = &clState->kernel[hash_len_bits];
 
 		cl_int status;
 		size_t globalThreads[1] = { cgpu->thread_concurrency };
@@ -247,9 +247,11 @@ static int64_t opencl_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, u
 
 		uint64_t n = start_position;
 		size_t positions = end_position - start_position + 1;
+		uint64_t chunkSize = (cgpu->thread_concurrency * hash_len_bits) / 8;
+		uint64_t outLength = ((end_position - start_position + 1) * hash_len_bits + 7) / 8;
 
 		do {
-			status = queue_scrypt_kernel(clState, pdata, n, N, (firstBuffer ? 0 : 1));
+			status = queue_scrypt_kernel(clState, pdata, n, N, (firstBuffer ? 0 : 1), hash_len_bits);
 			if (unlikely(status != CL_SUCCESS)) {
 				applog(LOG_ERR, "Error: clSetKernelArg of all params failed.");
 				return -1;
@@ -272,9 +274,9 @@ static int64_t opencl_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, u
 				clReleaseEvent(clState->outputEvent[(firstBuffer ? 0 : 1)]);
 				clState->outputEvent[(firstBuffer ? 0 : 1)] = NULL;
 			}
-			status = clEnqueueReadBuffer(clState->commandQueue, clState->outputBuffer[(firstBuffer ? 0 : 1)], CL_FALSE, 0, min(cgpu->thread_concurrency, positions), output, 0, NULL, &clState->outputEvent[(firstBuffer ? 0 : 1)]);
+			status = clEnqueueReadBuffer(clState->commandQueue, clState->outputBuffer[(firstBuffer ? 0 : 1)], CL_FALSE, 0, min(chunkSize, outLength), output, 0, NULL, &clState->outputEvent[(firstBuffer ? 0 : 1)]);
 #else
-			status = clEnqueueReadBuffer(clState->commandQueue, clState->outputBuffer[(firstBuffer ? 0 : 1)], CL_TRUE, 0, min(cgpu->thread_concurrency, positions), output, 0, NULL, NULL);
+			status = clEnqueueReadBuffer(clState->commandQueue, clState->outputBuffer[(firstBuffer ? 0 : 1)], CL_TRUE, 0, min(chunkSize, outLength), output, 0, NULL, NULL);
 #endif
 			if (unlikely(status != CL_SUCCESS)) {
 				applog(LOG_ERR, "Error: clEnqueueReadBuffer failed error %d. (clEnqueueReadBuffer)", status);
@@ -293,7 +295,8 @@ static int64_t opencl_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, u
 #else
 			clFinish(clState->commandQueue);
 #endif
-			output += cgpu->thread_concurrency;
+			output += chunkSize;
+			outLength -= chunkSize;
 			positions -= cgpu->thread_concurrency;
 
 		} while (n <= end_position && !abort_flag);
@@ -316,7 +319,30 @@ static void opencl_shutdown(struct cgpu_info *cgpu)
 {
 	_clState *clState = (_clState *)cgpu->device_data;
 	if (!clState) {
-		clReleaseKernel(clState->kernel);
+		if (clState->kernel[1]) {
+			clReleaseKernel(clState->kernel[1]);
+		}
+		if (clState->kernel[2]) {
+			clReleaseKernel(clState->kernel[2]);
+		}
+		if (clState->kernel[3]) {
+			clReleaseKernel(clState->kernel[3]);
+		}
+		if (clState->kernel[4]) {
+			clReleaseKernel(clState->kernel[4]);
+		}
+		if (clState->kernel[5]) {
+			clReleaseKernel(clState->kernel[5]);
+		}
+		if (clState->kernel[6]) {
+			clReleaseKernel(clState->kernel[6]);
+		}
+		if (clState->kernel[7]) {
+			clReleaseKernel(clState->kernel[7]);
+		}
+		if (clState->kernel[8]) {
+			clReleaseKernel(clState->kernel[8]);
+		}
 		clReleaseProgram(clState->program);
 		clReleaseCommandQueue(clState->commandQueue);
 		clReleaseContext(clState->context);

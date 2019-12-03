@@ -48,7 +48,7 @@ uint32_t  h_V_extra[MAX_GPUDEVICES][TOTAL_WARP_LIMIT * 64];    //       with rea
 
 int find_optimal_blockcount(struct cgpu_info *cgpu, KernelInterface* &kernel, uint32_t N, uint32_t r, uint32_t p, bool &concurrent, int &wpb);
 
-_cudaState *initCuda(struct cgpu_info *cgpu, uint32_t N, uint32_t r, uint32_t p)
+_cudaState *initCuda(struct cgpu_info *cgpu, uint32_t N, uint32_t r, uint32_t p, uint32_t hash_len_bits)
 {
 	_cudaState *cudaState = (_cudaState *)calloc(1, sizeof(_cudaState));
 	int GRID_BLOCKS, WARPS_PER_BLOCK;
@@ -69,7 +69,7 @@ _cudaState *initCuda(struct cgpu_info *cgpu, uint32_t N, uint32_t r, uint32_t p)
 
 	unsigned int THREADS_PER_WU = kernel->threads_per_wu();
 	unsigned int mem_size = WU_PER_LAUNCH * sizeof(uint32_t) * 32 * r;
-	unsigned int labels_size = WU_PER_LAUNCH;
+	unsigned int labels_size = (WU_PER_LAUNCH * hash_len_bits + 7) / 8;
 
 	// allocate device memory for scrypt_core inputs and outputs
 	uint32_t *tmp;
@@ -365,13 +365,13 @@ void cuda_scrypt_core(struct cgpu_info *cgpu, _cudaState *cudaState, int stream,
 	);
 }
 
-void cuda_scrypt_DtoH(_cudaState *cudaState, uint8_t *X, int stream)
+void cuda_scrypt_DtoH(_cudaState *cudaState, uint8_t *X, int stream, uint32_t size)
 {
 	unsigned int GRID_BLOCKS = cudaState->context_blocks;
 	unsigned int WARPS_PER_BLOCK = cudaState->context_wpb;
 	unsigned int THREADS_PER_WU = cudaState->context_kernel->threads_per_wu();
 	// copy result from device to host (asynchronously)
-	checkCudaErrors(cudaState->cuda_id, cudaMemcpyAsync(X, cudaState->context_labels[stream], WU_PER_LAUNCH, cudaMemcpyDeviceToHost, cudaState->context_streams[stream]));
+	checkCudaErrors(cudaState->cuda_id, cudaMemcpyAsync(X, cudaState->context_labels[stream], size, cudaMemcpyDeviceToHost, cudaState->context_streams[stream]));
 }
 
 bool cuda_scrypt_sync(struct cgpu_info *cgpu, _cudaState *cudaState, int stream)

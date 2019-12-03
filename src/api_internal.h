@@ -271,7 +271,7 @@ struct device_drv {
 
 	bool(*init)(struct cgpu_info *);
 
-	int64_t(*scrypt_positions)(struct cgpu_info *, uint8_t *pdata, uint64_t start_pos, uint64_t end_position, uint8_t *out, uint32_t N, uint32_t r, uint32_t p, struct timeval *tv_start, struct timeval *tv_end); // (thr, pdata, start_pos, end_position, out, N, r, p, tv_start, tv_end)
+	int64_t(*scrypt_positions)(struct cgpu_info *, uint8_t *pdata, uint64_t start_pos, uint64_t end_position, uint8_t hash_len_bits, uint8_t *out, uint32_t N, uint32_t r, uint32_t p, struct timeval *tv_start, struct timeval *tv_end); // (thr, pdata, start_pos, end_position, out, N, r, p, tv_start, tv_end)
 
 	void(*shutdown)(struct cgpu_info *);
 
@@ -330,8 +330,6 @@ extern pthread_mutex_t applog_lock;
 extern bool have_cuda;
 extern bool have_opencl;
 
-extern struct cgpu_info g_gpus[MAX_GPUDEVICES];
-
 #define EXIT_CODE_OK            0
 #define EXIT_CODE_USAGE         1
 #define EXIT_CODE_POOL_TIMEOUT  2
@@ -341,11 +339,11 @@ extern struct cgpu_info g_gpus[MAX_GPUDEVICES];
 #define EXIT_CODE_TIME_LIMIT    0
 #define EXIT_CODE_KILLED        7
 
+void spacemesh_api_stop();
+int spacemesh_api_stats();
 struct cgpu_info * get_available_gpu();
 struct cgpu_info * get_available_gpu_by_type(enum drv_driver type);
 void release_gpu(struct cgpu_info *cgpu);
-
-void proper_exit(int reason);
 
 #ifdef __cplusplus
 }

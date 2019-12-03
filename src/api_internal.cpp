@@ -22,11 +22,11 @@ pthread_mutex_t applog_lock;
 pthread_mutex_t gpus_lock;
 #endif
 
-static int total_devices = 0;
+static int s_total_devices = 0;
 bool have_cuda = false;
 bool have_opencl = false;
 
-struct cgpu_info g_gpus[MAX_GPUDEVICES]; /* Maximum number apparently possible */
+static struct cgpu_info s_gpus[MAX_GPUDEVICES]; /* Maximum number apparently possible */
 
 static volatile int api_inited = 0;
 
@@ -42,20 +42,20 @@ extern "C" void spacemesh_api_init()
 		pthread_mutex_init(&gpus_lock, NULL);
 #endif
 
-		memset(g_gpus, 0, sizeof(g_gpus));
+		memset(s_gpus, 0, sizeof(s_gpus));
 
 #ifdef HAVE_CUDA
-		cuda_drv.drv_detect(g_gpus, &total_devices);
+		cuda_drv.drv_detect(s_gpus, &s_total_devices);
 #endif
 
 #ifdef HAVE_OPENCL
-		opencl_drv.drv_detect(g_gpus, &total_devices);
+		opencl_drv.drv_detect(s_gpus, &s_total_devices);
 #endif
 
-		cpu_drv.drv_detect(g_gpus, &total_devices);
+		cpu_drv.drv_detect(s_gpus, &s_total_devices);
 
-		for (int i = 0; i < total_devices; ++i) {
-			struct cgpu_info *cgpu = &g_gpus[i];
+		for (int i = 0; i < s_total_devices; ++i) {
+			struct cgpu_info *cgpu = &s_gpus[i];
 			cgpu->status = LIFE_INIT;
 
 			if (!cgpu->drv->init(cgpu)) {
@@ -67,29 +67,14 @@ extern "C" void spacemesh_api_init()
 	}
 }
 
-/**
-* Exit app
-*/
-void proper_exit(int reason)
-{
-	if (abort_flag) {/* already called */
-		return;
-	}
-
-	abort_flag = true;
-	usleep(200 * 1000);
-
-	exit(reason);
-}
-
 // TODO: wait for available
 struct cgpu_info * get_available_gpu()
 {
 	struct cgpu_info *cgpu = NULL;
 	pthread_mutex_lock(&gpus_lock);
-	for (int i = 0; i < total_devices; ++i) {
-		if (g_gpus[i].available) {
-			cgpu = &g_gpus[i];
+	for (int i = 0; i < s_total_devices; ++i) {
+		if (s_gpus[i].available) {
+			cgpu = &s_gpus[i];
 			cgpu->available = false;
 			break;
 		}
@@ -102,9 +87,9 @@ struct cgpu_info * get_available_gpu_by_type(enum drv_driver type)
 {
 	struct cgpu_info *cgpu = NULL;
 	pthread_mutex_lock(&gpus_lock);
-	for (int i = 0; i < total_devices; ++i) {
-		if (g_gpus[i].available && (type == g_gpus[i].drv->drv_id)) {
-			cgpu = &g_gpus[i];
+	for (int i = 0; i < s_total_devices; ++i) {
+		if (s_gpus[i].available && (type == s_gpus[i].drv->drv_id)) {
+			cgpu = &s_gpus[i];
 			cgpu->available = false;
 			break;
 		}
@@ -125,4 +110,27 @@ void _quit(int status)
 //	clean_up();
 
 	exit(status);
+}
+
+int spacemesh_api_stats()
+{
+	int devices = SPACEMESH_API_CPU;
+	for (int i = 0; i < s_total_devices; ++i) {
+		if (DRIVER_CUDA == s_gpus[i].drv->drv_id) {
+			devices |= SPACEMESH_API_CUDA;
+		}
+		else if (DRIVER_OPENCL == s_gpus[i].drv->drv_id) {
+			devices |= SPACEMESH_API_OPENCL;
+		}
+	}
+	return devices;
+}
+
+void spacemesh_api_stop()
+{
+	if (abort_flag) {/* already called */
+		return;
+	}
+
+	abort_flag = true;
 }

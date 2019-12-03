@@ -24,7 +24,7 @@
 
 typedef struct {
 	cl_context context;
-	cl_kernel kernel;
+	cl_kernel kernel[9];
 	cl_command_queue commandQueue;
 	cl_program program;
 
@@ -44,6 +44,6 @@ typedef struct {
 } _clState;
 
 extern char *file_contents(const char *filename, int *length);
-extern _clState *initCl(struct cgpu_info *cgpu, char *name, size_t nameSize);
+extern _clState *initCl(struct cgpu_info *cgpu, char *name, size_t nameSize, cl_uint hash_len_bits);
 
 #endif /* __OCL_H__ */

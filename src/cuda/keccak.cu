@@ -423,12 +423,49 @@ void cuda_pre_keccak512(uint32_t *g_idata, uint64_t nonce, uint32_t r)
 }
 
 __global__ __launch_bounds__(128)
-void cuda_post_keccak512(uint32_t *g_odata, uint8_t *labels, uint64_t nonce, uint32_t r)
+void cuda_pre_keccak512_1_1(uint32_t *g_idata, uint64_t nonce)
 {
+	uint32_t i, blocks;
 	uint32_t data[20];
 
 	const uint32_t thread = (blockIdx.x * blockDim.x) + threadIdx.x;
-	labels  += thread;
+	nonce += thread;
+	g_idata += thread * 32;
+
+#pragma unroll
+	for (int i = 0; i < 19; i++) {
+		data[i] = c_data[i];
+	}
+	((uint64_t*)data)[4] = nonce;
+
+	pbkdf2_hmac_state hmac_pw;
+	uint32_t bytes = 128;
+
+	/* hmac(password, ...) */
+	pbkdf2_hmac_init72(&hmac_pw, data);
+
+	pbkdf2_hmac_state work;
+
+	/* U1 = hmac(password, salt || be(i)) */
+	uint32_t be = 0x01000000; //  cuda_swab32(1);
+	pbkdf2_statecopy0(&work, &hmac_pw);
+	pbkdf2_hmac_update4(&work, &be);
+	pbkdf2_hmac_finish4(&work, g_idata);
+
+	g_idata += SCRYPT_HASH_DIGEST_SIZE / sizeof(uint32_t);
+
+	be = 0x02000000; //  cuda_swab32(2);
+	pbkdf2_statecopy0(&work, &hmac_pw);
+	pbkdf2_hmac_update4(&work, &be);
+	pbkdf2_hmac_finish4(&work, g_idata);
+}
+
+__global__ __launch_bounds__(128)
+void cuda_post_keccak512_8(uint32_t *g_odata, uint8_t *labels, uint64_t nonce, uint32_t r)
+{
+	uint32_t data[20];
+
+	const uint32_t thread = blockIdx.x * blockDim.x + threadIdx.x;
 	g_odata += thread * 32 * r;
 	nonce   += thread;
 
@@ -449,7 +486,221 @@ void cuda_post_keccak512(uint32_t *g_odata, uint8_t *labels, uint64_t nonce, uin
 	/* U1 = hmac(password, salt || be(i)) */
 	uint32_t be = 0x01000000U;//cuda_swab32(1);
 	buffered = pbkdf2_hmac_buffer_update4(&hmac_pw, be, buffered);
-	*labels = pbkdf2_hmac_finish(&hmac_pw, buffered);
+	labels[thread] = pbkdf2_hmac_finish(&hmac_pw, buffered);
+}
+
+__global__ __launch_bounds__(128)
+void cuda_post_keccak512_4(uint32_t *g_odata, uint8_t *out, uint64_t nonce, uint32_t r)
+{
+	uint32_t data[20];
+	uint32_t label;
+
+	const uint32_t thread = blockIdx.x * blockDim.x + threadIdx.x;
+	g_odata += thread * 32 * r;
+	nonce += thread;
+
+#pragma unroll
+	for (int i = 0; i < 19; i++) {
+		data[i] = c_data[i];
+	}
+	((uint64_t*)data)[4] = nonce;
+
+	pbkdf2_hmac_state hmac_pw;
+
+	/* hmac(password, ...) */
+	pbkdf2_hmac_init72(&hmac_pw, data);
+
+	/* hmac(password, salt...) */
+	uint32_t buffered = pbkdf2_hmac_update(&hmac_pw, g_odata, 128 * r);
+
+	/* U1 = hmac(password, salt || be(i)) */
+	uint32_t be = 0x01000000U;//cuda_swab32(1);
+	buffered = pbkdf2_hmac_buffer_update4(&hmac_pw, be, buffered);
+	label = pbkdf2_hmac_finish(&hmac_pw, buffered) & 0x0f;
+	out += thread * 16 / 32;
+
+	uint4 labels;
+
+	labels.x  = __shfl_sync(0xFFFFFFFF, label, 0, 32);
+	labels.x |= __shfl_sync(0xFFFFFFFF, label, 1, 32) << 4;
+	labels.x |= __shfl_sync(0xFFFFFFFF, label, 2, 32) << 8;
+	labels.x |= __shfl_sync(0xFFFFFFFF, label, 3, 32) << 12;
+	labels.x |= __shfl_sync(0xFFFFFFFF, label, 4, 32) << 16;
+	labels.x |= __shfl_sync(0xFFFFFFFF, label, 5, 32) << 20;
+	labels.x |= __shfl_sync(0xFFFFFFFF, label, 6, 32) << 24;
+	labels.x |= __shfl_sync(0xFFFFFFFF, label, 7, 32) << 28;
+
+	labels.y  = __shfl_sync(0xFFFFFFFF, label,  8, 32);
+	labels.y |= __shfl_sync(0xFFFFFFFF, label,  9, 32) << 4;
+	labels.y |= __shfl_sync(0xFFFFFFFF, label, 10, 32) << 8;
+	labels.y |= __shfl_sync(0xFFFFFFFF, label, 11, 32) << 12;
+	labels.y |= __shfl_sync(0xFFFFFFFF, label, 12, 32) << 16;
+	labels.y |= __shfl_sync(0xFFFFFFFF, label, 13, 32) << 20;
+	labels.y |= __shfl_sync(0xFFFFFFFF, label, 14, 32) << 24;
+	labels.y |= __shfl_sync(0xFFFFFFFF, label, 15, 32) << 28;
+
+	labels.z  = __shfl_sync(0xFFFFFFFF, label, 16, 32);
+	labels.z |= __shfl_sync(0xFFFFFFFF, label, 17, 32) << 4;
+	labels.z |= __shfl_sync(0xFFFFFFFF, label, 18, 32) << 8;
+	labels.z |= __shfl_sync(0xFFFFFFFF, label, 19, 32) << 12;
+	labels.z |= __shfl_sync(0xFFFFFFFF, label, 20, 32) << 16;
+	labels.z |= __shfl_sync(0xFFFFFFFF, label, 21, 32) << 20;
+	labels.z |= __shfl_sync(0xFFFFFFFF, label, 22, 32) << 24;
+	labels.z |= __shfl_sync(0xFFFFFFFF, label, 23, 32) << 28;
+
+	labels.w  = __shfl_sync(0xFFFFFFFF, label, 24, 32);
+	labels.w |= __shfl_sync(0xFFFFFFFF, label, 25, 32) << 4;
+	labels.w |= __shfl_sync(0xFFFFFFFF, label, 26, 32) << 8;
+	labels.w |= __shfl_sync(0xFFFFFFFF, label, 27, 32) << 12;
+	labels.w |= __shfl_sync(0xFFFFFFFF, label, 28, 32) << 16;
+	labels.w |= __shfl_sync(0xFFFFFFFF, label, 29, 32) << 20;
+	labels.w |= __shfl_sync(0xFFFFFFFF, label, 30, 32) << 24;
+	labels.w |= __shfl_sync(0xFFFFFFFF, label, 31, 32) << 28;
+
+	if (0 == threadIdx.x % 32) {
+			*(uint4*)out = labels;
+	}
+}
+
+__global__ __launch_bounds__(128)
+void cuda_post_keccak512_2(uint32_t *g_odata, uint8_t *out, uint64_t nonce, uint32_t r)
+{
+	uint32_t data[20];
+	uint32_t label;
+
+	const uint32_t thread = blockIdx.x * blockDim.x + threadIdx.x;
+	g_odata += thread * 32 * r;
+	nonce += thread;
+
+#pragma unroll
+	for (int i = 0; i < 19; i++) {
+		data[i] = c_data[i];
+	}
+	((uint64_t*)data)[4] = nonce;
+
+	pbkdf2_hmac_state hmac_pw;
+
+	/* hmac(password, ...) */
+	pbkdf2_hmac_init72(&hmac_pw, data);
+
+	/* hmac(password, salt...) */
+	uint32_t buffered = pbkdf2_hmac_update(&hmac_pw, g_odata, 128 * r);
+
+	/* U1 = hmac(password, salt || be(i)) */
+	uint32_t be = 0x01000000U;//cuda_swab32(1);
+	buffered = pbkdf2_hmac_buffer_update4(&hmac_pw, be, buffered);
+	label = pbkdf2_hmac_finish(&hmac_pw, buffered) & 0x03;
+	out += thread * 8 / 32;
+
+	uint2 labels;
+
+	labels.x  = __shfl_sync(0xFFFFFFFF, label,  0, 32);
+	labels.x |= __shfl_sync(0xFFFFFFFF, label,  1, 32) << 2;
+	labels.x |= __shfl_sync(0xFFFFFFFF, label,  2, 32) << 4;
+	labels.x |= __shfl_sync(0xFFFFFFFF, label,  3, 32) << 6;
+	labels.x |= __shfl_sync(0xFFFFFFFF, label,  4, 32) << 8;
+	labels.x |= __shfl_sync(0xFFFFFFFF, label,  5, 32) << 10;
+	labels.x |= __shfl_sync(0xFFFFFFFF, label,  6, 32) << 12;
+	labels.x |= __shfl_sync(0xFFFFFFFF, label,  7, 32) << 14;
+	labels.x |= __shfl_sync(0xFFFFFFFF, label,  8, 32) << 16;
+	labels.x |= __shfl_sync(0xFFFFFFFF, label,  9, 32) << 18;
+	labels.x |= __shfl_sync(0xFFFFFFFF, label, 10, 32) << 20;
+	labels.x |= __shfl_sync(0xFFFFFFFF, label, 11, 32) << 22;
+	labels.x |= __shfl_sync(0xFFFFFFFF, label, 12, 32) << 24;
+	labels.x |= __shfl_sync(0xFFFFFFFF, label, 13, 32) << 26;
+	labels.x |= __shfl_sync(0xFFFFFFFF, label, 14, 32) << 28;
+	labels.x |= __shfl_sync(0xFFFFFFFF, label, 15, 32) << 30;
+
+	labels.y  = __shfl_sync(0xFFFFFFFF, label, 16, 32);
+	labels.y |= __shfl_sync(0xFFFFFFFF, label, 17, 32) << 2;
+	labels.y |= __shfl_sync(0xFFFFFFFF, label, 18, 32) << 4;
+	labels.y |= __shfl_sync(0xFFFFFFFF, label, 19, 32) << 6;
+	labels.y |= __shfl_sync(0xFFFFFFFF, label, 20, 32) << 8;
+	labels.y |= __shfl_sync(0xFFFFFFFF, label, 21, 32) << 10;
+	labels.y |= __shfl_sync(0xFFFFFFFF, label, 22, 32) << 12;
+	labels.y |= __shfl_sync(0xFFFFFFFF, label, 23, 32) << 14;
+	labels.y |= __shfl_sync(0xFFFFFFFF, label, 24, 32) << 16;
+	labels.y |= __shfl_sync(0xFFFFFFFF, label, 25, 32) << 18;
+	labels.y |= __shfl_sync(0xFFFFFFFF, label, 26, 32) << 20;
+	labels.y |= __shfl_sync(0xFFFFFFFF, label, 27, 32) << 22;
+	labels.y |= __shfl_sync(0xFFFFFFFF, label, 28, 32) << 24;
+	labels.y |= __shfl_sync(0xFFFFFFFF, label, 29, 32) << 26;
+	labels.y |= __shfl_sync(0xFFFFFFFF, label, 30, 32) << 28;
+	labels.y |= __shfl_sync(0xFFFFFFFF, label, 31, 32) << 30;
+
+	if (0 == threadIdx.x % 32) {
+		*(uint2*)out = labels;
+	}
+}
+
+__global__ __launch_bounds__(128)
+void cuda_post_keccak512_1(uint32_t *g_odata, uint8_t *out, uint64_t nonce, uint32_t r)
+{
+	uint32_t data[20];
+	uint32_t label;
+
+	const uint32_t thread = blockIdx.x * blockDim.x + threadIdx.x;
+	g_odata += thread * 32 * r;
+	nonce += thread;
+
+#pragma unroll
+	for (int i = 0; i < 19; i++) {
+		data[i] = c_data[i];
+	}
+	((uint64_t*)data)[4] = nonce;
+
+	pbkdf2_hmac_state hmac_pw;
+
+	/* hmac(password, ...) */
+	pbkdf2_hmac_init72(&hmac_pw, data);
+
+	/* hmac(password, salt...) */
+	uint32_t buffered = pbkdf2_hmac_update(&hmac_pw, g_odata, 128 * r);
+
+	/* U1 = hmac(password, salt || be(i)) */
+	uint32_t be = 0x01000000U;//cuda_swab32(1);
+	buffered = pbkdf2_hmac_buffer_update4(&hmac_pw, be, buffered);
+	label = pbkdf2_hmac_finish(&hmac_pw, buffered) & 0x01;
+	out += thread * 4 / 32;
+
+	uint32_t labels;
+
+	labels = __shfl_sync(0xFFFFFFFF, label, 0, 32);
+	labels |= __shfl_sync(0xFFFFFFFF, label, 1, 32) << 1;
+	labels |= __shfl_sync(0xFFFFFFFF, label, 2, 32) << 2;
+	labels |= __shfl_sync(0xFFFFFFFF, label, 3, 32) << 3;
+	labels |= __shfl_sync(0xFFFFFFFF, label, 4, 32) << 4;
+	labels |= __shfl_sync(0xFFFFFFFF, label, 5, 32) << 5;
+	labels |= __shfl_sync(0xFFFFFFFF, label, 6, 32) << 6;
+	labels |= __shfl_sync(0xFFFFFFFF, label, 7, 32) << 7;
+	labels |= __shfl_sync(0xFFFFFFFF, label, 8, 32) << 8;
+	labels |= __shfl_sync(0xFFFFFFFF, label, 9, 32) << 9;
+	labels |= __shfl_sync(0xFFFFFFFF, label, 10, 32) << 10;
+	labels |= __shfl_sync(0xFFFFFFFF, label, 11, 32) << 11;
+	labels |= __shfl_sync(0xFFFFFFFF, label, 12, 32) << 12;
+	labels |= __shfl_sync(0xFFFFFFFF, label, 13, 32) << 13;
+	labels |= __shfl_sync(0xFFFFFFFF, label, 14, 32) << 14;
+	labels |= __shfl_sync(0xFFFFFFFF, label, 15, 32) << 15;
+	labels |= __shfl_sync(0xFFFFFFFF, label, 16, 32) << 16;
+	labels |= __shfl_sync(0xFFFFFFFF, label, 17, 32) << 17;
+	labels |= __shfl_sync(0xFFFFFFFF, label, 18, 32) << 18;
+	labels |= __shfl_sync(0xFFFFFFFF, label, 19, 32) << 19;
+	labels |= __shfl_sync(0xFFFFFFFF, label, 20, 32) << 20;
+	labels |= __shfl_sync(0xFFFFFFFF, label, 21, 32) << 21;
+	labels |= __shfl_sync(0xFFFFFFFF, label, 22, 32) << 22;
+	labels |= __shfl_sync(0xFFFFFFFF, label, 23, 32) << 23;
+	labels |= __shfl_sync(0xFFFFFFFF, label, 24, 32) << 24;
+	labels |= __shfl_sync(0xFFFFFFFF, label, 25, 32) << 25;
+	labels |= __shfl_sync(0xFFFFFFFF, label, 26, 32) << 26;
+	labels |= __shfl_sync(0xFFFFFFFF, label, 27, 32) << 27;
+	labels |= __shfl_sync(0xFFFFFFFF, label, 28, 32) << 28;
+	labels |= __shfl_sync(0xFFFFFFFF, label, 29, 32) << 29;
+	labels |= __shfl_sync(0xFFFFFFFF, label, 30, 32) << 30;
+	labels |= __shfl_sync(0xFFFFFFFF, label, 31, 32) << 31;
+
+	if (0 == threadIdx.x % 32) {
+		*(uint32_t*)out = labels;
+	}
 }
 
 //
@@ -473,10 +724,31 @@ extern "C" void pre_keccak512(_cudaState *cudaState, int stream, uint64_t nonce,
 	cuda_pre_keccak512 << <grid, block, 0, cudaState->context_streams[stream] >> >(cudaState->context_idata[stream], nonce, r);
 }
 
-extern "C" void post_keccak512(_cudaState *cudaState, int stream, uint64_t nonce, int throughput, uint32_t r)
+extern "C" void pre_keccak512_1_1(_cudaState *cudaState, int stream, uint64_t nonce, int throughput)
 {
 	dim3 block(128);
 	dim3 grid((throughput + 127) / 128);
 
-	cuda_post_keccak512 << <grid, block, 0, cudaState->context_streams[stream] >> >((uint32_t *)cudaState->context_odata[stream], cudaState->context_labels[stream], nonce, r);
+	cuda_pre_keccak512_1_1 << <grid, block, 0, cudaState->context_streams[stream] >> >(cudaState->context_idata[stream], nonce);
+}
+
+extern "C" void post_keccak512(_cudaState *cudaState, int stream, uint64_t nonce, int throughput, uint32_t r, uint32_t hash_len_bits)
+{
+	dim3 block(128);
+	dim3 grid((throughput + 127) / 128);
+
+	switch (hash_len_bits) {
+	case 8:
+		cuda_post_keccak512_8 << <grid, block, 0, cudaState->context_streams[stream] >> > ((uint32_t *)cudaState->context_odata[stream], cudaState->context_labels[stream], nonce, r);
+		break;
+	case 4:
+		cuda_post_keccak512_4 << <grid, block, 0, cudaState->context_streams[stream] >> > ((uint32_t *)cudaState->context_odata[stream], cudaState->context_labels[stream], nonce, r);
+		break;
+	case 2:
+		cuda_post_keccak512_2 << <grid, block, 0, cudaState->context_streams[stream] >> > ((uint32_t *)cudaState->context_odata[stream], cudaState->context_labels[stream], nonce, r);
+		break;
+	case 1:
+		cuda_post_keccak512_1 << <grid, block, 0, cudaState->context_streams[stream] >> > ((uint32_t *)cudaState->context_odata[stream], cudaState->context_labels[stream], nonce, r);
+		break;
+	}
 }
