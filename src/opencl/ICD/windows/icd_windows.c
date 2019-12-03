@@ -17,9 +17,8 @@
  */
 
 #include "../icd.h"
-#include "icd_windows.h"
-//#include "icd_windows_hkr.h"
-#include "icd_windows_dxgk.h"
+#include "ICD/icd_windows.h"
+#include "ICD/icd_windows_dxgk.h"
 #include <stdio.h>
 #include <windows.h>
 #include <winreg.h>

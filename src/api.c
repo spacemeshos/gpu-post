@@ -1,5 +1,6 @@
 #include "api.h"
 #include "api_internal.h"
+#include <string.h>
 
 extern void spacemesh_api_init();
 
@@ -9,7 +10,7 @@ int scryptPositions(
     uint64_t end_position, // e.g. 49,999
     uint8_t hash_len_bits, // (1...8) for each hash output, the number of prefix bits (not bytes) to copy into the buffer
     const uint8_t *salt,  // 32 bytes
-    uint8_t options,  // throttle etc…
+    uint8_t options,  // throttle etc.
     uint8_t *out, // memory buffer large enough to include hash_len_bits * number of requested hashes
     uint32_t N,
     uint32_t R,
@@ -49,7 +50,7 @@ int scryptPositions(
 	cgpu->drv->scrypt_positions(cgpu, (uint8_t*)data, start_position, end_position, out, N, R, P, &tv_start, &tv_end);
 	release_gpu(cgpu);
 	t = 1e-6 * (tv_end.tv_usec - tv_start.tv_usec) + (tv_end.tv_sec - tv_start.tv_sec);
-	printf("Performance: %.0f (%u positions in %.2fs)\n", (end_position - start_position + 1) / t, (end_position - start_position + 1), t);
+	printf("Performance: %.0f (%u positions in %.2fs)\n", (end_position - start_position + 1) / t, (unsigned)(end_position - start_position + 1), t);
     return 0;
 }
 

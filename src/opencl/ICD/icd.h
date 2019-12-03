@@ -19,7 +19,7 @@
 #ifndef _ICD_H_
 #define _ICD_H_
 
-#include "icd_platform.h"
+#include "ICD/icd_platform.h"
 
 #ifndef CL_USE_DEPRECATED_OPENCL_1_0_APIS
 #define CL_USE_DEPRECATED_OPENCL_1_0_APIS

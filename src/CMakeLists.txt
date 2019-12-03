@@ -41,7 +41,6 @@ add_custom_command(
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/opencl/scrypt-chacha.cl
 )
 
-include_directories(${CMAKE_CURRENT_SOURSE_DIR})
 include_directories(.)
 include_directories(../include)
 

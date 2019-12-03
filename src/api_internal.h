@@ -24,11 +24,14 @@ extern "C" {
 
 #include <stdlib.h>
 #include <stddef.h>
+#include <stdio.h>
 
 #ifdef WIN32
 #include "compat.h"
 #else
 #include "compat/compat.h"
+#include <unistd.h>
+#include <byteswap.h>
 #endif
 
 #ifdef __INTELLISENSE__

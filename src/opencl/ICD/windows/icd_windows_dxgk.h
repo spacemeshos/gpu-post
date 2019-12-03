@@ -17,6 +17,6 @@
  */
 
 #include <stdbool.h>
-#include "icd_windows.h"
+#include "ICD/icd_windows.h"
 
 bool khrIcdOsVendorsEnumerateDXGK(void);
