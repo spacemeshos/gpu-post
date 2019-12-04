@@ -820,6 +820,437 @@ __kernel void search8(__global const uint4 * restrict input, volatile __global u
 }
 
 __attribute__((reqd_work_group_size(64, 1, 1)))
+__kernel void search7(__global const uint4 * restrict input, volatile __global uchar * restrict output, __global uchar * restrict padcache, const uint N, const ulong nonceBase)
+{
+	__local uint labels[64];
+	uint4 password[5];
+	uint4 X[8];
+	const uint gid = get_global_id(0);
+	const uint lid = get_local_id(0);
+	uint Nfactor = 0;
+	uint tmp = N >> 1;
+	ulong nonce = nonceBase + gid;
+	
+	/* Determine the Nfactor */
+	while ((tmp & 1) == 0) {
+		tmp >>= 1;
+		Nfactor++;
+	}
+	
+	password[0] = input[0];
+	password[1] = input[1];
+	password[2] = input[2];
+	password[3] = input[3];
+	password[4] = input[4];
+	password[2].xy = as_uint2(nonce);
+	
+	/* 1: X = PBKDF2(password, salt) */
+	scrypt_pbkdf2_128B(password, X);
+
+	/* 2: X = ROMix(X) */
+	scrypt_ROMix(X, (__global uint4 *)padcache, N, gid, Nfactor);
+
+	/* 3: Out = PBKDF2(password, X) */
+	labels[lid] = scrypt_pbkdf2_32B(password, X) & 0x7f;
+
+	barrier(CLK_LOCAL_MEM_FENCE); 
+
+	if (0 == lid) {
+		uint2 buffer1, buffer2, buffer3, buffer4, buffer5, buffer6, buffer7;
+
+		output += gid * 56 / 64;
+
+		buffer1.s0  = labels[0];
+		buffer1.s0 |= labels[1] << 7;
+		buffer1.s0 |= labels[2] << 14;
+		buffer1.s0 |= labels[3] << 21;
+		buffer1.s1  = labels[4];
+		buffer1.s0 |= buffer1.s1 << 28;
+
+		buffer1.s1 >>= 4;
+		buffer1.s1 |= labels[5] << 3;
+		buffer1.s1 |= labels[6] << 10;
+		buffer1.s1 |= labels[7] << 17;
+		buffer1.s1 |= labels[8] << 24;
+		buffer2.s0  = labels[9];
+		buffer1.s1 |= buffer2.s0 << 31;
+
+		buffer2.s0 >>= 1;
+		buffer2.s0 |= labels[10] << 6;
+		buffer2.s0 |= labels[11] << 13;
+		buffer2.s0 |= labels[12] << 20;
+		buffer2.s1  = labels[13];
+		buffer2.s0 |= buffer2.s1 << 27;
+
+		buffer2.s1 >>= 5;
+		buffer2.s1 |= labels[14] << 2;
+		buffer2.s1 |= labels[15] << 9;
+		buffer2.s1 |= labels[16] << 16;
+		buffer2.s1 |= labels[17] << 23;
+		buffer3.s0  = labels[18];
+		buffer2.s1 |= buffer3.s0 << 30;
+
+		buffer3.s0 >>= 2;
+		buffer3.s0 |= labels[19] << 5;
+		buffer3.s0 |= labels[20] << 12;
+		buffer3.s0 |= labels[21] << 19;
+		buffer3.s1  = labels[22];
+		buffer3.s0 |= buffer3.s1 << 26;
+
+		buffer3.s1 >>= 6;
+		buffer3.s1 |= labels[23] << 1;
+		buffer3.s1 |= labels[24] << 8;
+		buffer3.s1 |= labels[25] << 15;
+		buffer3.s1 |= labels[26] << 22;
+		buffer4.s0  = labels[27];
+		buffer3.s1 |= buffer4.s0 << 29;
+
+		buffer4.s0 >>= 3;
+		buffer4.s0 |= labels[28] << 4;
+		buffer4.s0 |= labels[29] << 11;
+		buffer4.s0 |= labels[30] << 18;
+		buffer4.s0 |= labels[31] << 25;
+//
+		buffer4.s1  = labels[32+0];
+		buffer4.s1 |= labels[32+1] << 7;
+		buffer4.s1 |= labels[32+2] << 14;
+		buffer4.s1 |= labels[32+3] << 21;
+		buffer5.s0  = labels[32+4];
+		buffer4.s1 |= buffer5.s0 << 28;
+
+		buffer5.s0 >>= 4;
+		buffer5.s0 |= labels[32+5] << 3;
+		buffer5.s0 |= labels[32+6] << 10;
+		buffer5.s0 |= labels[32+7] << 17;
+		buffer5.s0 |= labels[32+8] << 24;
+		buffer5.s1  = labels[32+9];
+		buffer5.s0 |= buffer5.s1 << 31;
+
+		buffer5.s1 >>= 1;
+		buffer5.s1 |= labels[32+10] << 6;
+		buffer5.s1 |= labels[32+11] << 13;
+		buffer5.s1 |= labels[32+12] << 20;
+		buffer6.s0  = labels[32+13];
+		buffer5.s1 |= buffer6.s0 << 27;
+
+		buffer6.s0 >>= 5;
+		buffer6.s0 |= labels[32+14] << 2;
+		buffer6.s0 |= labels[32+15] << 9;
+		buffer6.s0 |= labels[32+16] << 16;
+		buffer6.s0 |= labels[32+17] << 23;
+		buffer6.s1  = labels[32+18];
+		buffer6.s0 |= buffer6.s1 << 30;
+
+		buffer6.s1 >>= 2;
+		buffer6.s1 |= labels[32+19] << 5;
+		buffer6.s1 |= labels[32+20] << 12;
+		buffer6.s1 |= labels[32+21] << 19;
+		buffer7.s0  = labels[32+22];
+		buffer6.s1 |= buffer7.s0 << 26;
+
+		buffer7.s0 >>= 6;
+		buffer7.s0 |= labels[32+23] << 1;
+		buffer7.s0 |= labels[32+24] << 8;
+		buffer7.s0 |= labels[32+25] << 15;
+		buffer7.s0 |= labels[32+26] << 22;
+		buffer7.s1  = labels[32+27];
+		buffer7.s0 |= buffer7.s1 << 29;
+
+		buffer7.s1 >>= 3;
+		buffer7.s1 |= labels[32+28] << 4;
+		buffer7.s1 |= labels[32+29] << 11;
+		buffer7.s1 |= labels[32+30] << 18;
+		buffer7.s1 |= labels[32+31] << 25;
+
+		((__global uint2*)output)[0] = buffer1;
+		((__global uint2*)output)[1] = buffer2;
+		((__global uint2*)output)[2] = buffer3;
+		((__global uint2*)output)[3] = buffer4;
+		((__global uint2*)output)[4] = buffer5;
+		((__global uint2*)output)[5] = buffer6;
+		((__global uint2*)output)[6] = buffer7;
+	}
+}
+
+__attribute__((reqd_work_group_size(64, 1, 1)))
+__kernel void search6(__global const uint4 * restrict input, volatile __global uchar * restrict output, __global uchar * restrict padcache, const uint N, const ulong nonceBase)
+{
+	__local uint labels[64];
+	uint4 password[5];
+	uint4 X[8];
+	const uint gid = get_global_id(0);
+	const uint lid = get_local_id(0);
+	uint Nfactor = 0;
+	uint tmp = N >> 1;
+	ulong nonce = nonceBase + gid;
+	
+	/* Determine the Nfactor */
+	while ((tmp & 1) == 0) {
+		tmp >>= 1;
+		Nfactor++;
+	}
+	
+	password[0] = input[0];
+	password[1] = input[1];
+	password[2] = input[2];
+	password[3] = input[3];
+	password[4] = input[4];
+	password[2].xy = as_uint2(nonce);
+	
+	/* 1: X = PBKDF2(password, salt) */
+	scrypt_pbkdf2_128B(password, X);
+
+	/* 2: X = ROMix(X) */
+	scrypt_ROMix(X, (__global uint4 *)padcache, N, gid, Nfactor);
+
+	/* 3: Out = PBKDF2(password, X) */
+	labels[lid] = scrypt_pbkdf2_32B(password, X) & 0x3f;
+
+	barrier(CLK_LOCAL_MEM_FENCE); 
+
+	if (0 == lid) {
+		uint4 buffer1, buffer2, buffer3;
+
+		output += gid * 48 / 64;
+
+		buffer1.s0  = labels[0*16+0];
+		buffer1.s0 |= labels[0*16+1] << 6;
+		buffer1.s0 |= labels[0*16+2] << 12;
+		buffer1.s0 |= labels[0*16+3] << 18;
+		buffer1.s0 |= labels[0*16+4] << 24;
+		buffer1.s1  = labels[0*16+5];
+		buffer1.s0 |= buffer1.s1 << 30;
+
+		buffer1.s1 >>= 2;
+		buffer1.s1 |= labels[0*16+6] << 4;
+		buffer1.s1 |= labels[0*16+7] << 10;
+		buffer1.s1 |= labels[0*16+8] << 16;
+		buffer1.s1 |= labels[0*16+9] << 22;
+		buffer1.s2  = labels[0*16+10];
+		buffer1.s1 |= buffer1.s2 << 28;
+
+		buffer1.s2 >>= 4;
+		buffer1.s2 |= labels[0*16+11] << 2;
+		buffer1.s2 |= labels[0*16+12] << 8;
+		buffer1.s2 |= labels[0*16+13] << 14;
+		buffer1.s2 |= labels[0*16+14] << 20;
+		buffer1.s2 |= labels[0*16+15] << 26;
+
+		buffer1.s3  = labels[1*16+0];
+		buffer1.s3 |= labels[1*16+1] << 6;
+		buffer1.s3 |= labels[1*16+2] << 12;
+		buffer1.s3 |= labels[1*16+3] << 18;
+		buffer1.s3 |= labels[1*16+4] << 24;
+		buffer2.s0  = labels[1*16+5];
+		buffer1.s3 |= buffer2.s0 << 30;
+
+		buffer2.s0 >>= 2;
+		buffer2.s0 |= labels[1*16+6] << 4;
+		buffer2.s0 |= labels[1*16+7] << 10;
+		buffer2.s0 |= labels[1*16+8] << 16;
+		buffer2.s0 |= labels[1*16+9] << 22;
+		buffer2.s1  = labels[1*16+10];
+		buffer2.s0 |= buffer2.s1 << 28;
+
+		buffer2.s1 >>= 4;
+		buffer2.s1 |= labels[1*16+11] << 2;
+		buffer2.s1 |= labels[1*16+12] << 8;
+		buffer2.s1 |= labels[1*16+13] << 14;
+		buffer2.s1 |= labels[1*16+14] << 20;
+		buffer2.s1 |= labels[1*16+15] << 26;
+
+		buffer2.s2  = labels[2*16+0];
+		buffer2.s2 |= labels[2*16+1] << 6;
+		buffer2.s2 |= labels[2*16+2] << 12;
+		buffer2.s2 |= labels[2*16+3] << 18;
+		buffer2.s2 |= labels[2*16+4] << 24;
+		buffer2.s3  = labels[2*16+5];
+		buffer2.s2 |= buffer2.s3 << 30;
+
+		buffer2.s3 >>= 2;
+		buffer2.s3 |= labels[2*16+6] << 4;
+		buffer2.s3 |= labels[2*16+7] << 10;
+		buffer2.s3 |= labels[2*16+8] << 16;
+		buffer2.s3 |= labels[2*16+9] << 22;
+		buffer3.s0  = labels[2*16+10];
+		buffer2.s3 |= buffer3.s0 << 28;
+
+		buffer3.s0 >>= 4;
+		buffer3.s0 |= labels[2*16+11] << 2;
+		buffer3.s0 |= labels[2*16+12] << 8;
+		buffer3.s0 |= labels[2*16+13] << 14;
+		buffer3.s0 |= labels[2*16+14] << 20;
+		buffer3.s0 |= labels[2*16+15] << 26;
+
+		buffer3.s1  = labels[3*16+0];
+		buffer3.s1 |= labels[3*16+1] << 6;
+		buffer3.s1 |= labels[3*16+2] << 12;
+		buffer3.s1 |= labels[3*16+3] << 18;
+		buffer3.s1 |= labels[3*16+4] << 24;
+		buffer3.s2  = labels[3*16+5];
+		buffer3.s1 |= buffer3.s2 << 30;
+
+		buffer3.s2 >>= 2;
+		buffer3.s2 |= labels[3*16+6] << 4;
+		buffer3.s2 |= labels[3*16+7] << 10;
+		buffer3.s2 |= labels[3*16+8] << 16;
+		buffer3.s2 |= labels[3*16+9] << 22;
+		buffer3.s3  = labels[3*16+10];
+		buffer3.s2 |= buffer3.s3 << 28;
+
+		buffer3.s3 >>= 4;
+		buffer3.s3 |= labels[3*16+11] << 2;
+		buffer3.s3 |= labels[3*16+12] << 8;
+		buffer3.s3 |= labels[3*16+13] << 14;
+		buffer3.s3 |= labels[3*16+14] << 20;
+		buffer3.s3 |= labels[3*16+15] << 26;
+
+		((__global uint4*)output)[0] = buffer1;
+		((__global uint4*)output)[1] = buffer2;
+		((__global uint4*)output)[2] = buffer3;
+	}
+}
+
+__attribute__((reqd_work_group_size(64, 1, 1)))
+__kernel void search5(__global const uint4 * restrict input, volatile __global uchar * restrict output, __global uchar * restrict padcache, const uint N, const ulong nonceBase)
+{
+	__local uint labels[64];
+	uint4 password[5];
+	uint4 X[8];
+	const uint gid = get_global_id(0);
+	const uint lid = get_local_id(0);
+	uint Nfactor = 0;
+	uint tmp = N >> 1;
+	ulong nonce = nonceBase + gid;
+	
+	/* Determine the Nfactor */
+	while ((tmp & 1) == 0) {
+		tmp >>= 1;
+		Nfactor++;
+	}
+	
+	password[0] = input[0];
+	password[1] = input[1];
+	password[2] = input[2];
+	password[3] = input[3];
+	password[4] = input[4];
+	password[2].xy = as_uint2(nonce);
+	
+	/* 1: X = PBKDF2(password, salt) */
+	scrypt_pbkdf2_128B(password, X);
+
+	/* 2: X = ROMix(X) */
+	scrypt_ROMix(X, (__global uint4 *)padcache, N, gid, Nfactor);
+
+	/* 3: Out = PBKDF2(password, X) */
+	labels[lid] = scrypt_pbkdf2_32B(password, X) & 0x1f;
+
+	barrier(CLK_LOCAL_MEM_FENCE); 
+
+	if (0 == lid) {
+		uint2 buffer1, buffer2, buffer3, buffer4, buffer5;
+
+		output += gid * 40 / 64;
+
+		buffer1.s0  = labels[0];
+		buffer1.s0 |= labels[1] << 5;
+		buffer1.s0 |= labels[2] << 10;
+		buffer1.s0 |= labels[3] << 15;
+		buffer1.s0 |= labels[4] << 20;
+		buffer1.s0 |= labels[5] << 25;
+		buffer1.s1  = labels[6];
+		buffer1.s0 |= buffer1.s1 << 30;
+
+		buffer1.s1 >>= 2;
+		buffer1.s1 |= labels[7] << 3;
+		buffer1.s1 |= labels[8] << 8;
+		buffer1.s1 |= labels[9] << 13;
+		buffer1.s1 |= labels[10] << 18;
+		buffer1.s1 |= labels[11] << 23;
+		buffer2.s0  = labels[12];
+		buffer1.s1 |= buffer2.s0 << 28;
+
+		buffer2.s0 >>= 4;
+		buffer2.s0 |= labels[13] << 1;
+		buffer2.s0 |= labels[14] << 6;
+		buffer2.s0 |= labels[15] << 11;
+		buffer2.s0 |= labels[16] << 16;
+		buffer2.s0 |= labels[17] << 21;
+		buffer2.s0 |= labels[18] << 26;
+		buffer2.s1  = labels[19];
+		buffer2.s0 |= buffer2.s1 << 31;
+
+		buffer2.s1 >>= 1;
+		buffer2.s1 |= labels[20] << 4;
+		buffer2.s1 |= labels[21] << 9;
+		buffer2.s1 |= labels[22] << 14;
+		buffer2.s1 |= labels[23] << 19;
+		buffer2.s1 |= labels[24] << 24;
+		buffer3.s0  = labels[25];
+		buffer2.s1 |= buffer3.s0 << 29;
+
+		buffer3.s0 >>= 3;
+		buffer3.s0 |= labels[26] << 2;
+		buffer3.s0 |= labels[27] << 7;
+		buffer3.s0 |= labels[28] << 12;
+		buffer3.s0 |= labels[29] << 17;
+		buffer3.s0 |= labels[30] << 22;
+		buffer3.s0 |= labels[31] << 27;
+//
+		buffer3.s1  = labels[32+0];
+		buffer3.s1 |= labels[32+1] << 5;
+		buffer3.s1 |= labels[32+2] << 10;
+		buffer3.s1 |= labels[32+3] << 15;
+		buffer3.s1 |= labels[32+4] << 20;
+		buffer3.s1 |= labels[32+5] << 25;
+		buffer4.s0  = labels[32+6];
+		buffer3.s1 |= buffer4.s0 << 30;
+
+		buffer4.s0 >>= 2;
+		buffer4.s0 |= labels[32+7] << 3;
+		buffer4.s0 |= labels[32+8] << 8;
+		buffer4.s0 |= labels[32+9] << 13;
+		buffer4.s0 |= labels[32+10] << 18;
+		buffer4.s0 |= labels[32+11] << 23;
+		buffer4.s1  = labels[32+12];
+		buffer4.s0 |= buffer4.s1 << 28;
+
+		buffer4.s1 >>= 4;
+		buffer4.s1 |= labels[32+13] << 1;
+		buffer4.s1 |= labels[32+14] << 6;
+		buffer4.s1 |= labels[32+15] << 11;
+		buffer4.s1 |= labels[32+16] << 16;
+		buffer4.s1 |= labels[32+17] << 21;
+		buffer4.s1 |= labels[32+18] << 26;
+		buffer5.s0  = labels[32+19];
+		buffer4.s1 |= buffer5.s0 << 31;
+
+		buffer5.s0 >>= 1;
+		buffer5.s0 |= labels[32+20] << 4;
+		buffer5.s0 |= labels[32+21] << 9;
+		buffer5.s0 |= labels[32+22] << 14;
+		buffer5.s0 |= labels[32+23] << 19;
+		buffer5.s0 |= labels[32+24] << 24;
+		buffer5.s1  = labels[32+25];
+		buffer5.s0 |= buffer5.s1 << 29;
+
+		buffer5.s1 >>= 3;
+		buffer5.s1 |= labels[32+26] << 2;
+		buffer5.s1 |= labels[32+27] << 7;
+		buffer5.s1 |= labels[32+28] << 12;
+		buffer5.s1 |= labels[32+29] << 17;
+		buffer5.s1 |= labels[32+30] << 22;
+		buffer5.s1 |= labels[32+31] << 27;
+
+		((__global uint2*)output)[0] = buffer1;
+		((__global uint2*)output)[1] = buffer2;
+		((__global uint2*)output)[2] = buffer3;
+		((__global uint2*)output)[3] = buffer4;
+		((__global uint2*)output)[4] = buffer5;
+	}
+}
+
+__attribute__((reqd_work_group_size(64, 1, 1)))
 __kernel void search4(__global const uint4 * restrict input, volatile __global uchar * restrict output, __global uchar * restrict padcache, const uint N, const ulong nonceBase)
 {
 	__local uint labels[64];
@@ -933,6 +1364,131 @@ __kernel void search4(__global const uint4 * restrict input, volatile __global u
 		buffer.s7 |= labels[63] << 28;
 
 		*(__global uint8*)output = buffer;
+	}
+}
+
+__attribute__((reqd_work_group_size(64, 1, 1)))
+__kernel void search3(__global const uint4 * restrict input, volatile __global uchar * restrict output, __global uchar * restrict padcache, const uint N, const ulong nonceBase)
+{
+	__local uint labels[64];
+	uint4 password[5];
+	uint4 X[8];
+	const uint gid = get_global_id(0);
+	const uint lid = get_local_id(0);
+	uint Nfactor = 0;
+	uint tmp = N >> 1;
+	ulong nonce = nonceBase + gid;
+	
+	/* Determine the Nfactor */
+	while ((tmp & 1) == 0) {
+		tmp >>= 1;
+		Nfactor++;
+	}
+	
+	password[0] = input[0];
+	password[1] = input[1];
+	password[2] = input[2];
+	password[3] = input[3];
+	password[4] = input[4];
+	password[2].xy = as_uint2(nonce);
+	
+	/* 1: X = PBKDF2(password, salt) */
+	scrypt_pbkdf2_128B(password, X);
+
+	/* 2: X = ROMix(X) */
+	scrypt_ROMix(X, (__global uint4 *)padcache, N, gid, Nfactor);
+
+	/* 3: Out = PBKDF2(password, X) */
+	labels[lid] = scrypt_pbkdf2_32B(password, X) & 0x07;
+
+	barrier(CLK_LOCAL_MEM_FENCE); 
+
+	if (0 == lid) {
+		uint2 buffer1, buffer2, buffer3;
+
+		output += gid * 24 / 64;
+
+		buffer1.s0  = labels[0];
+		buffer1.s0 |= labels[1] << 3;
+		buffer1.s0 |= labels[2] << 6;
+		buffer1.s0 |= labels[3] << 9;
+		buffer1.s0 |= labels[4] << 12;
+		buffer1.s0 |= labels[5] << 15;
+		buffer1.s0 |= labels[6] << 18;
+		buffer1.s0 |= labels[7] << 21;
+		buffer1.s0 |= labels[8] << 24;
+		buffer1.s0 |= labels[9] << 27;
+		buffer1.s1  = labels[10];
+		buffer1.s0 |= buffer1.s1 << 30;
+
+		buffer1.s1 >>= 2;
+		buffer1.s1 |= labels[11] << 1;
+		buffer1.s1 |= labels[12] << 4;
+		buffer1.s1 |= labels[13] << 7;
+		buffer1.s1 |= labels[14] << 10;
+		buffer1.s1 |= labels[15] << 13;
+		buffer1.s1 |= labels[16] << 16;
+		buffer1.s1 |= labels[17] << 19;
+		buffer1.s1 |= labels[18] << 22;
+		buffer1.s1 |= labels[19] << 25;
+		buffer1.s1 |= labels[20] << 28;
+		buffer2.s0  = labels[21];
+		buffer1.s1 |= buffer2.s0 << 31;
+
+		buffer2.s0 >>= 1;
+		buffer2.s0 |= labels[22] << 2;
+		buffer2.s0 |= labels[23] << 5;
+		buffer2.s0 |= labels[24] << 8;
+		buffer2.s0 |= labels[25] << 11;
+		buffer2.s0 |= labels[26] << 14;
+		buffer2.s0 |= labels[27] << 17;
+		buffer2.s0 |= labels[28] << 20;
+		buffer2.s0 |= labels[29] << 23;
+		buffer2.s0 |= labels[30] << 26;
+		buffer2.s0 |= labels[31] << 29;
+
+		buffer2.s1  = labels[32+0];
+		buffer2.s1 |= labels[32+1] << 3;
+		buffer2.s1 |= labels[32+2] << 6;
+		buffer2.s1 |= labels[32+3] << 9;
+		buffer2.s1 |= labels[32+4] << 12;
+		buffer2.s1 |= labels[32+5] << 15;
+		buffer2.s1 |= labels[32+6] << 18;
+		buffer2.s1 |= labels[32+7] << 21;
+		buffer2.s1 |= labels[32+8] << 24;
+		buffer2.s1 |= labels[32+9] << 27;
+		buffer3.s0  = labels[32+10];
+		buffer2.s1 |= buffer3.s0 << 30;
+
+		buffer3.s0 >>= 2;
+		buffer3.s0 |= labels[32+11] << 1;
+		buffer3.s0 |= labels[32+12] << 4;
+		buffer3.s0 |= labels[32+13] << 7;
+		buffer3.s0 |= labels[32+14] << 10;
+		buffer3.s0 |= labels[32+15] << 13;
+		buffer3.s0 |= labels[32+16] << 16;
+		buffer3.s0 |= labels[32+17] << 19;
+		buffer3.s0 |= labels[32+18] << 22;
+		buffer3.s0 |= labels[32+19] << 25;
+		buffer3.s0 |= labels[32+20] << 28;
+		buffer3.s1  = labels[32+21];
+		buffer3.s0 |= buffer3.s1 << 31;
+
+		buffer3.s1 >>= 1;
+		buffer3.s1 |= labels[32+22] << 2;
+		buffer3.s1 |= labels[32+23] << 5;
+		buffer3.s1 |= labels[32+24] << 8;
+		buffer3.s1 |= labels[32+25] << 11;
+		buffer3.s1 |= labels[32+26] << 14;
+		buffer3.s1 |= labels[32+27] << 17;
+		buffer3.s1 |= labels[32+28] << 20;
+		buffer3.s1 |= labels[32+29] << 23;
+		buffer3.s1 |= labels[32+30] << 26;
+		buffer3.s1 |= labels[32+31] << 29;
+
+		((__global uint2*)output)[0] = buffer1;
+		((__global uint2*)output)[1] = buffer2;
+		((__global uint2*)output)[2] = buffer3;
 	}
 }
 

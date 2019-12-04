@@ -333,7 +333,31 @@ _clState *initCl(struct cgpu_info *cgpu, char *name, size_t nameSize, cl_uint ha
 		return NULL;
 	}
 
+	clState->kernel[7] = clCreateKernel(clState->program, "search7", &status);
+	if (status != CL_SUCCESS) {
+		applog(LOG_ERR, "Error %d: Creating Kernel from program. (clCreateKernel)", status);
+		return NULL;
+	}
+
+	clState->kernel[6] = clCreateKernel(clState->program, "search6", &status);
+	if (status != CL_SUCCESS) {
+		applog(LOG_ERR, "Error %d: Creating Kernel from program. (clCreateKernel)", status);
+		return NULL;
+	}
+
+	clState->kernel[5] = clCreateKernel(clState->program, "search5", &status);
+	if (status != CL_SUCCESS) {
+		applog(LOG_ERR, "Error %d: Creating Kernel from program. (clCreateKernel)", status);
+		return NULL;
+	}
+
 	clState->kernel[4] = clCreateKernel(clState->program, "search4", &status);
+	if (status != CL_SUCCESS) {
+		applog(LOG_ERR, "Error %d: Creating Kernel from program. (clCreateKernel)", status);
+		return NULL;
+	}
+
+	clState->kernel[3] = clCreateKernel(clState->program, "search3", &status);
 	if (status != CL_SUCCESS) {
 		applog(LOG_ERR, "Error %d: Creating Kernel from program. (clCreateKernel)", status);
 		return NULL;
