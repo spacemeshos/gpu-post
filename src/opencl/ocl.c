@@ -28,7 +28,7 @@
 #include "ICD/icd_dispatch.h"
 #include "scrypt-chacha-cl.inl"
 
-_clState *initCl(struct cgpu_info *cgpu, char *name, size_t nameSize, cl_uint hash_len_bits)
+_clState *initCl(struct cgpu_info *cgpu, char *name, size_t nameSize, cl_uint hash_len_bits, bool throttled)
 {
 	_clState *clState = calloc(1, sizeof(_clState));
 	bool patchbfi = false, prog_built = false;
@@ -206,6 +206,7 @@ _clState *initCl(struct cgpu_info *cgpu, char *name, size_t nameSize, cl_uint ha
 		applog(LOG_ERR, "Error %d: Failed to clGetDeviceInfo when trying to get CL_DEVICE_MAX_COMPUTE_UNITS", status);
 		return NULL;
 	}
+	cgpu->gpu_core_count = (uint32_t)compute_units;
 	// AMD architechture got 64 compute shaders per compute unit.
 	// Source: http://www.amd.com/us/Documents/GCN_Architecture_whitepaper.pdf
 	clState->compute_shaders = compute_units * 64;
@@ -244,6 +245,11 @@ _clState *initCl(struct cgpu_info *cgpu, char *name, size_t nameSize, cl_uint ha
 		// use the buffer-size to overwrite the thread-concurrency
 		cgpu->thread_concurrency = (int)((cgpu->buffer_size * 1024 * 1024) / ipt / 128);
 		applog(LOG_DEBUG, "GPU %d: setting thread_concurrency to %d based on buffer size %d and lookup gap %d", cgpu->driver_id, (int)(cgpu->thread_concurrency), (int)(cgpu->buffer_size), (int)(cgpu->lookup_gap));
+	}
+
+	if (throttled) {
+		cgpu->thread_concurrency = min(cgpu->thread_concurrency, 32 * cgpu->gpu_core_count);
+		applog(LOG_DEBUG, "GPU %d: setting throttled thread_concurrency to %d based on buffer size %d and lookup gap %d", cgpu->driver_id, (int)(cgpu->thread_concurrency), (int)(cgpu->buffer_size), (int)(cgpu->lookup_gap));
 	}
 
 	const char *source = scrypt_chacha_cl;

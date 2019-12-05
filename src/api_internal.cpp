@@ -11,7 +11,6 @@
 
 #include "scrypt-jane/scrypt-jane.h"
 
-bool opt_benchmark = false;
 volatile bool abort_flag = false;
 bool opt_debug = false;
 #ifdef WIN32
@@ -126,11 +125,34 @@ int spacemesh_api_stats()
 	return devices;
 }
 
-void spacemesh_api_stop()
+int spacemesh_api_stop(uint32_t ms_timeout)
 {
+	uint32_t timeout = 0;
 	if (abort_flag) {/* already called */
-		return;
+		return -1;
 	}
 
 	abort_flag = true;
+
+	while (abort_flag) {
+		bool busy = false;
+		for (int i = 0; i < s_total_devices; ++i) {
+			if (s_gpus[i].busy) {
+				busy = true;
+				break;
+			}
+		}
+		if (busy) {
+			if (timeout >= ms_timeout) {
+				abort_flag = false;
+				return -2;
+			}
+			usleep(100000);
+			timeout += 100;
+			continue;
+		}
+		abort_flag = false;
+	}
+
+	return 0;
 }

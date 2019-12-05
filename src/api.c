@@ -10,7 +10,7 @@ int scryptPositions(
     uint64_t end_position, // e.g. 49,999
     uint8_t hash_len_bits, // (1...8) for each hash output, the number of prefix bits (not bytes) to copy into the buffer
     const uint8_t *salt,  // 32 bytes
-    uint8_t options,  // throttle etc.
+    uint32_t options,  // throttle etc.
     uint8_t *out, // memory buffer large enough to include hash_len_bits * number of requested hashes
     uint32_t N,
     uint32_t R,
@@ -54,7 +54,7 @@ int scryptPositions(
 #ifdef _DEBUG
 	memset(out, 0, (end_position - start_position + 1));
 #endif
-	cgpu->drv->scrypt_positions(cgpu, (uint8_t*)data, start_position, end_position, hash_len_bits, out, N, R, P, &tv_start, &tv_end);
+	cgpu->drv->scrypt_positions(cgpu, (uint8_t*)data, start_position, end_position, hash_len_bits, options, out, N, R, P, &tv_start, &tv_end);
 	release_gpu(cgpu);
 
 	t = 1e-6 * (tv_end.tv_usec - tv_start.tv_usec) + (tv_end.tv_sec - tv_start.tv_sec);
@@ -77,8 +77,8 @@ int stats()
 }
 
 // stop all GPU work and don’t fill the passed-in buffer with any more results.
-int stop()
+int stop(uint32_t ms_timeout)
 {
-    return 0;
+	return spacemesh_api_stop(ms_timeout);
 }
 

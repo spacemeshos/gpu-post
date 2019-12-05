@@ -31,9 +31,9 @@ int main()
 	out[2] = (uint8_t *)malloc(LABELS_COUNT);
 	memset(out[2], 0, LABELS_COUNT);
 
-	scryptPositions(id, 0, LABELS_COUNT - 1, 1, salt, SPACEMESH_API_CPU, out[0], 512, 1, 1);
-	scryptPositions(id, 0, LABELS_COUNT - 1, 1, salt, SPACEMESH_API_CUDA, out[1], 512, 1, 1);
-	scryptPositions(id, 0, LABELS_COUNT - 1, 1, salt, SPACEMESH_API_OPENCL, out[2], 512, 1, 1);
+	scryptPositions(id, 0, LABELS_COUNT - 1, 8, salt, SPACEMESH_API_CPU, out[0], 512, 1, 1);
+	scryptPositions(id, 0, LABELS_COUNT - 1, 8, salt, SPACEMESH_API_CUDA/*   | SPACEMESH_API_THROTTLED_MODE*/, out[1], 512, 1, 1);
+	scryptPositions(id, 0, LABELS_COUNT - 1, 8, salt, SPACEMESH_API_OPENCL/* | SPACEMESH_API_THROTTLED_MODE*/, out[2], 512, 1, 1);
 
 	print(out[0]);
 	print(out[1]);

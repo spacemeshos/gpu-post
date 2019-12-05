@@ -40,15 +40,9 @@
 		applog(LOG_ERR, "GPU #%d: Err %d: %s (%s:%d)", gpuId, err, cudaGetErrorString(err), __FILENAME__, __LINE__); \
 }
 
-// some globals containing pointers to device memory (for chunked allocation)
-// [MAX_GPUS] indexes up to MAX_GPUS threads (0...MAX_GPUS-1)
-int       MAXWARPS[MAX_GPUDEVICES];
-uint32_t* h_V[MAX_GPUDEVICES][TOTAL_WARP_LIMIT * 64];          // NOTE: the *64 prevents buffer overflow for --keccak
-uint32_t  h_V_extra[MAX_GPUDEVICES][TOTAL_WARP_LIMIT * 64];    //       with really large kernel launch configurations
+int find_optimal_concurency(struct cgpu_info *cgpu, _cudaState *cudaState, KernelInterface* &kernel, uint32_t N, uint32_t r, uint32_t p, bool &concurrent, int &wpb);
 
-int find_optimal_blockcount(struct cgpu_info *cgpu, KernelInterface* &kernel, uint32_t N, uint32_t r, uint32_t p, bool &concurrent, int &wpb);
-
-_cudaState *initCuda(struct cgpu_info *cgpu, uint32_t N, uint32_t r, uint32_t p, uint32_t hash_len_bits)
+_cudaState *initCuda(struct cgpu_info *cgpu, uint32_t N, uint32_t r, uint32_t p, uint32_t hash_len_bits, bool throttled)
 {
 	_cudaState *cudaState = (_cudaState *)calloc(1, sizeof(_cudaState));
 	int GRID_BLOCKS, WARPS_PER_BLOCK;
@@ -61,10 +55,14 @@ _cudaState *initCuda(struct cgpu_info *cgpu, uint32_t N, uint32_t r, uint32_t p,
 
 	KernelInterface *kernel;
 	bool concurrent;
-	GRID_BLOCKS = find_optimal_blockcount(cgpu, kernel, N, r, p, concurrent, WARPS_PER_BLOCK);
+	GRID_BLOCKS = find_optimal_concurency(cgpu, cudaState, kernel, N, r, p, concurrent, WARPS_PER_BLOCK);
 
 	if (GRID_BLOCKS == 0) {
 		return 0;
+	}
+
+	if (throttled) {
+		GRID_BLOCKS = min(GRID_BLOCKS, cgpu->gpu_core_count / 2);
 	}
 
 	unsigned int THREADS_PER_WU = kernel->threads_per_wu();
@@ -113,42 +111,10 @@ _cudaState *initCuda(struct cgpu_info *cgpu, uint32_t N, uint32_t r, uint32_t p,
 // Beginning of GPU Architecture definitions
 inline int _ConvertSMVer2Cores(int major, int minor)
 {
-	// Defines for GPU Architecture types (using the SM version to determine the # of cores per SM
-	typedef struct {
-		int SM; // 0xMm (hexidecimal notation), M = SM Major version, and m = SM minor version
-		int Cores;
-	} sSMtoCores;
-
-	sSMtoCores nGpuArchCoresPerSM[] = {
-		{ 0x10, 8   }, // Tesla Generation (SM 1.0) G80 class
-		{ 0x11, 8   }, // Tesla Generation (SM 1.1) G8x class
-		{ 0x12, 8   }, // Tesla Generation (SM 1.2) G9x class
-		{ 0x13, 8   }, // Tesla Generation (SM 1.3) GT200 class
-		{ 0x20, 32  }, // Fermi Generation (SM 2.0) GF100 class
-		{ 0x21, 48  }, // Fermi Generation (SM 2.1) GF10x class
-		{ 0x30, 192 }, // Kepler Generation (SM 3.0) GK10x class - GK104 = 1536 cores / 8 SMs
-		{ 0x35, 192 }, // Kepler Generation (SM 3.5) GK11x class
-		{ 0x50, 128 }, // Maxwell First Generation (SM 5.0) GTX750/750Ti
-		{ 0x52, 128 }, // Maxwell Second Generation (SM 5.2) GTX980 = 2048 cores / 16 SMs - GTX970 1664 cores / 13 SMs
-		{ 0x61, 128 }, // Pascal GeForce (SM 6.1)
-		{ -1, -1 },
-	};
-
-	int index = 0;
-	while (nGpuArchCoresPerSM[index].SM != -1)
-	{
-		if (nGpuArchCoresPerSM[index].SM == ((major << 4) + minor)) {
-			return nGpuArchCoresPerSM[index].Cores;
-		}
-		index++;
-	}
-
-	// If we don't find the values, we default use the previous one to run properly
-	applog(LOG_WARNING, "MapSMtoCores for SM %d.%d is undefined. Default to use %d Cores/SM", major, minor, 128);
 	return 128;
 }
 
-int find_optimal_blockcount(struct cgpu_info *cgpu, KernelInterface* &kernel, uint32_t N, uint32_t r, uint32_t p, bool &concurrent, int &WARPS_PER_BLOCK)
+int find_optimal_concurency(struct cgpu_info *cgpu, _cudaState *cudaState, KernelInterface* &kernel, uint32_t N, uint32_t r, uint32_t p, bool &concurrent, int &WARPS_PER_BLOCK)
 {
 	int optimal_blocks = 0;
 
@@ -173,6 +139,7 @@ int find_optimal_blockcount(struct cgpu_info *cgpu, KernelInterface* &kernel, ui
 	if (cgpu->lookup_gap == 0) {
 		cgpu->lookup_gap = 1;
 	}
+
 	if (!kernel->support_lookup_gap() && cgpu->lookup_gap > 1) {
 		applog(LOG_WARNING, "GPU #%d: the '%c' kernel does not support a lookup gap", cgpu->driver_id, kernel->get_identifier());
 		cgpu->lookup_gap = 1;
@@ -180,18 +147,15 @@ int find_optimal_blockcount(struct cgpu_info *cgpu, KernelInterface* &kernel, ui
 
 	// number of threads collaborating on one work unit (hash)
 	unsigned int THREADS_PER_WU = kernel->threads_per_wu();
-	unsigned int LOOKUP_GAP = cgpu->lookup_gap;
-	unsigned int BACKOFF = cgpu->backoff;
-	double szPerWarp = (double)(r * SCRATCH * WU_PER_WARP * sizeof(uint32_t));
+	size_t szPerWarp = r * SCRATCH(N, cgpu->lookup_gap) * WU_PER_WARP * sizeof(uint32_t);
 	//applog(LOG_INFO, "WU_PER_WARP=%u, THREADS_PER_WU=%u, LOOKUP_GAP=%u, BACKOFF=%u, SCRATCH=%u", WU_PER_WARP, THREADS_PER_WU, LOOKUP_GAP, BACKOFF, SCRATCH);
-	applog(LOG_INFO, "GPU #%d: %d hashes / %.1f MB per warp.", cgpu->driver_id, WU_PER_WARP, szPerWarp / (1024.0 * 1024.0));
+	applog(LOG_INFO, "GPU #%d: %d hashes / %.1f MB per warp.", cgpu->driver_id, WU_PER_WARP, double(szPerWarp) / (1024.0 * 1024.0));
 
 	uint32_t *d_V = NULL;
 	{
 		// compute no. of warps to allocate the largest number producing a single memory block
 		// PROBLEM: one some devices, ALL allocations will fail if the first one failed. This sucks.
-		size_t MEM_LIMIT = (size_t)min((unsigned long long)MAXMEM, (unsigned long long)props.totalGlobalMem);
-		int warpmax = (int)min((unsigned long long)TOTAL_WARP_LIMIT, (unsigned long long)(MEM_LIMIT / szPerWarp));
+		int warpmax = (int)min((size_t)TOTAL_WARP_LIMIT, (size_t)(cgpu->gpu_max_alloc / szPerWarp));
 
 		// run a bisection algorithm for memory allocation (way more reliable than the previous approach)
 		int best = 0;
@@ -203,28 +167,36 @@ int find_optimal_blockcount(struct cgpu_info *cgpu, KernelInterface* &kernel, ui
 			cudaMalloc((void **)&d_V, (size_t)(szPerWarp * warp));
 			if (cudaGetLastError() == cudaSuccess) {
 				checkCudaErrors(cgpu->driver_id, cudaFree(d_V)); d_V = NULL;
-				if (warp > best) best = warp;
-				if (warp == warpmax) break;
+				if (warp > best) {
+					best = warp;
+				}
+				if (warp == warpmax) {
+					break;
+				}
 				interval = (interval+1)/2;
 				warp += interval;
-				if (warp > warpmax) warp = warpmax;
+				if (warp > warpmax) {
+					warp = warpmax;
+				}
 			}
-			else
-			{
+			else {
 				interval = interval/2;
 				warp -= interval;
-				if (warp < 1) warp = 1;
+				if (warp < 1) {
+					warp = 1;
+				}
 			}
 		}
+
 		// back off a bit from the largest possible allocation size
-		MAXWARPS[cgpu->driver_id] = ((100-BACKOFF)*best+50)/100;
+		cudaState->max_warps = ((100 - cgpu->backoff)*best + 50) / 100;
 
 		// now allocate a buffer for determined MAXWARPS setting
 		cudaGetLastError(); // clear the error state
-		cudaMalloc((void **)&d_V, (size_t)r * SCRATCH * WU_PER_WARP * MAXWARPS[cgpu->driver_id] * sizeof(uint32_t));
+		cudaMalloc((void **)&d_V, (size_t)r * SCRATCH(N, cgpu->lookup_gap) * WU_PER_WARP * cudaState->max_warps * sizeof(uint32_t));
 		if (cudaGetLastError() == cudaSuccess) {
-			for (int i = 0; i < MAXWARPS[cgpu->driver_id]; ++i) {
-				h_V[cgpu->driver_id][i] = d_V + r * SCRATCH * WU_PER_WARP * i;
+			for (int i = 0; i < cudaState->max_warps; ++i) {
+				cudaState->h_V[i] = d_V + r * SCRATCH(N, cgpu->lookup_gap) * WU_PER_WARP * i;
 			}
 		}
 		else
@@ -234,7 +206,7 @@ int find_optimal_blockcount(struct cgpu_info *cgpu, KernelInterface* &kernel, ui
 		}
 	}
 
-	kernel->set_scratchbuf_constants(MAXWARPS[cgpu->driver_id], h_V[cgpu->driver_id]);
+	kernel->set_scratchbuf_constants(cudaState->max_warps, cudaState->h_V);
 
 	if (cgpu->device_config != NULL && strcasecmp("auto", cgpu->device_config)) {
 		applog(LOG_WARNING, "GPU #%d: Given launch config '%s' does not validate.", cgpu->driver_id, cgpu->device_config);
@@ -246,81 +218,32 @@ int find_optimal_blockcount(struct cgpu_info *cgpu, KernelInterface* &kernel, ui
 	int device_cores = props.multiProcessorCount * _ConvertSMVer2Cores(props.major, props.minor);
 
 	// defaults, in case nothing else is chosen below
-	optimal_blocks = 4 * device_cores / WU_PER_WARP;
-	WARPS_PER_BLOCK = 2;
+	optimal_blocks = device_cores;
+	WARPS_PER_BLOCK = 4;
 
-	// Based on compute capability, pick a known good block x warp configuration.
-	if (props.major >= 3)
-	{
-		if (props.major == 3 && props.minor == 5) // GK110 (Tesla K20X, K20, GeForce GTX TITAN)
-		{
-			// TODO: what to do with Titan and Tesla K20(X)?
-			// for now, do the same as for GTX 660Ti (2GB)
-			optimal_blocks = (int)(optimal_blocks * 0.8809524);
-			WARPS_PER_BLOCK = 2;
-		}
-		else // GK104, GK106, GK107 ...
-		{
-			if (MAXWARPS[cgpu->driver_id] > (int)(optimal_blocks * 1.7261905) * 2)
-			{
-				// this results in 290x2 configuration on GTX 660Ti (3GB)
-				// but it requires 3GB memory on the card!
-				optimal_blocks = (int)(optimal_blocks * 1.7261905);
-				WARPS_PER_BLOCK = 2;
-			}
-			else
-			{
-				// this results in 148x2 configuration on GTX 660Ti (2GB)
-				optimal_blocks = (int)(optimal_blocks * 0.8809524);
-				WARPS_PER_BLOCK = 2;
-			}
-		}
-	}
-	// 1st generation Fermi (compute 2.0) GF100, GF110
-	else if (props.major == 2 && props.minor == 0)
-	{
-		// this results in a 60x4 configuration on GTX 570
-		optimal_blocks = 4 * device_cores / WU_PER_WARP;
-		WARPS_PER_BLOCK = 4;
-	}
-	// 2nd generation Fermi (compute 2.1) GF104,106,108,114,116
-	else if (props.major == 2 && props.minor == 1)
-	{
-		// this results in a 56x2 configuration on GTX 460
-		optimal_blocks = props.multiProcessorCount * 8;
-		WARPS_PER_BLOCK = 2;
-	}
-
-	// in case we run out of memory with the automatically chosen configuration,
-	// first back off with WARPS_PER_BLOCK, then reduce optimal_blocks.
-	if (WARPS_PER_BLOCK == 3 && optimal_blocks * WARPS_PER_BLOCK > MAXWARPS[cgpu->driver_id]) {
-		WARPS_PER_BLOCK = 2;
-	}
-	while (optimal_blocks > 0 && optimal_blocks * WARPS_PER_BLOCK > MAXWARPS[cgpu->driver_id]) {
+	while (optimal_blocks > 0 && optimal_blocks * WARPS_PER_BLOCK > cudaState->max_warps) {
 		optimal_blocks--;
 	}
 
 	applog(LOG_INFO, "GPU #%d: using launch configuration %c%dx%d", cgpu->driver_id, kernel->get_identifier(), optimal_blocks, WARPS_PER_BLOCK);
 
+	if (cudaState->max_warps != optimal_blocks * WARPS_PER_BLOCK)
 	{
-		if (MAXWARPS[cgpu->driver_id] != optimal_blocks * WARPS_PER_BLOCK)
-		{
-			MAXWARPS[cgpu->driver_id] = optimal_blocks * WARPS_PER_BLOCK;
-			checkCudaErrors(cgpu->driver_id, cudaFree(d_V)); d_V = NULL;
+		cudaState->max_warps = optimal_blocks * WARPS_PER_BLOCK;
+		checkCudaErrors(cgpu->driver_id, cudaFree(d_V)); d_V = NULL;
 
-			cudaGetLastError(); // clear the error state
-			cudaMalloc((void **)&d_V, (size_t)r * SCRATCH * WU_PER_WARP * MAXWARPS[cgpu->driver_id] * sizeof(uint32_t));
-			if (cudaGetLastError() == cudaSuccess) {
-				for (int i = 0; i < MAXWARPS[cgpu->driver_id]; ++i) {
-					h_V[cgpu->driver_id][i] = d_V + r * SCRATCH * WU_PER_WARP * i;
-				}
-				// update pointers to scratch buffer in constant memory after reallocation
-				kernel->set_scratchbuf_constants(MAXWARPS[cgpu->driver_id], h_V[cgpu->driver_id]);
+		cudaGetLastError(); // clear the error state
+		cudaMalloc((void **)&d_V, (size_t)r * SCRATCH(N, cgpu->lookup_gap) * WU_PER_WARP * cudaState->max_warps * sizeof(uint32_t));
+		if (cudaGetLastError() == cudaSuccess) {
+			for (int i = 0; i < cudaState->max_warps; ++i) {
+				cudaState->h_V[i] = d_V + r * SCRATCH(N, cgpu->lookup_gap) * WU_PER_WARP * i;
 			}
-			else
-			{
-				applog(LOG_ERR, "GPU #%d: Unable to allocate enough memory for launch config '%s'.", cgpu->driver_id, cgpu->device_config);
-			}
+			// update pointers to scratch buffer in constant memory after reallocation
+			kernel->set_scratchbuf_constants(cudaState->max_warps, cudaState->h_V);
+		}
+		else
+		{
+			applog(LOG_ERR, "GPU #%d: Unable to allocate enough memory for launch config '%s'.", cgpu->driver_id, cgpu->device_config);
 		}
 	}
 
@@ -356,20 +279,17 @@ void cuda_scrypt_core(struct cgpu_info *cgpu, _cudaState *cudaState, int stream,
 	unsigned int LOOKUP_GAP = cgpu->lookup_gap;
 
 	// setup execution parameters
-	dim3 grid(WU_PER_LAUNCH/WU_PER_BLOCK, 1, 1);
+	dim3 grid(GRID_BLOCKS, 1, 1);
 	dim3 threads(THREADS_PER_WU*WU_PER_BLOCK, 1, 1);
 
 	cudaState->context_kernel->run_kernel(grid, threads, WARPS_PER_BLOCK, cudaState->cuda_id,
 		cudaState->context_streams[stream], cudaState->context_idata[stream], cudaState->context_odata[stream],
-		N, r, p, cgpu->batchsize, LOOKUP_GAP, opt_benchmark
+		N, r, p, cgpu->batchsize, LOOKUP_GAP
 	);
 }
 
 void cuda_scrypt_DtoH(_cudaState *cudaState, uint8_t *X, int stream, uint32_t size)
 {
-	unsigned int GRID_BLOCKS = cudaState->context_blocks;
-	unsigned int WARPS_PER_BLOCK = cudaState->context_wpb;
-	unsigned int THREADS_PER_WU = cudaState->context_kernel->threads_per_wu();
 	// copy result from device to host (asynchronously)
 	checkCudaErrors(cudaState->cuda_id, cudaMemcpyAsync(X, cudaState->context_labels[stream], size, cudaMemcpyDeviceToHost, cudaState->context_streams[stream]));
 }

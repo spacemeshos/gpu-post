@@ -15,11 +15,11 @@
 // Define work unit size
 #define TOTAL_WARP_LIMIT 4096
 #define WU_PER_WARP (32 / THREADS_PER_WU)
-#define WU_PER_BLOCK (WU_PER_WARP*WARPS_PER_BLOCK)
-#define WU_PER_LAUNCH (GRID_BLOCKS*WU_PER_BLOCK)
+#define WU_PER_BLOCK (WU_PER_WARP * WARPS_PER_BLOCK)
+#define WU_PER_LAUNCH (GRID_BLOCKS * WU_PER_BLOCK)
 
 // make scratchpad size dependent on N and LOOKUP_GAP
-#define SCRATCH   (((N+LOOKUP_GAP-1)/LOOKUP_GAP)*32)
+#define SCRATCH(N, LOOKUP_GAP)   (((N+LOOKUP_GAP-1)/LOOKUP_GAP)*32)
 
 typedef unsigned int uint32_t; // define this as 32 bit type derived from int
 
@@ -37,12 +37,11 @@ class KernelInterface
 {
 public:
 	virtual void set_scratchbuf_constants(int MAXWARPS, uint32_t** h_V) = 0;
-	virtual bool run_kernel(dim3 grid, dim3 threads, int WARPS_PER_BLOCK, int gpu_id, cudaStream_t stream, uint32_t* d_idata, uint32_t* d_odata, unsigned int N, unsigned int r, unsigned int p, unsigned int batch, unsigned int LOOKUP_GAP, bool benchmark) = 0;
+	virtual bool run_kernel(dim3 grid, dim3 threads, int WARPS_PER_BLOCK, int gpu_id, cudaStream_t stream, uint32_t* d_idata, uint32_t* d_odata, unsigned int N, unsigned int r, unsigned int p, unsigned int batch, unsigned int LOOKUP_GAP) = 0;
 
 	virtual char get_identifier() = 0;
 	virtual int get_major_version() { return 1; }
 	virtual int get_minor_version() { return 0; }
-	virtual int max_warps_per_block() = 0;
 	virtual int threads_per_wu() { return 1; }
 	virtual bool support_lookup_gap() { return false; }
 	virtual cudaSharedMemConfig shared_mem_config() { return cudaSharedMemBankSizeDefault; }
@@ -70,10 +69,17 @@ typedef struct {
 	uint8_t		*context_L[2];
 	cudaEvent_t context_serialize[2];
 	uint8_t		*context_labels[2];
+
+	uint32_t	*data[2];
+
+	// some globals containing pointers to device memory (for chunked allocation)
+	int			max_warps;
+	uint32_t	*h_V[TOTAL_WARP_LIMIT * 64];          // NOTE: the *64 prevents buffer overflow for --keccak
+	uint32_t	h_V_extra[TOTAL_WARP_LIMIT * 64];    //       with really large kernel launch configurations
 } _cudaState;
 
 // CUDA externals
-extern _cudaState *initCuda(struct cgpu_info *cgpu, uint32_t N, uint32_t r, uint32_t p, uint32_t hash_len_bits);
+extern _cudaState *initCuda(struct cgpu_info *cgpu, uint32_t N, uint32_t r, uint32_t p, uint32_t hash_len_bits, bool throttled);
 extern uint32_t *cuda_transferbuffer(_cudaState *cudaState, int stream);
 extern uint8_t *cuda_hashbuffer(_cudaState *cudaState, int stream);
 

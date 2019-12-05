@@ -44,6 +44,6 @@ typedef struct {
 } _clState;
 
 extern char *file_contents(const char *filename, int *length);
-extern _clState *initCl(struct cgpu_info *cgpu, char *name, size_t nameSize, cl_uint hash_len_bits);
+extern _clState *initCl(struct cgpu_info *cgpu, char *name, size_t nameSize, cl_uint hash_len_bits, bool throttled);
 
 #endif /* __OCL_H__ */

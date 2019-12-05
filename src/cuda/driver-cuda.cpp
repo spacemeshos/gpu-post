@@ -6,6 +6,7 @@
  * Adapted to ccminer by tpruvot@github (2015)
  */
 
+#include "api.h"
 #include "api_internal.h"
 
 #include "scrypt-jane/scrypt-jane.h"
@@ -17,6 +18,8 @@
 
 #include "salsa_kernel.h"
 #include "cuda.h"
+
+#define	PREIMAGE_SIZE	72
 
 extern struct device_drv cuda_drv;
 
@@ -53,7 +56,7 @@ static int cuda_detect(struct cgpu_info *gpus, int *active)
 		cgpu->driver_id = dev_id;
 
 		cgpu->cuda_sm = (props.major * 100 + props.minor * 10);
-		cgpu->cuda_mpcount = (short)props.multiProcessorCount;
+		cgpu->gpu_core_count = (short)props.multiProcessorCount;
 		cgpu->gpu_max_alloc = (uint64_t)props.totalGlobalMem;
 		cgpu->pci_bus_id = props.pciBusID;
 		cgpu->pci_device_id = props.pciDeviceID;
@@ -81,19 +84,23 @@ static void reinit_cuda_device(struct cgpu_info *gpu)
 {
 }
 
-static bool cuda_prepare(struct cgpu_info *cgpu, unsigned N, uint32_t r, uint32_t p, uint32_t hash_len_bits)
+static bool cuda_prepare(struct cgpu_info *cgpu, unsigned N, uint32_t r, uint32_t p, uint32_t hash_len_bits, bool throttled)
 {
 	if (N != cgpu->N || r != cgpu->r || p != cgpu->p) {
 		applog(LOG_INFO, "Init GPU thread for GPU %i, platform GPU %i, pci [%d:%d]", cgpu->id, cgpu->driver_id, cgpu->pci_bus_id, cgpu->pci_device_id);
 		if (cgpu->device_data) {
 			cuda_shutdown(cgpu);
 		}
-		cgpu->device_data = initCuda(cgpu, N, r, p, hash_len_bits);
+		cgpu->device_data = initCuda(cgpu, N, r, p, hash_len_bits, throttled);
 		if (!cgpu->device_data) {
 			applog(LOG_ERR, "Failed to init GPU, disabling device %d", cgpu->id);
 			cgpu->deven = DEV_DISABLED;
 			cgpu->status = LIFE_NOSTART;
 			return false;
+		}
+		if (_cudaState *cudaState = (_cudaState *)cgpu->device_data) {
+			cudaState->data[0] = new uint32_t[(PREIMAGE_SIZE / 4) * cgpu->thread_concurrency];
+			cudaState->data[1] = new uint32_t[(PREIMAGE_SIZE / 4) * cgpu->thread_concurrency];
 		}
 		cgpu->N = N;
 		cgpu->r = r;
@@ -113,30 +120,30 @@ static bool cuda_init(struct cgpu_info *cgpu)
 #define bswap_32x4(x) ((((x) << 24) & 0xff000000u) | (((x) << 8) & 0x00ff0000u) \
 					 | (((x) >> 8) & 0x0000ff00u) | (((x) >> 24) & 0x000000ffu))
 
-#define	PREIMAGE_SIZE	72
 
-static int64_t cuda_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uint64_t start_position, uint64_t end_position, uint8_t hash_len_bits, uint8_t *output, uint32_t N, uint32_t r, uint32_t p, struct timeval *tv_start, struct timeval *tv_end)
+static int64_t cuda_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uint64_t start_position, uint64_t end_position, uint8_t hash_len_bits, uint32_t options, uint8_t *output, uint32_t N, uint32_t r, uint32_t p, struct timeval *tv_start, struct timeval *tv_end)
 {
-	if (cuda_prepare(cgpu, N, r, p, hash_len_bits))
+	cgpu->busy = 1;
+	if (cuda_prepare(cgpu, N, r, p, hash_len_bits, 0 != (options & SPACEMESH_API_THROTTLED_MODE)))
 	{
 		_cudaState *cudaState = (_cudaState *)cgpu->device_data;
 
 		gpulog(LOG_INFO, cgpu->driver_id, "Intensity set to %g, %u cuda threads", throughput2intensity(cgpu->thread_concurrency), cgpu->thread_concurrency);
 
 		if (cgpu->thread_concurrency == 0) {
+			cgpu->busy = 0;
 			return -1;
 		}
 
 		gettimeofday(tv_start, NULL);
 
-		uint32_t *data[2] = { new uint32_t[(PREIMAGE_SIZE / 4) * cgpu->thread_concurrency], new uint32_t[(PREIMAGE_SIZE / 4) * cgpu->thread_concurrency] };
 		uint8_t *hash[2] = { cuda_hashbuffer(cudaState, 0), cuda_hashbuffer(cudaState, 1) };
 
 		uint64_t n = start_position;
 
 		/* byte swap pdata into data[0]/[1] arrays */
 		for (int k = 0; k < 2; ++k) {
-			for (unsigned i = 0; i < cgpu->thread_concurrency; ++i) memcpy(&data[k][(PREIMAGE_SIZE / 4)*i], pdata, PREIMAGE_SIZE);
+			for (unsigned i = 0; i < cgpu->thread_concurrency; ++i) memcpy(&cudaState->data[k][(PREIMAGE_SIZE / 4)*i], pdata, PREIMAGE_SIZE);
 		}
 		prepare_keccak512(cudaState, pdata, PREIMAGE_SIZE);
 
@@ -189,13 +196,13 @@ static int64_t cuda_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uin
 			++iteration;
 		} while (n <= end_position && !abort_flag);
 
-		delete[] data[0];
-		delete[] data[1];
-
 		gettimeofday(tv_end, NULL);
 
+		cgpu->busy = 0;
 		return 0;
 	}
+
+	cgpu->busy = 0;
 	return -1;
 }
 
@@ -207,6 +214,10 @@ static void cuda_shutdown(struct cgpu_info *cgpu)
 		cudaDeviceReset(); // well, simple way to free ;)
 		cgpu->deven = DEV_DISABLED;
 		cgpu->status = LIFE_NOSTART;
+		if (_cudaState *cudaState = (_cudaState *)cgpu->device_data) {
+			delete[] cudaState->data[0];
+			delete[] cudaState->data[1];
+		}
 		free(cgpu->device_data);
 		cgpu->device_data = NULL;
 	}

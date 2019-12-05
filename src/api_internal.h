@@ -271,7 +271,7 @@ struct device_drv {
 
 	bool(*init)(struct cgpu_info *);
 
-	int64_t(*scrypt_positions)(struct cgpu_info *, uint8_t *pdata, uint64_t start_pos, uint64_t end_position, uint8_t hash_len_bits, uint8_t *out, uint32_t N, uint32_t r, uint32_t p, struct timeval *tv_start, struct timeval *tv_end); // (thr, pdata, start_pos, end_position, out, N, r, p, tv_start, tv_end)
+	int64_t(*scrypt_positions)(struct cgpu_info *, uint8_t *pdata, uint64_t start_pos, uint64_t end_position, uint8_t hash_len_bits, uint32_t options, uint8_t *out, uint32_t N, uint32_t r, uint32_t p, struct timeval *tv_start, struct timeval *tv_end); // (thr, pdata, start_pos, end_position, out, N, r, p, tv_start, tv_end)
 
 	void(*shutdown)(struct cgpu_info *);
 
@@ -293,20 +293,19 @@ struct cgpu_info {
 	enum dev_enable deven;
 	enum alive status;
 
+	uint32_t gpu_core_count;
 	uint64_t gpu_max_alloc;
 
 	uint32_t N;
 	uint32_t r;
 	uint32_t p;
 	int opt_lg, lookup_gap;
+	uint32_t block_count;
 	uint32_t thread_concurrency;
 	size_t buffer_size;
 
 #ifdef HAVE_CUDA
-	int cuda_mpcount;
 	long cuda_sm;
-	char gpu_sn[64];
-	char gpu_desc[64];
 	int batchsize;
 	int backoff;
 #endif
@@ -315,11 +314,11 @@ struct cgpu_info {
 	unsigned int platform;
 #endif
 
-	bool available;
+	volatile bool available;
+	volatile bool busy;
 	bool shutdown;
 };
 
-extern bool opt_benchmark;
 extern volatile bool abort_flag;
 extern bool opt_debug;
 #ifdef WIN32
@@ -339,7 +338,7 @@ extern bool have_opencl;
 #define EXIT_CODE_TIME_LIMIT    0
 #define EXIT_CODE_KILLED        7
 
-void spacemesh_api_stop();
+int spacemesh_api_stop(uint32_t ms_timeout);
 int spacemesh_api_stats();
 struct cgpu_info * get_available_gpu();
 struct cgpu_info * get_available_gpu_by_type(enum drv_driver type);

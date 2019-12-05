@@ -7,10 +7,14 @@
 extern "C" {
 #endif	// #ifdef __cplusplus
 
-#define	SPACEMESH_API_CPU		0x01
-#define	SPACEMESH_API_CUDA		0x02
-#define	SPACEMESH_API_OPENCL	0x04
-#define	SPACEMESH_API_GPU		(SPACEMESH_API_CUDA | SPACEMESH_API_OPENCL)
+#define	SPACEMESH_API_CPU				0x00000001
+#define	SPACEMESH_API_CUDA				0x00000002
+#define	SPACEMESH_API_OPENCL			0x00000004
+#define	SPACEMESH_API_GPU				(SPACEMESH_API_CUDA | SPACEMESH_API_OPENCL)
+
+#define	SPACEMESH_API_THROTTLED_MODE	0x00000008
+
+#define SPACEMESH_API_USE_LOCKED_DEVICE	0x00001000
 
 int scryptPositions(
     const uint8_t *id, // 32 bytes
@@ -18,7 +22,7 @@ int scryptPositions(
     uint64_t end_position, // e.g. 49,999
     uint8_t hash_len_bits, // (1...8) for each hash output, the number of prefix bits (not bytes) to copy into the buffer
     const uint8_t *salt,  // 32 bytes
-    uint8_t options,  // throttle etc.
+    uint32_t options,  // throttle etc.
     uint8_t *out, // memory buffer large enough to include hash_len_bits * number of requested hashes
     uint32_t N,
     uint32_t R,
@@ -29,7 +33,7 @@ int scryptMany();
 
 int stats(); // return to the client the system GPU capabilities. E.g. OPENCL, CUDA/NVIDIA or NONE
 
-int stop(); // stop all GPU work and don’t fill the passed-in buffer with any more results.
+int stop(uint32_t ms_timeout); // stop all GPU work and don’t fill the passed-in buffer with any more results.
 
 #ifdef __cplusplus
 }

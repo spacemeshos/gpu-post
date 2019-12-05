@@ -682,14 +682,14 @@ void TitanKernel::set_scratchbuf_constants(int MAXWARPS, uint32_t** h_V)
 }
 
 bool TitanKernel::run_kernel(dim3 grid, dim3 threads, int WARPS_PER_BLOCK, int gpu_id, cudaStream_t stream,
-	uint32_t* d_idata, uint32_t* d_odata, unsigned int N, unsigned int r, unsigned int p, unsigned int batch, unsigned int LOOKUP_GAP, bool benchmark)
+	uint32_t* d_idata, uint32_t* d_odata, unsigned int N, unsigned int r, unsigned int p, unsigned int batch, unsigned int LOOKUP_GAP)
 {
 	bool success = true;
 
-	if (N != _prev_N) {
+	if (N != _prev_N || r != _prev_r) {
 		uint32_t h_N = N;
 		uint32_t h_N_1 = N-1;
-		uint32_t h_SCRATCH = r * SCRATCH;
+		uint32_t h_SCRATCH = r * SCRATCH(N, LOOKUP_GAP);
 		uint32_t h_SCRATCH_WU_PER_WARP = (h_SCRATCH * WU_PER_WARP);
 		uint32_t h_SCRATCH_WU_PER_WARP_1 = (h_SCRATCH * WU_PER_WARP) - 1;
 
@@ -700,6 +700,7 @@ bool TitanKernel::run_kernel(dim3 grid, dim3 threads, int WARPS_PER_BLOCK, int g
 		cudaMemcpyToSymbolAsync(c_SCRATCH_WU_PER_WARP_1, &h_SCRATCH_WU_PER_WARP_1, sizeof(uint32_t), 0, cudaMemcpyHostToDevice, stream);
 
 		_prev_N = N;
+		_prev_r = r;
 	}
 
 	for (unsigned i = 0; i < p; i++)

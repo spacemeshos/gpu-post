@@ -18,6 +18,7 @@
 #ifndef WIN32
 #include <sys/resource.h>
 #endif
+#include "api.h"
 #include "api_internal.h"
 #include "driver-opencl.h"
 #include "ocl.h"
@@ -195,7 +196,7 @@ static void reinit_opencl_device(struct cgpu_info *gpu)
 
 static uint32_t *blank_res;
 
-static bool opencl_prepare(struct cgpu_info *cgpu, unsigned N, uint32_t r, uint32_t p, cl_uint hash_len_bits)
+static bool opencl_prepare(struct cgpu_info *cgpu, unsigned N, uint32_t r, uint32_t p, cl_uint hash_len_bits, bool throttled)
 {
 	if (N != cgpu->N || r != cgpu->r || p != cgpu->p) {
 		char name[256];
@@ -204,7 +205,7 @@ static bool opencl_prepare(struct cgpu_info *cgpu, unsigned N, uint32_t r, uint3
 		if (cgpu->device_data) {
 			opencl_shutdown(cgpu);
 		}
-		cgpu->device_data = initCl(cgpu, name, sizeof(name), hash_len_bits);
+		cgpu->device_data = initCl(cgpu, name, sizeof(name), hash_len_bits, throttled);
 		if (!cgpu->device_data) {
 			applog(LOG_ERR, "Failed to init GPU, disabling device %d", cgpu->id);
 			cgpu->deven = DEV_DISABLED;
@@ -230,9 +231,10 @@ static bool opencl_init(struct cgpu_info *cgpu)
 
 #define	USE_ASYNC_BUFFER_READ	1
 
-static int64_t opencl_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uint64_t start_position, uint64_t end_position, uint8_t hash_len_bits, uint8_t *output, uint32_t N, uint32_t r, uint32_t p, struct timeval *tv_start, struct timeval *tv_end)
+static int64_t opencl_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uint64_t start_position, uint64_t end_position, uint8_t hash_len_bits, uint32_t options, uint8_t *output, uint32_t N, uint32_t r, uint32_t p, struct timeval *tv_start, struct timeval *tv_end)
 {
-	if (opencl_prepare(cgpu, N, r, p, hash_len_bits))
+	cgpu->busy = 1;
+	if (opencl_prepare(cgpu, N, r, p, hash_len_bits, 0 != (options & SPACEMESH_API_THROTTLED_MODE)))
 	{
 		_clState *clState = (_clState *)cgpu->device_data;
 		const cl_kernel *kernel = &clState->kernel[hash_len_bits];
@@ -254,6 +256,7 @@ static int64_t opencl_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, u
 			status = queue_scrypt_kernel(clState, pdata, n, N, (firstBuffer ? 0 : 1), hash_len_bits);
 			if (unlikely(status != CL_SUCCESS)) {
 				applog(LOG_ERR, "Error: clSetKernelArg of all params failed.");
+				cgpu->busy = 0;
 				return -1;
 			}
 
@@ -265,6 +268,7 @@ static int64_t opencl_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, u
 
 			if (unlikely(status != CL_SUCCESS)) {
 				applog(LOG_ERR, "Error %d: Enqueueing kernel onto command queue. (clEnqueueNDRangeKernel)", status);
+				cgpu->busy = 0;
 				return -1;
 			}
 
@@ -280,6 +284,7 @@ static int64_t opencl_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, u
 #endif
 			if (unlikely(status != CL_SUCCESS)) {
 				applog(LOG_ERR, "Error: clEnqueueReadBuffer failed error %d. (clEnqueueReadBuffer)", status);
+				cgpu->busy = 0;
 				return -1;
 			}
 #if USE_ASYNC_BUFFER_READ
@@ -310,8 +315,11 @@ static int64_t opencl_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, u
 #endif
 		gettimeofday(tv_end, NULL);
 
+		cgpu->busy = 0;
 		return 0;
 	}
+
+	cgpu->busy = 0;
 	return -1;
 }
 
