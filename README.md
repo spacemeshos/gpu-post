@@ -9,12 +9,12 @@
 - Windows 10 Pro.
 - Microsoft Visual Studio 2017 (any edition should be okay. Visual Studio 2019 is not supported. You may also need to install specific versions of the Windows SDK when prompted when attempting to build for the first time.
 - NVIDIA GPU Computing Toolkit 10.0 (but not later versions), and an NVIDIA GPU supporting CUDA 10.0 computation for CUDA testing.
-- An AMD GPU supporting OpenCL 2.0 or newer for OpenCL testing.
+- An AMD GPU supporting OpenCL 1.2 or newer for OpenCL testing.
 
 ### Linux
 - Modern 64-bit Linux, such as Ubuntu, Debian.
 - NVIDIA GPU Computing Toolkit 9 or 10, and an NVIDIA GPU supporting CUDA 9 or 10 computation for CUDA testing.
-- An AMD GPU supporting OpenCL 2.0 or newer for OpenCL testing.
+- An AMD GPU supporting OpenCL 1.2 or newer for OpenCL testing.
 
 ## Biulding
 
