@@ -128,8 +128,6 @@ static int64_t cuda_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uin
 	{
 		_cudaState *cudaState = (_cudaState *)cgpu->device_data;
 
-		gpulog(LOG_INFO, cgpu->driver_id, "Intensity set to %g, %u cuda threads", throughput2intensity(cgpu->thread_concurrency), cgpu->thread_concurrency);
-
 		if (cgpu->thread_concurrency == 0) {
 			cgpu->busy = 0;
 			return -1;
@@ -224,7 +222,7 @@ static void cuda_shutdown(struct cgpu_info *cgpu)
 }
 
 struct device_drv cuda_drv = {
-	DRIVER_CUDA,
+	SPACEMESH_API_CUDA,
 	"cuda",
 	"GPU",
 	cuda_detect,

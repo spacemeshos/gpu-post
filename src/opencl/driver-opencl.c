@@ -360,7 +360,7 @@ static void opencl_shutdown(struct cgpu_info *cgpu)
 }
 
 struct device_drv opencl_drv = {
-	DRIVER_OPENCL,
+	SPACEMESH_API_OPENCL,
 	"opencl",
 	"GPU",
 	opencl_detect,

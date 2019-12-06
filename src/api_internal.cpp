@@ -26,6 +26,7 @@ bool have_cuda = false;
 bool have_opencl = false;
 
 static struct cgpu_info s_gpus[MAX_GPUDEVICES]; /* Maximum number apparently possible */
+static struct cgpu_info s_cpu;
 
 static volatile int api_inited = 0;
 
@@ -51,7 +52,10 @@ extern "C" void spacemesh_api_init()
 		opencl_drv.drv_detect(s_gpus, &s_total_devices);
 #endif
 
-		cpu_drv.drv_detect(s_gpus, &s_total_devices);
+		if (0 == cpu_drv.drv_detect(&s_cpu, NULL)) {
+			s_cpu.drv->init(&s_cpu);
+			s_cpu.available = true;
+		}
 
 		for (int i = 0; i < s_total_devices; ++i) {
 			struct cgpu_info *cgpu = &s_gpus[i];
@@ -66,13 +70,12 @@ extern "C" void spacemesh_api_init()
 	}
 }
 
-// TODO: wait for available
-struct cgpu_info * get_available_gpu()
+struct cgpu_info * spacemesh_api_get_available_gpu()
 {
 	struct cgpu_info *cgpu = NULL;
 	pthread_mutex_lock(&gpus_lock);
 	for (int i = 0; i < s_total_devices; ++i) {
-		if (s_gpus[i].available) {
+		if (s_gpus[i].available && (0 != (s_gpus[i].drv->type & SPACEMESH_API_GPU))) {
 			cgpu = &s_gpus[i];
 			cgpu->available = false;
 			break;
@@ -82,22 +85,33 @@ struct cgpu_info * get_available_gpu()
 	return cgpu;
 }
 
-struct cgpu_info * get_available_gpu_by_type(enum drv_driver type)
+struct cgpu_info * spacemesh_api_get_gpu(int id)
+{
+	if (id >= 0 && id < s_total_devices) {
+		return &s_gpus[id];
+	}
+	return NULL;
+}
+
+struct cgpu_info * spacemesh_api_get_available_gpu_by_type(enum drv_driver type)
 {
 	struct cgpu_info *cgpu = NULL;
 	pthread_mutex_lock(&gpus_lock);
 	for (int i = 0; i < s_total_devices; ++i) {
-		if (s_gpus[i].available && (type == s_gpus[i].drv->drv_id)) {
+		if (s_gpus[i].available && (type == s_gpus[i].drv->type)) {
 			cgpu = &s_gpus[i];
 			cgpu->available = false;
 			break;
 		}
 	}
 	pthread_mutex_unlock(&gpus_lock);
+	if (NULL == cgpu && (0 != (type & SPACEMESH_API_CPU))) {
+		cgpu = &s_cpu;
+	}
 	return cgpu;
 }
 
-void release_gpu(struct cgpu_info *cgpu)
+void spacemesh_api_release_gpu(struct cgpu_info *cgpu)
 {
 	pthread_mutex_lock(&gpus_lock);
 	cgpu->available = true;
@@ -115,21 +129,67 @@ int spacemesh_api_stats()
 {
 	int devices = SPACEMESH_API_CPU;
 	for (int i = 0; i < s_total_devices; ++i) {
-		if (DRIVER_CUDA == s_gpus[i].drv->drv_id) {
-			devices |= SPACEMESH_API_CUDA;
-		}
-		else if (DRIVER_OPENCL == s_gpus[i].drv->drv_id) {
-			devices |= SPACEMESH_API_OPENCL;
-		}
+		devices |= s_gpus[i].drv->type;
 	}
 	return devices;
+}
+
+int spacemesh_api_get_gpu_count(int type, int only_available)
+{
+	int devices = 0;
+	if (0 == type) {
+		type = SPACEMESH_API_GPU;
+	}
+	pthread_mutex_lock(&gpus_lock);
+	for (int i = 0; i < s_total_devices; ++i) {
+		if (0 != (type & s_gpus[i].drv->type)) {
+			if (only_available) {
+				if (s_gpus[i].available) {
+					devices++;
+				}
+			}
+			else {
+				devices++;
+			}
+		}
+	}
+	pthread_mutex_unlock(&gpus_lock);
+	return devices;
+}
+
+int spacemesh_api_lock_gpu(int type)
+{
+	int device = 0;
+	if (0 == type) {
+		type = SPACEMESH_API_GPU;
+	}
+	pthread_mutex_lock(&gpus_lock);
+	for (int i = 0; i < s_total_devices; ++i) {
+		if (s_gpus[i].available && (0 != (type & s_gpus[i].drv->type))) {
+			s_gpus[i].available = false;
+			device = SPACEMESH_API_USE_LOCKED_DEVICE | (i << 8);
+			break;
+		}
+	}
+	pthread_mutex_unlock(&gpus_lock);
+	return device;
+}
+
+void spacemesh_api_unlock_gpu(int cookie)
+{
+	pthread_mutex_lock(&gpus_lock);
+	int id = (cookie >> 8) & 0x0f;
+	if (id >= 0 && id < s_total_devices) {
+		s_gpus[id].available = true;
+	}
+	pthread_mutex_unlock(&gpus_lock);
 }
 
 int spacemesh_api_stop(uint32_t ms_timeout)
 {
 	uint32_t timeout = 0;
 	if (abort_flag) {/* already called */
-		return -1;
+		return SPACEMESH_API_ERROR_ALREADY;
 	}
 
 	abort_flag = true;
@@ -145,7 +205,7 @@ int spacemesh_api_stop(uint32_t ms_timeout)
 		if (busy) {
 			if (timeout >= ms_timeout) {
 				abort_flag = false;
-				return -2;
+				return SPACEMESH_API_ERROR_TIMEOUT;
 			}
 			usleep(100000);
 			timeout += 100;
@@ -154,5 +214,5 @@ int spacemesh_api_stop(uint32_t ms_timeout)
 		abort_flag = false;
 	}
 
-	return 0;
+	return SPACEMESH_API_ERROR_NONE;
 }

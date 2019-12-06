@@ -6,7 +6,7 @@
 #include <conio.h>
 #endif
 
-#define	LABELS_COUNT	250000
+#define	LABELS_COUNT	25000
 
 static void print(uint8_t *data)
 {
@@ -45,6 +45,26 @@ int main()
 
 	if (0 != memcmp(out[0], out[2], LABELS_COUNT)) {
 		printf("WRONG result from OpenCL:\n");
+	}
+
+	if (int cookie = spacemesh_api_lock_gpu(SPACEMESH_API_CUDA)) {
+		for (int i = 0; i < 5; i++) {
+			scryptPositions(id, 0, LABELS_COUNT - 1, 8, salt, cookie, out[1], 512, 1, 1);
+			if (0 != memcmp(out[0], out[1], LABELS_COUNT)) {
+				printf("WRONG result from CUDA\n");
+			}
+		}
+		spacemesh_api_unlock_gpu(cookie);
+	}
+
+	if (int cookie = spacemesh_api_lock_gpu(SPACEMESH_API_OPENCL)) {
+		for (int i = 0; i < 5; i++) {
+			scryptPositions(id, 0, LABELS_COUNT - 1, 8, salt, cookie, out[2], 512, 1, 1);
+			if (0 != memcmp(out[0], out[2], LABELS_COUNT)) {
+				printf("WRONG result from OpenCL:\n");
+			}
+		}
+		spacemesh_api_unlock_gpu(cookie);
 	}
 
 	free(out[0]);

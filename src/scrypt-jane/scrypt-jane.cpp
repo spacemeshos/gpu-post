@@ -6,6 +6,7 @@
  * Adapted to ccminer by tpruvot@github (2015)
  */
 
+#include "api.h"
 #include "api_internal.h"
 
 #include "scrypt-jane.h"
@@ -407,14 +408,14 @@ typedef struct {
 	uint8_t *X, *Y;
 } _cpuState;
 
-static int cpu_detect(struct cgpu_info *gpus, int *active)
+static int cpu_detect(struct cgpu_info *cgpu, int *active)
 {
-	struct cgpu_info *cgpu = &gpus[*active];
-
 	cgpu->drv = &cpu_drv;
 	cgpu->driver_id = 0;
 
-	*active += 1;
+	if (active) {
+		*active += 1;
+	}
 
 	return 0;
 }
@@ -475,7 +476,6 @@ static bool cpu_init(struct cgpu_info *cgpu)
 
 static int64_t cpu_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uint64_t start_position, uint64_t end_position, uint8_t hash_len_bits, uint32_t options, uint8_t *output, uint32_t N, uint32_t r, uint32_t p, struct timeval *tv_start, struct timeval *tv_end)
 {
-	cgpu->busy = 1;
 	if (cpu_prepare(cgpu, N, r, p))
 	{
 		_cpuState *cpuState = (_cpuState *)cgpu->device_data;
@@ -533,7 +533,6 @@ static int64_t cpu_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uint
 		gettimeofday(tv_end, NULL);
 	}
 
-	cgpu->busy = 0;
 	return 0;
 }
 
@@ -556,7 +555,7 @@ static void cpu_shutdown(struct cgpu_info *cgpu)
 }
 
 struct device_drv cpu_drv = {
-	DRIVER_CPU,
+	SPACEMESH_API_CPU,
 	"cpu",
 	"CPU",
 	cpu_detect,

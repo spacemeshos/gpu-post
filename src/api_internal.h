@@ -240,13 +240,6 @@ enum dev_enable {
 	DEV_RECOVER,
 };
 
-enum drv_driver {
-	DRIVER_CPU = 0,
-	DRIVER_OPENCL,
-	DRIVER_CUDA,
-	DRIVER_MAX
-};
-
 enum alive {
 	LIFE_WELL,
 	LIFE_SICK,
@@ -258,10 +251,10 @@ enum alive {
 struct cgpu_info;
 
 struct device_drv {
-	enum drv_driver drv_id;
+	uint32_t type;
 
-	const char *dname;
 	const char *name;
+	const char *class_name;
 
 	// DRV-global functions
 	int(*drv_detect)(struct cgpu_info *, int *);
@@ -340,9 +333,13 @@ extern bool have_opencl;
 
 int spacemesh_api_stop(uint32_t ms_timeout);
 int spacemesh_api_stats();
-struct cgpu_info * get_available_gpu();
-struct cgpu_info * get_available_gpu_by_type(enum drv_driver type);
-void release_gpu(struct cgpu_info *cgpu);
+struct cgpu_info * spacemesh_api_get_available_gpu();
+struct cgpu_info * spacemesh_api_get_available_gpu_by_type(enum drv_driver type);
+struct cgpu_info * spacemesh_api_get_gpu(int id);
+int spacemesh_api_get_gpu_count(int type, int only_available);
+int spacemesh_api_lock_gpu(int type);
+void spacemesh_api_unlock_gpu(int cookie);
+void spacemesh_api_release_gpu(struct cgpu_info *cgpu);
 
 #ifdef __cplusplus
 }

@@ -7,6 +7,11 @@
 extern "C" {
 #endif	// #ifdef __cplusplus
 
+#define	SPACEMESH_API_ERROR_NONE		0
+#define	SPACEMESH_API_ERROR				-1
+#define	SPACEMESH_API_ERROR_TIMEOUT		-2
+#define	SPACEMESH_API_ERROR_ALREADY		-3
+
 #define	SPACEMESH_API_CPU				0x00000001
 #define	SPACEMESH_API_CUDA				0x00000002
 #define	SPACEMESH_API_OPENCL			0x00000004
@@ -34,6 +39,12 @@ int scryptMany();
 int stats(); // return to the client the system GPU capabilities. E.g. OPENCL, CUDA/NVIDIA or NONE
 
 int stop(uint32_t ms_timeout); // stop all GPU work and don’t fill the passed-in buffer with any more results.
+
+int spacemesh_api_get_gpu_count(int type, int only_available);
+
+int spacemesh_api_lock_gpu(int type);
+
+void spacemesh_api_unlock_gpu(int cookie);
 
 #ifdef __cplusplus
 }
