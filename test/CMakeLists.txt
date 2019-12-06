@@ -7,7 +7,7 @@ set(CUDA_LIB_PATH ${CUDA_TOOLKIT_ROOT_DIR}/lib64/stubs/)
 add_executable(gpu-setup-test ${SOURCES})
 
 target_include_directories(gpu-setup-test PRIVATE ..)
-target_link_libraries(gpu-setup-test PRIVATE gpu-setup)
+target_link_libraries(gpu-setup-test PRIVATE gpu-setup -ldl)
 
 if (SPACEMESHCUDA)
     if(MSVC)
