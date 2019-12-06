@@ -334,7 +334,7 @@ extern bool have_opencl;
 int spacemesh_api_stop(uint32_t ms_timeout);
 int spacemesh_api_stats();
 struct cgpu_info * spacemesh_api_get_available_gpu();
-struct cgpu_info * spacemesh_api_get_available_gpu_by_type(enum drv_driver type);
+struct cgpu_info * spacemesh_api_get_available_gpu_by_type(int type);
 struct cgpu_info * spacemesh_api_get_gpu(int id);
 int spacemesh_api_get_gpu_count(int type, int only_available);
 int spacemesh_api_lock_gpu(int type);

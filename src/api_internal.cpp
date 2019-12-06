@@ -93,7 +93,7 @@ struct cgpu_info * spacemesh_api_get_gpu(int id)
 	return NULL;
 }
 
-struct cgpu_info * spacemesh_api_get_available_gpu_by_type(enum drv_driver type)
+struct cgpu_info * spacemesh_api_get_available_gpu_by_type(int type)
 {
 	struct cgpu_info *cgpu = NULL;
 	pthread_mutex_lock(&gpus_lock);
