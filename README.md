@@ -14,7 +14,7 @@
 ### Linux
 - Modern 64-bit Linux, such as Ubuntu, Debian.
 - NVIDIA GPU Computing Toolkit 9 or 10, and an NVIDIA GPU supporting CUDA 9 or 10 computation for CUDA testing.
-- An AMD GPU supporting OpenCL 1.2 or newer for OpenCL testing.
+- An AMD GPU supporting OpenCL 1.2 or newer for OpenCL testing. Install the AMD Linux driver package (with the opencl option selected).
 
 ## Building
 
