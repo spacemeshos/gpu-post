@@ -16,7 +16,7 @@
 - NVIDIA GPU Computing Toolkit 9 or 10, and an NVIDIA GPU supporting CUDA 9 or 10 computation for CUDA testing.
 - An AMD GPU supporting OpenCL 1.2 or newer for OpenCL testing.
 
-## Biulding
+## Building
 
 Build options:
 SPACEMESHCL   "Build with OpenCL support" default: ON
@@ -87,7 +87,7 @@ return to the client the system GPU capabilities. E.g. OPENCL, CUDA/NVIDIA or NO
 int stats();
 ```
 
-stop all GPU work and don’t fill the passed-in buffer with any more results.
+stop all GPU work and donâ€™t fill the passed-in buffer with any more results.
 ```
 int stop(
 	uint32_t ms_timeout			// timeout in milliseconds
