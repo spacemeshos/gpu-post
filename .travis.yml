@@ -1,0 +1,30 @@
+language: cpp
+dist: bionic
+
+os:
+  - linux
+
+env:
+  jobs:
+    - CUDA=10.2
+    - CUDA=10.1
+    - CUDA=10.0
+
+before_install:
+  - source .travis/install-cuda.sh
+
+script:
+  - cmake .
+  - make
+  - export RELEASE_FILE=/tmp/gpu-post-${TRAVIS_TAG/v}-$TRAVIS_OS_NAME-cuda$CUDA.tgz
+  - tar zcf $RELEASE_FILE --transform='s,^.*/,,' include/api.h test/gpu-setup-test src/libgpu-setup.a
+
+deploy:
+  provider: releases
+  token:
+    secure: VAQDPn9UMmVbVwF077HxgKkLGYcrmY0vzuYLvDRVILo4idfnVbY8fTJiDD63Phnj1A0imxNP8WPP3aoyUsgJixRGdjr3+Hiym7b1Zp1PhTLNRmRl2/7SoHyaMe14udowyalvOPzOl2tnUiCnh+XuTzR4jMioqhdQRUPnmpu0oLOvmJT7c1ZrmgmjAzzOBoT8xZWErzUhXaqZu0ahYtcnKHfucdFXR6hc9mA2z/1q1DrdaTLsSiJoNkQpekkUZmLgQjtfoKukGNSw0JKa0H6jBLiUSlNihnfKMEaMl65yOIXksvL54s+w+ZXQIo+wEykGN7TnzVa5qgxMsJCkWWj7NYhLGk5iQt7gHrioYKXrYOql4iVCgme7jh1tJge14ZKtynzY1558pG54qabZ5FEEcHq987lOBXscvChtavyuVEkK5JuMupF8rQoqDmGCMZawDHTUBjVZ44WrWsbVTCIUynpOSS9akEFxvsgcAbOvUBdZ72bpsRcQ0eJx3ldHbS8o3MZ/pw+t9PrPy8irj2yfzQ16mAfkvNQ6F0EF8c04WQ+YyCo/qKbP6FryyOzPrsnzZYn70OJ8NnCwwwUitjAPx2I1ITfoUmTSTnGwaTGDK9YdBQwfI2Mq5gLbr5vtc69/5QgsuJW69bintq6kVnSmGPh6EQ19ZbPQIKSfvnPLcNM=
+  file: "/tmp/gpu-post-*"
+  file_glob: true
+  cleanup: false
+  on:
+    tags: true
