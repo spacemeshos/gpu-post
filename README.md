@@ -119,15 +119,14 @@ void spacemesh_api_unlock_gpu(
 ## Initial Benchmarks
 
 Scrypt Benchmarks (n=512, r=1, p=1) 1 byte per leaf, batch size leaves per API call.
-
-|Date      |Reporter|impl     |cpu / gpu                       |notes                                 |batch size|kh/s |mh/s|x factor over 1 4ghz cpu native thread|x factor over 12 4ghz cpu native threads|
-|----------|--------|---------|--------------------------------|--------------------------------------|----------|-----|----|--------------------------------------|----------------------------------------|
-|11/19/2019|ae      |go-scrypt|mbp + Intel i9 @ 2.9ghz - 1 core|go scrypt crypto lib (not scrypt-jane)|250K      |7    |0.01|1                                     |1                                       |
-|11/19/2019|ae      |sm-scrypt|Ryzen 5 2600x @ 4ghz - 1 core   |scrypt-jane c code                    |250K      |7    |0.01|1                                     |1                                       |
-|11/19/2019|ae      |sm-scrypt|Nvidia Gefroce RTX 2070 8GB     |pre-optimized prototype               |250K      |1,920|1.92|290                                   |24.17                                   |
-|11/19/2019|ae      |sm-scrypt|AMD Radeon RX 580               |pre-optimized prototype               |250K      |500  |0.50|76                                    |6.29                                    |
-|11/19/2019|ar      |sm-scrypt|Nvidia GTX 1060 6G              |pre-optimized prototype               |250K      |979  |0.98|148                                   |12.32                                   |
-|11/19/2019|ar      |sm-scrypt|AMD Radeon 570 4GB              |pre-optimized prototype               |250K      |355  |0.36|54                                    |4.47                                    |
-|12/02/2019|ar      |sm-scrypt|Nvidia GTX 1060 6G              |pre-optimized prototype               |25M       |986  |0.99|                                      |                                        |
-|12/02/2019|ar      |sm-scrypt|AMD Radeon 570 4GB              |pre-optimized prototype               |25M       |717  |0.72|                                      |                                        |
-
+| Date       	| Reporter 	| impl      	| cpu / gpu                        	| Host OS             	| notes                                  	| kh/s  	| mh/s 	| x factor over 1 4ghz cpu native thread 	| x factor over 12 4ghz cpu native threads 	|
+|------------	|----------	|-----------	|----------------------------------	|---------------------	|----------------------------------------	|-------	|------	|----------------------------------------	|------------------------------------------	|
+| 11/19/2019 	| ae       	| go-scrypt 	| mbp + Intel i9 @ 2.9ghz - 1 core 	| OS X                	| go scrypt crypto lib (not scrypt-jane) 	| 7     	| 0.01 	| 1                                      	| 1                                        	|
+| 11/19/2019 	| ae       	| sm-scrypt 	| Ryzen 5 2600x @ 4ghz - 1 core    	| Windows 10          	| scrypt-jane c code                     	| 7     	| 0.01 	| 1                                      	| 1                                        	|
+| 11/19/2019 	| ae       	| sm-scrypt 	| Nvidia Gefroce RTX 2070 8GB      	| Windows 10          	| pre-optimized prototype                	| 1,920 	| 1.92 	| 290                                    	| 24.17                                    	|
+| 11/19/2019 	| ae       	| sm-scrypt 	| AMD Radeon RX 580                	| Windows 10          	| pre-optimized prototype                	| 500   	| 0.50 	| 76                                     	| 6.29                                     	|
+| 11/19/2019 	| ar       	| sm-scrypt 	| Nvidia GTX 1060 6G               	| Windows 10          	| pre-optimized prototype                	| 979   	| 0.98 	| 148                                    	| 12.32                                    	|
+| 11/19/2019 	| ar       	| sm-scrypt 	| AMD Radeon 570 4GB               	| Windows 10          	| pre-optimized prototype                	| 355   	| 0.36 	| 54                                     	| 4.47                                     	|
+| 11/12/2019 	| ae       	| sm-scrypt 	| AMD Radeon RX 580                	| Windows 10          	| optimized prototype                    	| 926   	| 0.93 	| 140                                    	| 11.65                                    	|
+| 11/12/2019 	| ae       	| sm-scrypt 	| AMD Radeon RX 580                	| Ubuntu 18.0.4.3 LTS 	| optimized prototype                    	| 893   	| 0.89 	| 135                                    	| 11.24                                    	|
+| 11/12/2019 	| ae       	| sm-scrypt 	| Nvidia Gefroce RTX 2070 8GB      	| Ubuntu 19.10 LTS    	| optimized prototype                    	| tbd   	| tbd  	| tbd                                    	| tbd                                      	|
