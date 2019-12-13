@@ -119,7 +119,6 @@ void spacemesh_api_unlock_gpu(
 ## Initial Benchmarks
 
 Scrypt Benchmarks (n=512, r=1, p=1) 1 byte per leaf, batch size leaves per API call.
-
 | Date       	| Reporter 	| impl      	| cpu / gpu                        	| Host OS             	| notes                                  	| kh/s  	| mh/s 	| x factor over 1 4ghz cpu native thread 	| x factor over 12 4ghz cpu native threads 	|
 |------------	|----------	|-----------	|----------------------------------	|---------------------	|----------------------------------------	|-------	|------	|----------------------------------------	|------------------------------------------	|
 | 11/19/2019 	| ae       	| go-scrypt 	| mbp + Intel i9 @ 2.9ghz - 1 core 	| OS X                	| go scrypt crypto lib (not scrypt-jane) 	| 7     	| 0.01 	| 1                                      	| 1                                        	|
@@ -130,4 +129,4 @@ Scrypt Benchmarks (n=512, r=1, p=1) 1 byte per leaf, batch size leaves per API c
 | 11/19/2019 	| ar       	| sm-scrypt 	| AMD Radeon 570 4GB               	| Windows 10          	| pre-optimized prototype                	| 355   	| 0.36 	| 54                                     	| 4.47                                     	|
 | 11/12/2019 	| ae       	| sm-scrypt 	| AMD Radeon RX 580                	| Windows 10          	| optimized prototype                    	| 926   	| 0.93 	| 140                                    	| 11.65                                    	|
 | 11/12/2019 	| ae       	| sm-scrypt 	| AMD Radeon RX 580                	| Ubuntu 18.0.4.3 LTS 	| optimized prototype                    	| 893   	| 0.89 	| 135                                    	| 11.24                                    	|
-| 11/12/2019 	| ae       	| sm-scrypt 	| Nvidia Gefroce RTX 2070 8GB      	| Ubuntu 19.10 LTS    	| optimized prototype                    	| tbd   	| tbd  	| tbd                                    	| tbd                                      	|
+| 11/12/2019 	| ae       	| sm-scrypt 	| Nvidia Gefroce RTX 2070 8GB      	| Ubuntu 19.10 LTS    	| optimized prototype                    	| 1,923 	| 1.92 	| 292                                    	| 24.37                                    	|
