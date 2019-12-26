@@ -50,7 +50,7 @@ be32enc_vect(uint32_t *dst, const uint32_t *src, uint32_t len)
 
 static void opencl_shutdown(struct cgpu_info *cgpu);
 
-static cl_int queue_scrypt_kernel(_clState *clState, uint8_t *pdata, uint64_t start_pos, uint32_t N, int nBuf, uint32_t hash_len_bits)
+static cl_int queue_scrypt_kernel(_clState *clState, uint8_t *pdata, uint64_t start_pos, uint32_t N, int nBuf, uint32_t hash_len_bits, uint32_t r, uint32_t p)
 {
 	cl_kernel *kernel = &clState->kernel[hash_len_bits];
 	unsigned int num = 0;
@@ -63,6 +63,8 @@ static cl_int queue_scrypt_kernel(_clState *clState, uint8_t *pdata, uint64_t st
 	CL_SET_ARG(clState->padbuffer8);
 	CL_SET_ARG(N);
 	CL_SET_ARG(start_pos);
+	CL_SET_ARG(r);
+	CL_SET_ARG(p);
 
 	return status;
 }
@@ -253,7 +255,7 @@ static int64_t opencl_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, u
 		uint64_t outLength = ((end_position - start_position + 1) * hash_len_bits + 7) / 8;
 
 		do {
-			status = queue_scrypt_kernel(clState, pdata, n, N, (firstBuffer ? 0 : 1), hash_len_bits);
+			status = queue_scrypt_kernel(clState, pdata, n, N, (firstBuffer ? 0 : 1), hash_len_bits, r, p);
 			if (unlikely(status != CL_SUCCESS)) {
 				applog(LOG_ERR, "Error: clSetKernelArg of all params failed.");
 				cgpu->busy = 0;

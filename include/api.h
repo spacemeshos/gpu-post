@@ -15,7 +15,8 @@ extern "C" {
 #define	SPACEMESH_API_CPU				0x00000001
 #define	SPACEMESH_API_CUDA				0x00000002
 #define	SPACEMESH_API_OPENCL			0x00000004
-#define	SPACEMESH_API_GPU				(SPACEMESH_API_CUDA | SPACEMESH_API_OPENCL)
+#define	SPACEMESH_API_VULKAN			0x00000008
+#define	SPACEMESH_API_GPU				(SPACEMESH_API_CUDA | SPACEMESH_API_OPENCL | SPACEMESH_API_VULKAN)
 
 #define	SPACEMESH_API_THROTTLED_MODE	0x00000008
 
@@ -29,9 +30,9 @@ int scryptPositions(
     const uint8_t *salt,		// 32 bytes
     uint32_t options,			// throttle etc.
     uint8_t *out,				// memory buffer large enough to include hash_len_bits * number of requested hashes
-    uint32_t N,
-    uint32_t R,
-    uint32_t P
+    uint32_t N,					// scrypt N
+    uint32_t R,					// scrypt r
+    uint32_t P					// scrypt p
 );
 
 // return to the client the system GPU capabilities. E.g. OPENCL, CUDA/NVIDIA or NONE

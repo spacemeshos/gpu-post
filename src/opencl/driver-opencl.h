@@ -1,5 +1,5 @@
-#ifndef __DEVICE_GPU_H__
-#define __DEVICE_GPU_H__
+#ifndef __SPACEMESH_OPENCL_DRIVER_OPENCL_H__
+#define __SPACEMESH_OPENCL_DRIVER_OPENCL_H__
 
 #include "api_internal.h"
 
@@ -15,4 +15,4 @@ extern struct device_drv opencl_drv;
 } /* extern "C" */
 #endif
 
-#endif /* __DEVICE_GPU_H__ */
+#endif /* __SPACEMESH_OPENCL_DRIVER_OPENCL_H__ */

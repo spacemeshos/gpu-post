@@ -692,7 +692,7 @@ scrypt_ROMix(uint4 *restrict X/*[chunkWords]*/, __global uint4 *restrict lookup/
 }
 
 __attribute__((reqd_work_group_size(64, 1, 1)))
-__kernel void search8(__global const uint4 * restrict input, volatile __global uchar * restrict output, __global uchar * restrict padcache, const uint N, const ulong nonceBase)
+__kernel void search8(__global const uint4 * restrict input, volatile __global uchar * restrict output, __global uchar * restrict padcache, const uint N, const ulong nonceBase, const uint r, const uint p)
 {
 	__local uint labels[64];
 	uint4 password[5];
@@ -820,7 +820,7 @@ __kernel void search8(__global const uint4 * restrict input, volatile __global u
 }
 
 __attribute__((reqd_work_group_size(64, 1, 1)))
-__kernel void search7(__global const uint4 * restrict input, volatile __global uchar * restrict output, __global uchar * restrict padcache, const uint N, const ulong nonceBase)
+__kernel void search7(__global const uint4 * restrict input, volatile __global uchar * restrict output, __global uchar * restrict padcache, const uint N, const ulong nonceBase, const uint r, const uint p)
 {
 	__local uint labels[64];
 	uint4 password[5];
@@ -973,7 +973,7 @@ __kernel void search7(__global const uint4 * restrict input, volatile __global u
 }
 
 __attribute__((reqd_work_group_size(64, 1, 1)))
-__kernel void search6(__global const uint4 * restrict input, volatile __global uchar * restrict output, __global uchar * restrict padcache, const uint N, const ulong nonceBase)
+__kernel void search6(__global const uint4 * restrict input, volatile __global uchar * restrict output, __global uchar * restrict padcache, const uint N, const ulong nonceBase, const uint r, const uint p)
 {
 	__local uint labels[64];
 	uint4 password[5];
@@ -1112,7 +1112,7 @@ __kernel void search6(__global const uint4 * restrict input, volatile __global u
 }
 
 __attribute__((reqd_work_group_size(64, 1, 1)))
-__kernel void search5(__global const uint4 * restrict input, volatile __global uchar * restrict output, __global uchar * restrict padcache, const uint N, const ulong nonceBase)
+__kernel void search5(__global const uint4 * restrict input, volatile __global uchar * restrict output, __global uchar * restrict padcache, const uint N, const ulong nonceBase, const uint r, const uint p)
 {
 	__local uint labels[64];
 	uint4 password[5];
@@ -1251,7 +1251,7 @@ __kernel void search5(__global const uint4 * restrict input, volatile __global u
 }
 
 __attribute__((reqd_work_group_size(64, 1, 1)))
-__kernel void search4(__global const uint4 * restrict input, volatile __global uchar * restrict output, __global uchar * restrict padcache, const uint N, const ulong nonceBase)
+__kernel void search4(__global const uint4 * restrict input, volatile __global uchar * restrict output, __global uchar * restrict padcache, const uint N, const ulong nonceBase, const uint r, const uint p)
 {
 	__local uint labels[64];
 	uint4 password[5];
@@ -1368,7 +1368,7 @@ __kernel void search4(__global const uint4 * restrict input, volatile __global u
 }
 
 __attribute__((reqd_work_group_size(64, 1, 1)))
-__kernel void search3(__global const uint4 * restrict input, volatile __global uchar * restrict output, __global uchar * restrict padcache, const uint N, const ulong nonceBase)
+__kernel void search3(__global const uint4 * restrict input, volatile __global uchar * restrict output, __global uchar * restrict padcache, const uint N, const ulong nonceBase, const uint r, const uint p)
 {
 	__local uint labels[64];
 	uint4 password[5];
@@ -1493,7 +1493,7 @@ __kernel void search3(__global const uint4 * restrict input, volatile __global u
 }
 
 __attribute__((reqd_work_group_size(64, 1, 1)))
-__kernel void search2(__global const uint4 * restrict input, volatile __global uchar * restrict output, __global uchar * restrict padcache, const uint N, const ulong nonceBase)
+__kernel void search2(__global const uint4 * restrict input, volatile __global uchar * restrict output, __global uchar * restrict padcache, const uint N, const ulong nonceBase, const uint r, const uint p)
 {
 	__local uint labels[64];
 	uint4 password[5];
@@ -1606,7 +1606,7 @@ __kernel void search2(__global const uint4 * restrict input, volatile __global u
 }
 
 __attribute__((reqd_work_group_size(64, 1, 1)))
-__kernel void search1(__global const uint4 * restrict input, volatile __global uchar * restrict output, __global uchar * restrict padcache, const uint N, const ulong nonceBase)
+__kernel void search1(__global const uint4 * restrict input, volatile __global uchar * restrict output, __global uchar * restrict padcache, const uint N, const ulong nonceBase, const uint r, const uint p)
 {
 	__local uint labels[64];
 	uint4 password[5];

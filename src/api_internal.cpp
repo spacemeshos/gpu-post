@@ -1,6 +1,10 @@
 #include "api.h"
 #include "api_internal.h"
 
+#ifdef HAVE_VULKAN
+#include "vulkan/driver-vulkan.h"
+#endif
+
 #ifdef HAVE_CUDA
 #include "cuda/driver-cuda.h"
 #endif
@@ -24,6 +28,7 @@ pthread_mutex_t gpus_lock;
 static int s_total_devices = 0;
 bool have_cuda = false;
 bool have_opencl = false;
+bool have_vulkan = false;
 
 static struct cgpu_info s_gpus[MAX_GPUDEVICES]; /* Maximum number apparently possible */
 static struct cgpu_info s_cpu;
@@ -43,6 +48,10 @@ extern "C" void spacemesh_api_init()
 #endif
 
 		memset(s_gpus, 0, sizeof(s_gpus));
+
+#ifdef HAVE_VULKAN
+		vulkan_drv.drv_detect(s_gpus, &s_total_devices);
+#endif
 
 #ifdef HAVE_CUDA
 		cuda_drv.drv_detect(s_gpus, &s_total_devices);

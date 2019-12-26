@@ -153,6 +153,30 @@ if (SPACEMESHCUDA)
     )
 endif()
 
+if (SPACEMESHVULKAN)
+    # Look for vulkan SDK
+    # For a Windows build on Linux, install the Vulkan SDK with wine, and set VULKAN_SDK to ..../.wine/drive_c/VulkanSDK/1.x.y
+    # For Linux, install libvulkan-dev
+    find_path(VulkanIncludes vulkan/vulkan.h PATHS $ENV{VULKAN_SDK}/Include $ENV{VULKAN_SDK}/include /usr )
+    if (NOT VulkanIncludes)
+        message(FATAL_ERROR "Can't find folder containing vulkan.h")
+    endif()
+
+    include_directories(${VulkanIncludes})
+
+    message("------------------------------------------------------------------------")
+    message("-- Vulkan API Includes ${VulkanIncludes}")
+    message("------------------------------------------------------------------------")
+
+    set(SOURCES
+        ${SOURCES}
+        vulkan/driver-vulkan.c
+        vulkan/driver-vulkan.h
+        vulkan/vulkan-helpers.c
+        vulkan/vulkan-helpers.h
+    )
+endif()
+
 # add_library(gpu-setup STATIC ${SOURCES})
 # cuda_add_library(gpu-setup STATIC ${SOURCES})
 if (SPACEMESHCUDA)

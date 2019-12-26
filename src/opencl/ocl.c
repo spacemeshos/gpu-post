@@ -221,13 +221,8 @@ _clState *initCl(struct cgpu_info *cgpu, char *name, size_t nameSize, cl_uint ha
 
 	clState->wsize = 64;
 
-	if (!cgpu->opt_lg) {
-		applog(LOG_NOTICE, "GPU %d: selecting lookup gap of 4", cgpu->driver_id);
-		cgpu->lookup_gap = 4;
-	}
-	else {
-		cgpu->lookup_gap = cgpu->opt_lg;
-	}
+	applog(LOG_NOTICE, "GPU %d: selecting lookup gap of 4", cgpu->driver_id);
+	cgpu->lookup_gap = 4;
 
 	unsigned int bsize = 1024;
 	size_t ipt = (bsize / cgpu->lookup_gap + (bsize % cgpu->lookup_gap > 0));

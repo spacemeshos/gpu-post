@@ -292,7 +292,7 @@ struct cgpu_info {
 	uint32_t N;
 	uint32_t r;
 	uint32_t p;
-	int opt_lg, lookup_gap;
+	int lookup_gap;
 	uint32_t block_count;
 	uint32_t thread_concurrency;
 	size_t buffer_size;
@@ -321,6 +321,7 @@ extern pthread_mutex_t applog_lock;
 #endif
 extern bool have_cuda;
 extern bool have_opencl;
+extern bool have_vulkan;
 
 #define EXIT_CODE_OK            0
 #define EXIT_CODE_USAGE         1

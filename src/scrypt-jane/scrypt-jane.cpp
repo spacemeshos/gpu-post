@@ -380,7 +380,6 @@ static void scrypt_free(scrypt_aligned_alloc *aa)
 static uint8_t scrypt_jane_hash_1_1(const uchar *password, size_t password_len, const uchar*salt, size_t salt_len, uint32_t N, uint8_t *X, uint8_t *Y, uint8_t *V)
 {
 	uint32_t chunk_bytes, i;
-	const uint32_t p = 1;
 
 #if !defined(SCRYPT_CHOOSE_COMPILETIME)
 	scrypt_ROMixfn scrypt_ROMix = scrypt_getROMix();
@@ -389,15 +388,13 @@ static uint8_t scrypt_jane_hash_1_1(const uchar *password, size_t password_len, 
 	chunk_bytes = SCRYPT_BLOCK_BYTES * 1 * 2;
 
 	/* 1: X = PBKDF2(password, salt) */
-	scrypt_pbkdf2(password, password_len, salt, salt_len, X, chunk_bytes * p);
+	scrypt_pbkdf2(password, password_len, salt, salt_len, X, chunk_bytes);
 
 	/* 2: X = ROMix(X) */
-	for (i = 0; i < p; i++) {
-		scrypt_ROMix_1((scrypt_mix_word_t *)(X + (chunk_bytes * i)), (scrypt_mix_word_t *)Y, (scrypt_mix_word_t *)V, N, 1);
-	}
+	scrypt_ROMix_1((scrypt_mix_word_t *)X, (scrypt_mix_word_t *)Y, (scrypt_mix_word_t *)V, N, 1);
 
 	/* 3: Out = PBKDF2(password, X) */
-	return scrypt_pbkdf2_1(password, password_len, X, chunk_bytes * p);
+	return scrypt_pbkdf2_1(password, password_len, X, chunk_bytes);
 }
 
 static void cpu_shutdown(struct cgpu_info *cgpu);
