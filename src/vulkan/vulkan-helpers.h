@@ -25,7 +25,9 @@ VkDeviceMemory allocateGPUMemory(int index,  VkDevice vkDevice, const VkDeviceSi
 void initCommandPool(VkDevice vkDevice, uint32_t computeQueueFamillyIndex, VkCommandPool *commandPool);
 VkCommandBuffer createCommandBuffer(VkDevice vkDevice, VkCommandPool commandPool);
 VkBuffer createBuffer(VkDevice vkDevice, uint32_t computeQueueFamillyIndex, VkDeviceMemory memory, VkDeviceSize bufferSize, VkDeviceSize offset);
-VkPipelineLayout bindBuffer(VkDevice vkDevice, VkDescriptorSet *descriptorSet, VkDescriptorPool *descriptorPool, VkDescriptorSetLayout *descriptorSetLayout, VkBuffer b0);
-uint32_t getBufferMemoryRequirements(VkDevice vkDevice, VkBuffer b);
+VkPipelineLayout bindBuffers(VkDevice vkDevice, VkDescriptorSet *descriptorSet, VkDescriptorPool *descriptorPool, VkDescriptorSetLayout *descriptorSetLayout, VkBuffer b0, VkBuffer b1, VkBuffer b2, VkBuffer b3, VkBuffer b4, VkBuffer b5);
+uint64_t getBufferMemoryRequirements(VkDevice vkDevice, VkBuffer b);
+VkPipeline loadShader(VkDevice vkDevice, VkPipelineLayout pipelineLayout, VkShaderModule *shader_module, const char * spirv_file_name);
+VkPipeline compileShader(VkDevice vkDevice, VkPipelineLayout pipelineLayout, VkShaderModule *shader_module, const char * file_name);
 
 #endif	// _SPACEMESH_VULKAN_VULKAN_HELPERS_H__

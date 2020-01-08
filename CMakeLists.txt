@@ -57,5 +57,8 @@ if(UNIX AND NOT APPLE)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc -pthread")
 endif()
 
+# Add third party libraries
+add_subdirectory(third_party)
+
 add_subdirectory(src)
 add_subdirectory(test)

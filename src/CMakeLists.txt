@@ -163,6 +163,7 @@ if (SPACEMESHVULKAN)
     endif()
 
     include_directories(${VulkanIncludes})
+    include_directories(${VulkanIncludes}/../glslang)
 
     message("------------------------------------------------------------------------")
     message("-- Vulkan API Includes ${VulkanIncludes}")
@@ -174,6 +175,7 @@ if (SPACEMESHVULKAN)
         vulkan/driver-vulkan.h
         vulkan/vulkan-helpers.c
         vulkan/vulkan-helpers.h
+        vulkan/glsl_compiler.cpp
     )
 endif()
 

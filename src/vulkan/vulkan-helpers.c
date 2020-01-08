@@ -160,19 +160,24 @@ VkBuffer createBuffer(VkDevice vkDevice, uint32_t computeQueueFamillyIndex, VkDe
 	return buffer;
 }
 
-VkPipelineLayout bindBuffer(VkDevice vkDevice, VkDescriptorSet *descriptorSet, VkDescriptorPool *descriptorPool, VkDescriptorSetLayout *descriptorSetLayout, VkBuffer b0)
-{
+VkPipelineLayout bindBuffers(VkDevice vkDevice, VkDescriptorSet *descriptorSet, VkDescriptorPool *descriptorPool, VkDescriptorSetLayout *descriptorSetLayout, VkBuffer b0, VkBuffer b1, VkBuffer b2, VkBuffer b3, VkBuffer b4, VkBuffer b5)
+ {
 	VkPipelineLayout pipelineLayout;
-	uint32_t nb_Buffers = 1;
-	VkDescriptorSetLayoutBinding descriptorSetLayoutBindings[1] = {
+	const uint32_t nBuffers = 6;
+	VkDescriptorSetLayoutBinding descriptorSetLayoutBindings[6] = {
 		{ 0,		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,		1,		VK_SHADER_STAGE_COMPUTE_BIT,		0 },
+		{ 1,		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,		1,		VK_SHADER_STAGE_COMPUTE_BIT,		0 },
+		{ 2,		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,		1,		VK_SHADER_STAGE_COMPUTE_BIT,		0 },
+		{ 3,		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,		1,		VK_SHADER_STAGE_COMPUTE_BIT,		0 },
+		{ 4,		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,		1,		VK_SHADER_STAGE_COMPUTE_BIT,		0 },
+		{ 5,		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,		1,		VK_SHADER_STAGE_COMPUTE_BIT,		0 }
 	};
 
 	VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = {
 		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
 		0,
 		0,
-		nb_Buffers,
+		nBuffers,
 		descriptorSetLayoutBindings
 	};
 
@@ -185,14 +190,14 @@ VkPipelineLayout bindBuffer(VkDevice vkDevice, VkDescriptorSet *descriptorSet, V
 		1,
 		descriptorSetLayout,
 		0,
-		0
+		0,
 	};
 
 	CHECK_RESULT(vkCreatePipelineLayout(vkDevice, &pipelineLayoutCreateInfo, 0, &pipelineLayout), "vkCreatePipelineLayout", NULL);
 
 	VkDescriptorPoolSize descriptorPoolSize = {
 		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-		nb_Buffers
+		nBuffers
 	};
 
 	VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = {
@@ -216,21 +221,91 @@ VkPipelineLayout bindBuffer(VkDevice vkDevice, VkDescriptorSet *descriptorSet, V
 	CHECK_RESULT(vkAllocateDescriptorSets(vkDevice, &descriptorSetAllocateInfo, descriptorSet), "vkAllocateDescriptorSets", NULL);
 
 	VkDescriptorBufferInfo descriptorBufferInfo0 = { b0, 0, 	VK_WHOLE_SIZE };
-	
-	VkWriteDescriptorSet writeDescriptorSet[1] = {
+	VkDescriptorBufferInfo descriptorBufferInfo1 = { b1, 0, 	VK_WHOLE_SIZE };
+	VkDescriptorBufferInfo descriptorBufferInfo2 = { b2, 0, 	VK_WHOLE_SIZE };
+	VkDescriptorBufferInfo descriptorBufferInfo3 = { b3, 0, 	VK_WHOLE_SIZE };
+	VkDescriptorBufferInfo descriptorBufferInfo4 = { b4, 0, 	VK_WHOLE_SIZE };
+	VkDescriptorBufferInfo descriptorBufferInfo5 = { b5, 0, 	VK_WHOLE_SIZE };
+
+
+	VkWriteDescriptorSet writeDescriptorSet[6] = {
 		{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,	0,	*descriptorSet,	0,	0,	1,	VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,	0,	&descriptorBufferInfo0,	0 },
+		{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,	0,	*descriptorSet,	1,	0,	1,	VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,	0,	&descriptorBufferInfo1,	0 },
+		{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,	0,	*descriptorSet,	2,	0,	1,	VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,	0,	&descriptorBufferInfo2,	0 },
+		{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,	0,	*descriptorSet,	3,	0,	1,	VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,	0,	&descriptorBufferInfo3,	0 },
+		{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,	0,	*descriptorSet,	4,	0,	1,	VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,	0,	&descriptorBufferInfo4,	0 },
+		{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,	0,	*descriptorSet,	5,	0,	1,	VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,	0,	&descriptorBufferInfo5,	0 }
 	};
 
-	vkUpdateDescriptorSets(vkDevice, nb_Buffers, writeDescriptorSet, 0, 0);
+	vkUpdateDescriptorSets(vkDevice, nBuffers, writeDescriptorSet, 0, 0);
 
 	return pipelineLayout;
 }
 
-uint32_t getBufferMemoryRequirements(VkDevice vkDevice, VkBuffer b)
+uint64_t getBufferMemoryRequirements(VkDevice vkDevice, VkBuffer b)
 {
 	VkMemoryRequirements req;
 	vkGetBufferMemoryRequirements(vkDevice, b, &req);
 	return req.alignment;
+}
+
+VkPipeline loadShader(VkDevice vkDevice, VkPipelineLayout pipelineLayout, VkShaderModule *shader_module, const char * spirv_file_name)
+{
+	uint32_t *shader;
+	size_t shader_size;
+
+	FILE *fp = fopen(spirv_file_name, "rb");
+	if (fp == NULL) {
+		applog(LOG_ERR, "SPIR-V program %s not found\n", spirv_file_name);
+		return NULL;
+	}
+	fseek(fp, 0, SEEK_END);
+	shader_size = (size_t)(ftell(fp) * sizeof(char));
+	fseek(fp, 0, SEEK_SET);
+
+	shader = (uint32_t*)malloc(shader_size + 1);
+	memset(shader, 0, shader_size + 1);
+	size_t read_size = fread(shader, sizeof(char), shader_size, fp);
+	if (read_size != shader_size) {
+		free(shader);
+		applog(LOG_ERR, "Failed to read shader %s!\n", spirv_file_name);
+		return NULL;
+	}
+
+	VkShaderModuleCreateInfo shaderModuleCreateInfo = {
+		VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+		0,
+		0,
+		shader_size,
+		shader
+	};
+
+	CHECK_RESULT(vkCreateShaderModule(vkDevice, &shaderModuleCreateInfo, 0, shader_module), "vkCreateShaderModule", NULL);
+
+	VkComputePipelineCreateInfo computePipelineCreateInfo = {
+		VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+		0,
+		0,
+		{
+			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+			0,
+			0,
+			VK_SHADER_STAGE_COMPUTE_BIT,
+			*shader_module,
+			"main",
+			0
+		},
+		pipelineLayout,
+		0,
+		0
+	};
+
+	VkPipeline pipeline;
+	CHECK_RESULT(vkCreateComputePipelines(vkDevice, 0, 1, &computePipelineCreateInfo, 0, &pipeline), "vkCreateComputePipelines", NULL);
+
+	free(shader);
+	fclose(fp);
+	return pipeline;
 }
 
 #endif
