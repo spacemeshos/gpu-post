@@ -338,7 +338,6 @@ static int64_t vulkan_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, u
 		const uint64_t delay = 5ULL * 1000ULL * 1000ULL * 1000ULL;
 
 		tfxOrigin = state->memParamsSize + state->memConstantSize + state->memInputSize;
-		CHECK_RESULT(vkMapMemory(state->vkDevice, state->gpuSharedMemory, tfxOrigin, state->memOutputSize, 0, (void **)&ptr), "vkMapMemory", 0);
 
 		do {
 			params.global_work_offset = n;
@@ -358,13 +357,15 @@ static int64_t vulkan_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, u
 			} while (res == VK_TIMEOUT);
 			vkResetFences(state->vkDevice, 1, &state->drawFence);
 
+			CHECK_RESULT(vkMapMemory(state->vkDevice, state->gpuSharedMemory, tfxOrigin, state->memOutputSize, 0, (void **)&ptr), "vkMapMemory", 0);
+			memcpy(output, ptr, min(chunkSize, outLength));
+			vkUnmapMemory(state->vkDevice, state->gpuSharedMemory);
+
 			output += chunkSize;
 			outLength -= chunkSize;
 			positions -= cgpu->thread_concurrency;
 
 		} while (n <= end_position && !abort_flag);
-
-		vkUnmapMemory(state->vkDevice, state->gpuSharedMemory);
 
 		gettimeofday(tv_end, NULL);
 
