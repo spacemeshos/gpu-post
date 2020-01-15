@@ -41,6 +41,8 @@ _clState *initCl(struct cgpu_info *cgpu, char *name, size_t nameSize, cl_uint ha
 	cl_uint numDevices;
 	cl_int status;
 
+	cl_uint scrypt_mem = 128 * cgpu->r;
+
 	status = clGetPlatformIDs(0, NULL, &numPlatforms);
 	if (status != CL_SUCCESS) {
 		applog(LOG_ERR, "Error %d: Getting Platforms. (clGetPlatformsIDs)", status);
@@ -96,19 +98,6 @@ _clState *initCl(struct cgpu_info *cgpu, char *name, size_t nameSize, cl_uint ha
 		if (status != CL_SUCCESS) {
 			applog(LOG_ERR, "Error %d: Getting Device IDs (list)", status);
 			return NULL;
-		}
-
-		applog(LOG_INFO, "List of devices:");
-
-		unsigned int i;
-		for (i = 0; i < numDevices; i++) {
-			status = clGetDeviceInfo(devices[i], CL_DEVICE_NAME, sizeof(pbuff), pbuff, NULL);
-			if (status != CL_SUCCESS) {
-				applog(LOG_ERR, "Error %d: Getting Device Info", status);
-				return NULL;
-			}
-
-			applog(LOG_INFO, "\t%i\t%s", i, pbuff);
 		}
 
 		if (cgpu->driver_id < (int)numDevices) {
@@ -230,7 +219,7 @@ _clState *initCl(struct cgpu_info *cgpu, char *name, size_t nameSize, cl_uint ha
 	// if we do not have TC and we do not have BS, then calculate some conservative numbers
 	if (!cgpu->buffer_size) {
 		unsigned int base_alloc = (int)(cgpu->gpu_max_alloc * 88 / 100 / 1024 / 1024 / 8) * 8 * 1024 * 1024;
-		cgpu->thread_concurrency = (uint32_t)(base_alloc / 128 / ipt);
+		cgpu->thread_concurrency = (uint32_t)(base_alloc / scrypt_mem / ipt);
 		cgpu->buffer_size = base_alloc / 1024 / 1024;
 		applog(LOG_DEBUG, "88%% Max Allocation: %u", base_alloc);
 		applog(LOG_NOTICE, "GPU %d: selecting buffer_size of %zu", cgpu->driver_id, cgpu->buffer_size);
@@ -238,7 +227,7 @@ _clState *initCl(struct cgpu_info *cgpu, char *name, size_t nameSize, cl_uint ha
 
 	if (cgpu->buffer_size) {
 		// use the buffer-size to overwrite the thread-concurrency
-		cgpu->thread_concurrency = (int)((cgpu->buffer_size * 1024 * 1024) / ipt / 128);
+		cgpu->thread_concurrency = (int)((cgpu->buffer_size * 1024 * 1024) / ipt / scrypt_mem);
 		applog(LOG_DEBUG, "GPU %d: setting thread_concurrency to %d based on buffer size %d and lookup gap %d", cgpu->driver_id, (int)(cgpu->thread_concurrency), (int)(cgpu->buffer_size), (int)(cgpu->lookup_gap));
 	}
 
@@ -376,7 +365,7 @@ _clState *initCl(struct cgpu_info *cgpu, char *name, size_t nameSize, cl_uint ha
 		return NULL;
 	}
 
-	size_t bufsize = 128 * ipt * cgpu->thread_concurrency;
+	size_t bufsize = scrypt_mem * ipt * cgpu->thread_concurrency;
 
 	if (!cgpu->buffer_size) {
 		applog(LOG_NOTICE, "GPU %d: bufsize for thread @ %dMB based on TC of %zu", cgpu->driver_id, (int)(bufsize/1048576),cgpu->thread_concurrency);

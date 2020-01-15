@@ -17,7 +17,6 @@
 #ifdef HAVE_CUDA
 
 #include "salsa_kernel.h"
-#include "cuda.h"
 
 #define	PREIMAGE_SIZE	72
 
@@ -91,6 +90,9 @@ static bool cuda_prepare(struct cgpu_info *cgpu, unsigned N, uint32_t r, uint32_
 		if (cgpu->device_data) {
 			cuda_shutdown(cgpu);
 		}
+		cgpu->N = N;
+		cgpu->r = r;
+		cgpu->p = p;
 		cgpu->device_data = initCuda(cgpu, N, r, p, hash_len_bits, throttled);
 		if (!cgpu->device_data) {
 			applog(LOG_ERR, "Failed to init GPU, disabling device %d", cgpu->id);
@@ -102,9 +104,6 @@ static bool cuda_prepare(struct cgpu_info *cgpu, unsigned N, uint32_t r, uint32_
 			cudaState->data[0] = new uint32_t[(PREIMAGE_SIZE / 4) * cgpu->thread_concurrency];
 			cudaState->data[1] = new uint32_t[(PREIMAGE_SIZE / 4) * cgpu->thread_concurrency];
 		}
-		cgpu->N = N;
-		cgpu->r = r;
-		cgpu->p = p;
 		applog(LOG_INFO, "initCuda() finished.");
 	}
 

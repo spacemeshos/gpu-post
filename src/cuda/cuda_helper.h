@@ -20,7 +20,6 @@
 #endif
 
 // common functions
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 extern __device__ __device_builtin__ void __syncthreads(void);
 extern __device__ __device_builtin__ void __threadfence(void);
 
@@ -164,20 +163,6 @@ do {                                                                  \
 		fprintf(stderr, "Cuda error in func '%s' at line %i : %s.\n", \
 		         __FUNCTION__, __LINE__, cudaGetErrorString(err) );   \
 		exit(EXIT_FAILURE);                                           \
-	}                                                                 \
-} while (0)
-
-#define CUDA_CALL_OR_RET(call) do {                                   \
-	cudaError_t err = call;                                           \
-	if (cudaSuccess != err) {                                         \
-		return;                                                       \
-	}                                                                 \
-} while (0)
-
-#define CUDA_CALL_OR_RET_X(call, ret) do {                            \
-	cudaError_t err = call;                                           \
-	if (cudaSuccess != err) {                                         \
-		return ret;                                                   \
 	}                                                                 \
 } while (0)
 

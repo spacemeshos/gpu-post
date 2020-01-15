@@ -207,6 +207,11 @@ static bool opencl_prepare(struct cgpu_info *cgpu, unsigned N, uint32_t r, uint3
 		if (cgpu->device_data) {
 			opencl_shutdown(cgpu);
 		}
+
+		cgpu->N = N;
+		cgpu->r = r;
+		cgpu->p = p;
+
 		cgpu->device_data = initCl(cgpu, name, sizeof(name), hash_len_bits, throttled);
 		if (!cgpu->device_data) {
 			applog(LOG_ERR, "Failed to init GPU, disabling device %d", cgpu->id);
@@ -217,9 +222,6 @@ static bool opencl_prepare(struct cgpu_info *cgpu, unsigned N, uint32_t r, uint3
 		if (!cgpu->name) {
 			cgpu->name = strdup(name);
 		}
-		cgpu->N = N;
-		cgpu->r = r;
-		cgpu->p = p;
 		applog(LOG_INFO, "initCl() finished. Found %s", name);
 	}
 	return true;

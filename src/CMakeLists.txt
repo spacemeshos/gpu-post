@@ -139,8 +139,6 @@ if (SPACEMESHCUDA)
 
     set(SOURCES
         ${SOURCES}
-        cuda/cuda.cpp
-        cuda/cuda.h
         cuda/cuda_helper.h
         cuda/driver-cuda.cpp
         cuda/driver-cuda.h

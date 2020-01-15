@@ -32,13 +32,14 @@
 
 #undef checkCudaErrors
 #define checkCudaErrors(gpuId, x) \
-{ \
+do { \
 	cudaGetLastError(); \
 	x; \
 	cudaError_t err = cudaGetLastError(); \
-	if (err != cudaSuccess && !abort_flag) \
+	if (err != cudaSuccess && !abort_flag) { \
 		applog(LOG_ERR, "GPU #%d: Err %d: %s (%s:%d)", gpuId, err, cudaGetErrorString(err), __FILENAME__, __LINE__); \
-}
+	} \
+} while (0)
 
 int find_optimal_concurency(struct cgpu_info *cgpu, _cudaState *cudaState, KernelInterface* &kernel, uint32_t N, uint32_t r, uint32_t p, bool &concurrent, int &wpb);
 
