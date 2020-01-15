@@ -61,13 +61,12 @@ typedef struct {
 	VkPipelineLayout pipelineLayout;
 	VkPipeline pipeline;
 	VkCommandPool commandPool;
-	VkCommandBuffer vkCommandBuffer;
+	VkCommandBuffer commandBuffer;
+	VkSemaphore semaphore;
 	VkDescriptorPool descriptorPool;
-	VkShaderModule shader_module;
+	VkShaderModule shaderModule;
 	VkDescriptorSetLayout descriptorSetLayout;
 	VkQueue queue;
-	VkFence drawFence;
-	VkMemoryBarrier memoryBarrier;
 
 	uint32_t alignment;
 	uint64_t bufSize;
@@ -108,29 +107,28 @@ static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameS
 {
 	_vulkanState *state = calloc(1, sizeof(_vulkanState));
 
+	uint32_t scrypt_mem = 128 * cgpu->r;
+
 	uint32_t computeQueueFamillyIndex = getComputeQueueFamillyIndex(cgpu->driver_id);
 
 	state->deviceId = cgpu->driver_id;
 	state->vkDevice = createDevice(cgpu->driver_id, computeQueueFamillyIndex);
 
-	// Get memory alignment
 	VkDeviceMemory tmpMem = allocateGPUMemory(state->deviceId, state->vkDevice, 1024, true, true);
 	VkBuffer tmpBuf = createBuffer(state->vkDevice, computeQueueFamillyIndex, tmpMem, 256, 0);
 	state->alignment = (uint32_t)getBufferMemoryRequirements(state->vkDevice, tmpBuf);
 	vkDestroyBuffer(state->vkDevice, tmpBuf, NULL);
 	vkFreeMemory(state->vkDevice, tmpMem, NULL);
 
-	// compute memory requirements
 	applog(LOG_NOTICE, "GPU %d: selecting lookup gap of 4", cgpu->driver_id);
 	cgpu->lookup_gap = 4;
 
 	unsigned int bsize = 1024;
 	size_t ipt = (bsize / cgpu->lookup_gap + (bsize % cgpu->lookup_gap > 0));
 
-	// if we do not have TC and we do not have BS, then calculate some conservative numbers
 	if (!cgpu->buffer_size) {
 		unsigned int base_alloc = (int)(cgpu->gpu_max_alloc * 88 / 100 / 1024 / 1024 / 8) * 8 * 1024 * 1024;
-		cgpu->thread_concurrency = (uint32_t)(base_alloc / 128 / ipt);
+		cgpu->thread_concurrency = (uint32_t)(base_alloc / scrypt_mem / ipt);
 		cgpu->buffer_size = base_alloc / 1024 / 1024;
 		applog(LOG_DEBUG, "88%% Max Allocation: %u", base_alloc);
 		applog(LOG_NOTICE, "GPU %d: selecting buffer_size of %zu", cgpu->driver_id, cgpu->buffer_size);
@@ -138,13 +136,13 @@ static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameS
 
 	if (cgpu->buffer_size) {
 		// use the buffer-size to overwrite the thread-concurrency
-		cgpu->thread_concurrency = (int)((cgpu->buffer_size * 1024 * 1024) / ipt / 128);
+		cgpu->thread_concurrency = (int)((cgpu->buffer_size * 1024 * 1024) / ipt / scrypt_mem);
 		applog(LOG_DEBUG, "GPU %d: setting thread_concurrency to %d based on buffer size %d and lookup gap %d", cgpu->driver_id, (int)(cgpu->thread_concurrency), (int)(cgpu->buffer_size), (int)(cgpu->lookup_gap));
 	}
 
 	uint32_t chunkSize = (cgpu->thread_concurrency * hash_len_bits + 7) / 8;
 
-	state->bufSize = alignBuffer(128 * ipt * cgpu->thread_concurrency, state->alignment);
+	state->bufSize = alignBuffer(scrypt_mem * ipt * cgpu->thread_concurrency, state->alignment);
 	state->memConstantSize = alignBuffer(sizeof(AlgorithmConstants), state->alignment);
 	state->memParamsSize = alignBuffer(sizeof(AlgorithmParams), state->alignment);
 	state->memInputSize = alignBuffer(72, state->alignment);
@@ -154,10 +152,8 @@ static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameS
 	state->gpuLocalMemory = allocateGPUMemory(state->deviceId, state->vkDevice, state->bufSize, true, true);
 	state->gpuSharedMemory = allocateGPUMemory(state->deviceId, state->vkDevice, state->sharedMemorySize, false, true);
 
-	// create the internal local buffers
 	state->padbuffer8 = createBuffer(state->vkDevice, computeQueueFamillyIndex, state->gpuLocalMemory, state->bufSize, 0);
 
-	// create the CPU shared buffers
 	uint64_t o = 0;
 	state->gpu_constants = createBuffer(state->vkDevice, computeQueueFamillyIndex, state->gpuSharedMemory, state->memConstantSize, o);
 	o += state->memConstantSize;
@@ -168,33 +164,50 @@ static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameS
 	state->outputBuffer[0] = createBuffer(state->vkDevice, computeQueueFamillyIndex, state->gpuSharedMemory, state->memOutputSize, o);
 	o += state->memOutputSize;
 	state->outputBuffer[1] = createBuffer(state->vkDevice, computeQueueFamillyIndex, state->gpuSharedMemory, state->memOutputSize, o);
-	o += state->memOutputSize;
+
+	vkGetDeviceQueue(state->vkDevice, computeQueueFamillyIndex, 0, &state->queue);
 
 	state->pipelineLayout = bindBuffers(state->vkDevice, &state->descriptorSet, &state->descriptorPool, &state->descriptorSetLayout,
 		state->padbuffer8, state->gpu_constants, state->gpu_params, state->CLbuffer0, state->outputBuffer[0], state->outputBuffer[1]
 	);
 
-	// Transfer constants to GPU
 	void *ptr = NULL;
 	CHECK_RESULT(vkMapMemory(state->vkDevice, state->gpuSharedMemory, 0, state->memConstantSize, 0, (void **)&ptr), "vkMapMemory", NULL);
 	memcpy(ptr, (const void*)&gpuConstants, sizeof(AlgorithmConstants));
 	vkUnmapMemory(state->vkDevice, state->gpuSharedMemory);
 
-	initCommandPool(state->vkDevice, computeQueueFamillyIndex, &state->commandPool);
-	state->vkCommandBuffer = createCommandBuffer(state->vkDevice, state->commandPool);
+	VkCommandPoolCreateInfo commandPoolCreateInfo = {
+		VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+		0,
+		VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+		computeQueueFamillyIndex
+	};
+	CHECK_RESULT(vkCreateCommandPool(state->vkDevice, &commandPoolCreateInfo, 0, &state->commandPool), "vkCreateCommandPool", NULL);
 
-	vkGetDeviceQueue(state->vkDevice, computeQueueFamillyIndex, 0, &state->queue);
-	state->memoryBarrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
-	state->memoryBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-	state->memoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+	VkCommandBufferAllocateInfo commandBufferAllocateInfo = {
+		VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+		0,
+		state->commandPool,
+		VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+		1
+	};
+	CHECK_RESULT(vkAllocateCommandBuffers(state->vkDevice, &commandBufferAllocateInfo, &state->commandBuffer), "vkAllocateCommandBuffers", NULL);
 
-	VkFenceCreateInfo fenceInfo;
-	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-	fenceInfo.pNext = NULL;
-	fenceInfo.flags = 0;
-	CHECK_RESULT(vkCreateFence(state->vkDevice, &fenceInfo, NULL, &state->drawFence), "vkCreateFence", NULL);
+	VkSemaphoreCreateInfo semaphoreCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+	semaphoreCreateInfo.pNext = NULL;
+	semaphoreCreateInfo.flags = 0;
+	CHECK_RESULT(vkCreateSemaphore(state->vkDevice, &semaphoreCreateInfo, NULL, &state->semaphore), "vkCreateSemaphore", NULL);
 
-	state->pipeline = compileShader(state->vkDevice, state->pipelineLayout, &state->shader_module, "scrypt-jane.comp");
+	state->pipeline = compileShader(state->vkDevice, state->pipelineLayout, &state->shaderModule, "scrypt-jane.comp");
+
+	VkCommandBufferBeginInfo commandBufferBeginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, 0, 0, 0 };
+	CHECK_RESULT(vkBeginCommandBuffer(state->commandBuffer, &commandBufferBeginInfo), "vkBeginCommandBuffer", NULL);
+
+	vkCmdBindPipeline(state->commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, state->pipeline);
+	vkCmdBindDescriptorSets(state->commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, state->pipelineLayout, 0, 1, &state->descriptorSet, 0, 0);
+	vkCmdDispatch(state->commandBuffer, cgpu->thread_concurrency / 64, 1, 1);
+
+	CHECK_RESULT(vkEndCommandBuffer(state->commandBuffer), "vkEndCommandBuffer", NULL);
 
 	return state;
 }
@@ -212,14 +225,14 @@ static int vulkan_detect(struct cgpu_info *gpus, int *active)
 	};
 
 	const VkInstanceCreateInfo instanceCreateInfo = {
-		VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,								// stype
-		0,																	// pNext
-		0,																	// flags
-		&applicationInfo,													// pApplicationInfo
-		0,																	// enabledLayerCount
-		NULL,															// ppEnabledLayerNames
-		0,																	// enabledExtensionCount
-		NULL 															// ppEnabledExtensionNames
+		VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+		0,
+		0,
+		&applicationInfo,
+		0,
+		NULL,
+		0,
+		NULL
 	};
 
 	CHECK_RESULT(vkCreateInstance(&instanceCreateInfo, 0, &gInstance), "vkCreateInstance", 0);
@@ -235,6 +248,9 @@ static int vulkan_detect(struct cgpu_info *gpus, int *active)
 
 			VkPhysicalDeviceProperties physicalDeviceProperties;
 			vkGetPhysicalDeviceProperties(gPhysicalDevices[i], &physicalDeviceProperties);
+
+			VkPhysicalDeviceFeatures physicalDeviceFeatures;
+			vkGetPhysicalDeviceFeatures(gPhysicalDevices[i], &physicalDeviceFeatures);
 
 			VkPhysicalDeviceMemoryProperties memoryProperties;
 			vkGetPhysicalDeviceMemoryProperties(gPhysicalDevices[i], &memoryProperties);
@@ -285,6 +301,10 @@ static bool vulkan_prepare(struct cgpu_info *cgpu, unsigned N, uint32_t r, uint3
 			vulkan_shutdown(cgpu);
 		}
 
+		cgpu->N = N;
+		cgpu->r = r;
+		cgpu->p = p;
+
 		VkPhysicalDeviceProperties physicalDeviceProperties;
 		vkGetPhysicalDeviceProperties(gPhysicalDevices[cgpu->driver_id], &physicalDeviceProperties);
 		cgpu->device_data = initVulkan(cgpu, physicalDeviceProperties.deviceName, strlen(physicalDeviceProperties.deviceName), hash_len_bits, throttled);
@@ -294,10 +314,6 @@ static bool vulkan_prepare(struct cgpu_info *cgpu, unsigned N, uint32_t r, uint3
 			cgpu->status = LIFE_NOSTART;
 			return false;
 		}
-
-		cgpu->N = N;
-		cgpu->r = r;
-		cgpu->p = p;
 
 		applog(LOG_INFO, "initVulkan() finished. Found %s", physicalDeviceProperties.deviceName);
 	}
@@ -348,21 +364,19 @@ static int64_t vulkan_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, u
 
 			n += cgpu->thread_concurrency;
 
-			VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO, 0, 0, 0, 0, 1, &state->vkCommandBuffer, 0, 0 };
-			CHECK_RESULT(vkQueueSubmit(state->queue, 1, &submitInfo, state->drawFence), "vkQueueSubmit", 0);
+			VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO, 0, 0, 0, 0, 1, &state->commandBuffer, 1, &state->semaphore };
+			CHECK_RESULT(vkQueueSubmit(state->queue, 1, &submitInfo, VK_NULL_HANDLE), "vkQueueSubmit", 0);
 
-			VkResult res;
-			do {
-				res = vkWaitForFences(state->vkDevice, 1, &state->drawFence, VK_TRUE, delay);
-			} while (res == VK_TIMEOUT);
-			vkResetFences(state->vkDevice, 1, &state->drawFence);
+			CHECK_RESULT(vkQueueWaitIdle(state->queue), "vkQueueWaitIdle", 0);
+
+			uint32_t length = (uint32_t)min(chunkSize, outLength);
 
 			CHECK_RESULT(vkMapMemory(state->vkDevice, state->gpuSharedMemory, tfxOrigin, state->memOutputSize, 0, (void **)&ptr), "vkMapMemory", 0);
-			memcpy(output, ptr, min(chunkSize, outLength));
+			memcpy(output, ptr, length);
 			vkUnmapMemory(state->vkDevice, state->gpuSharedMemory);
 
-			output += chunkSize;
-			outLength -= chunkSize;
+			output += length;
+			outLength -= length;
 			positions -= cgpu->thread_concurrency;
 
 		} while (n <= end_position && !abort_flag);
@@ -384,9 +398,9 @@ static void vulkan_shutdown(struct cgpu_info *cgpu)
 		vkFreeMemory(vulkanState->vkDevice, vulkanState->gpuLocalMemory, NULL);
 		vkFreeMemory(vulkanState->vkDevice, vulkanState->gpuSharedMemory, NULL);
 
-		vkDestroyPipeline(vulkanState->vkDevice, vulkanState->pipeline, NULL);
-
 		vkDestroyPipelineLayout(vulkanState->vkDevice, vulkanState->pipelineLayout, NULL);
+		vkDestroyDescriptorSetLayout(vulkanState->vkDevice, vulkanState->descriptorSetLayout, NULL);
+		vkDestroyPipeline(vulkanState->vkDevice, vulkanState->pipeline, NULL);
 
 		vkDestroyBuffer(vulkanState->vkDevice, vulkanState->gpu_params, NULL);
 		vkDestroyBuffer(vulkanState->vkDevice, vulkanState->gpu_constants, NULL);
@@ -397,8 +411,8 @@ static void vulkan_shutdown(struct cgpu_info *cgpu)
 
 		vkDestroyCommandPool(vulkanState->vkDevice, vulkanState->commandPool, NULL);
 		vkDestroyDescriptorPool(vulkanState->vkDevice, vulkanState->descriptorPool, NULL);
-		vkDestroyShaderModule(vulkanState->vkDevice, vulkanState->shader_module, NULL);
-		vkDestroyDescriptorSetLayout(vulkanState->vkDevice, vulkanState->descriptorSetLayout, NULL);
+		vkDestroyShaderModule(vulkanState->vkDevice, vulkanState->shaderModule, NULL);
+		vkDestroySemaphore(vulkanState->vkDevice, vulkanState->semaphore, NULL);
 
 		free(cgpu->device_data);
 		cgpu->device_data = NULL;

@@ -109,34 +109,6 @@ VkDeviceMemory allocateGPUMemory(int index,  VkDevice vkDevice, const VkDeviceSi
 	return memory;
 }
 
-void initCommandPool(VkDevice vkDevice, uint32_t computeQueueFamillyIndex, VkCommandPool *commandPool)
-{
-	VkCommandPoolCreateInfo commandPoolCreateInfo = {
-		VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-		0,
-		VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-		computeQueueFamillyIndex
-	};
-
-	CHECK_RESULT_NORET(vkCreateCommandPool(vkDevice, &commandPoolCreateInfo, 0, commandPool), "vkCreateCommandPool");
-}
-
-VkCommandBuffer createCommandBuffer(VkDevice vkDevice, VkCommandPool commandPool)
-{
-	VkCommandBufferAllocateInfo commandBufferAllocateInfo = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-		0,
-		commandPool,
-		VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-		1
-	};
-
-	VkCommandBuffer commandBuffer;
-	CHECK_RESULT(vkAllocateCommandBuffers(vkDevice, &commandBufferAllocateInfo, &commandBuffer), "vkAllocateCommandBuffers", NULL);
-
-	return commandBuffer;
-}
-
 VkBuffer createBuffer(VkDevice vkDevice, uint32_t computeQueueFamillyIndex, VkDeviceMemory memory, VkDeviceSize bufferSize, VkDeviceSize offset)
 {
 	// 4Gb limit on AMD and Nvidia
@@ -226,8 +198,7 @@ VkPipelineLayout bindBuffers(VkDevice vkDevice, VkDescriptorSet *descriptorSet, 
 	VkDescriptorBufferInfo descriptorBufferInfo3 = { b3, 0, 	VK_WHOLE_SIZE };
 	VkDescriptorBufferInfo descriptorBufferInfo4 = { b4, 0, 	VK_WHOLE_SIZE };
 	VkDescriptorBufferInfo descriptorBufferInfo5 = { b5, 0, 	VK_WHOLE_SIZE };
-
-
+	
 	VkWriteDescriptorSet writeDescriptorSet[6] = {
 		{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,	0,	*descriptorSet,	0,	0,	1,	VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,	0,	&descriptorBufferInfo0,	0 },
 		{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,	0,	*descriptorSet,	1,	0,	1,	VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,	0,	&descriptorBufferInfo1,	0 },
