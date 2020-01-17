@@ -1,6 +1,3 @@
-#version 450
-#extension GL_ARB_gpu_shader_int64 : require
-
 layout(binding = 0) buffer PadBuffer
 {
 	uvec4 lookup[ ];
@@ -35,16 +32,17 @@ layout(binding = 5) buffer OutputBuffer2
 	uint outputBuffer1[ ];
 };
 
-layout (local_size_x = 64, local_size_y = 1) in;
+layout (local_size_x = WORKSIZE, local_size_y = 1) in;
 
-shared uint labels[64];
+shared uint labels[WORKSIZE];
 
 #define SCRYPT_HASH_DIGEST_SIZE 64
 #define SCRYPT_KECCAK_F 1600
 #define SCRYPT_HASH_BLOCK_SIZE 72
 #define SCRYPT_BLOCK_BYTES 128
 
-#define ROTL64(x, y) unpackUint2x32(rotate64(packUint2x32(x), uint(y)))
+//#define ROTL64(x, y) unpackUint2x32(rotate64(packUint2x32(x), uint(y)))
+#define ROTL64(x, y) rotate2(x, uint(y))
 #define ROTL32(x, y) ((x << y) | (x >> (32-y)))
 
 struct scrypt_hash_state {
@@ -63,7 +61,24 @@ const uvec2 ZERO_UINT2 = uvec2(0);
 const uint be1 = 0x01000000;
 const uint be2 = 0x02000000;
 
-uint64_t rotate64(uint64_t x, uint c) {return (x << c) | (x >> (64-c));}
+uint64_t rotate64(uint64_t x, uint c)
+{
+	return (x << c) | (x >> (64-c));
+}
+
+uvec2 rotate2(uvec2 v, uint shift)
+{
+	uvec2 result;
+	if (shift >= 32) {
+		shift -= 32;
+		result.y = (v.x << shift) | (v.y >> (32 - shift));
+		result.x = (v.y << shift) | (v.x >> (32 - shift));
+	} else {
+		result.y = (v.y << shift) | (v.x >> (32 - shift));
+		result.x = (v.x << shift) | (v.y >> (32 - shift));
+	}
+	return result;
+}
 
 void
 keccak_block_core(inout uvec4 s4[(SCRYPT_KECCAK_F + 127) / 128])
@@ -81,7 +96,7 @@ keccak_block_core(inout uvec4 s4[(SCRYPT_KECCAK_F + 127) / 128])
 		t[2] = s4[1].xy ^ s4[3].zw ^ s4[6].xy ^ s4[8].zw ^ s4[11].xy;
 		t[3] = s4[1].zw ^ s4[4].xy ^ s4[6].zw ^ s4[9].xy ^ s4[11].zw;
 		t[4] = s4[2].xy ^ s4[4].zw ^ s4[7].xy ^ s4[9].zw ^ s4[12].xy;
-	
+
 		/* theta: d[i] = c[i+4] ^ rotl(c[i+1],1) */
 		u[0] = t[4] ^ ROTL64(t[1], 1UL);
 		u[1] = t[0] ^ ROTL64(t[2], 1UL);
@@ -190,9 +205,6 @@ chacha_core(inout uvec4 state[8], uint offset)
 
 #define Coord(x,y,z) x+y*(x)+z*(y)*(x)
 #define CO Coord(z,x,y)
-
-#define	LOOKUP_GAP		4
-#define	CONCURRENT_THREADS	128
 
 void
 scrypt_ROMix(uvec4 X[8], const uint N, const uint gid, const uint Nfactor)
@@ -331,6 +343,7 @@ main()
 		ti4[i] ^= KEY_0X36;
 	}
 	ti4[4].xy ^= KEY_0X36_2;
+
 //////////////////////////////////////////////////
 //	scrypt_hash_update_72(&st->inner, pad4);
 	keccak_block_zero(hmac_pw.inner, ti4);
@@ -495,96 +508,28 @@ main()
 //////////////////////////////////////////////////
 
 	memoryBarrierShared();
-/*
+
 	if (0 == lid) {
-		uint8 buffer;
+		i = gid * 64 / 4;
 
-		output += gid * 64 / 64;
+		outputBuffer0[i++] = labels[0]  | (labels[1] << 8)  | (labels[2] << 16)  | (labels[3] << 24);
+		outputBuffer0[i++] = labels[4]  | (labels[5] << 8)  | (labels[6] << 16)  | (labels[7] << 24);
+		outputBuffer0[i++] = labels[8]  | (labels[9] << 8)  | (labels[10] << 16) | (labels[11] << 24);
+		outputBuffer0[i++] = labels[12] | (labels[13] << 8) | (labels[14] << 16) | (labels[15] << 24);
 
-		buffer.s0  = labels[0];
-		buffer.s0 |= labels[1] << 8;
-		buffer.s0 |= labels[2] << 16;
-		buffer.s0 |= labels[3] << 24;
+		outputBuffer0[i++] = labels[16] | (labels[17] << 8) | (labels[18] << 16) | (labels[19] << 24);
+		outputBuffer0[i++] = labels[20] | (labels[21] << 8) | (labels[22] << 16) | (labels[23] << 24);
+		outputBuffer0[i++] = labels[24] | (labels[25] << 8) | (labels[26] << 16) | (labels[27] << 24);
+		outputBuffer0[i++] = labels[28] | (labels[29] << 8) | (labels[30] << 16) | (labels[31] << 24);
 
-		buffer.s1  = labels[4];
-		buffer.s1 |= labels[5] << 8;
-		buffer.s1 |= labels[6] << 16;
-		buffer.s1 |= labels[7] << 24;
+		outputBuffer0[i++] = labels[32] | (labels[33] << 8) | (labels[34] << 16) | (labels[35] << 24);
+		outputBuffer0[i++] = labels[36] | (labels[37] << 8) | (labels[38] << 16) | (labels[39] << 24);
+		outputBuffer0[i++] = labels[40] | (labels[41] << 8) | (labels[42] << 16) | (labels[43] << 24);
+		outputBuffer0[i++] = labels[44] | (labels[45] << 8) | (labels[46] << 16) | (labels[47] << 24);
 
-		buffer.s2  = labels[8];
-		buffer.s2 |= labels[9] << 8;
-		buffer.s2 |= labels[10] << 16;
-		buffer.s2 |= labels[11] << 24;
-
-		buffer.s3  = labels[12];
-		buffer.s3 |= labels[13] << 8;
-		buffer.s3 |= labels[14] << 16;
-		buffer.s3 |= labels[15] << 24;
-
-		buffer.s4  = labels[16];
-		buffer.s4 |= labels[17] << 8;
-		buffer.s4 |= labels[18] << 16;
-		buffer.s4 |= labels[19] << 24;
-
-		buffer.s5  = labels[20];
-		buffer.s5 |= labels[21] << 8;
-		buffer.s5 |= labels[22] << 16;
-		buffer.s5 |= labels[23] << 24;
-
-		buffer.s6  = labels[24];
-		buffer.s6 |= labels[25] << 8;
-		buffer.s6 |= labels[26] << 16;
-		buffer.s6 |= labels[27] << 24;
-
-		buffer.s7  = labels[28];
-		buffer.s7 |= labels[29] << 8;
-		buffer.s7 |= labels[30] << 16;
-		buffer.s7 |= labels[31] << 24;
-
-		*(__global uint8*)output = buffer;
-		output += 32;
-
-		buffer.s0  = labels[32];
-		buffer.s0 |= labels[33] << 8;
-		buffer.s0 |= labels[34] << 16;
-		buffer.s0 |= labels[35] << 24;
-
-		buffer.s1  = labels[36];
-		buffer.s1 |= labels[37] << 8;
-		buffer.s1 |= labels[38] << 16;
-		buffer.s1 |= labels[39] << 24;
-
-		buffer.s2  = labels[40];
-		buffer.s2 |= labels[41] << 8;
-		buffer.s2 |= labels[42] << 16;
-		buffer.s2 |= labels[43] << 24;
-
-		buffer.s3  = labels[44];
-		buffer.s3 |= labels[45] << 8;
-		buffer.s3 |= labels[46] << 16;
-		buffer.s3 |= labels[47] << 24;
-
-		buffer.s4  = labels[48];
-		buffer.s4 |= labels[49] << 8;
-		buffer.s4 |= labels[50] << 16;
-		buffer.s4 |= labels[51] << 24;
-
-		buffer.s5  = labels[52];
-		buffer.s5 |= labels[53] << 8;
-		buffer.s5 |= labels[54] << 16;
-		buffer.s5 |= labels[55] << 24;
-
-		buffer.s6  = labels[56];
-		buffer.s6 |= labels[57] << 8;
-		buffer.s6 |= labels[58] << 16;
-		buffer.s6 |= labels[59] << 24;
-
-		buffer.s7  = labels[60];
-		buffer.s7 |= labels[61] << 8;
-		buffer.s7 |= labels[62] << 16;
-		buffer.s7 |= labels[63] << 24;
-
-		output[(gid * 64 / 64) + 32] = buffer;
+		outputBuffer0[i++] = labels[48] | (labels[49] << 8) | (labels[50] << 16) | (labels[51] << 24);
+		outputBuffer0[i++] = labels[52] | (labels[53] << 8) | (labels[54] << 16) | (labels[55] << 24);
+		outputBuffer0[i++] = labels[56] | (labels[57] << 8) | (labels[58] << 16) | (labels[59] << 24);
+		outputBuffer0[i++] = labels[60] | (labels[61] << 8) | (labels[62] << 16) | (labels[63] << 24);
 	}
-*/
 }

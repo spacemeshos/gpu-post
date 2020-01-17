@@ -36,9 +36,22 @@ add_custom_command(
     -DBIN2H_SOURCE_FILE="${CMAKE_CURRENT_SOURCE_DIR}/opencl/scrypt-chacha.cl"
     -DBIN2H_VARIABLE_NAME=scrypt_chacha_cl
     -DBIN2H_HEADER_FILE="${CMAKE_CURRENT_BINARY_DIR}/scrypt-chacha-cl.inl"
-    -P "${CMAKE_CURRENT_SOURCE_DIR}/opencl/bin2h.cmake"
+    -P "${CMAKE_CURRENT_SOURCE_DIR}/bin2h.cmake"
     COMMENT "Generating OpenCL Kernel Byte Array"
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/opencl/scrypt-chacha.cl
+)
+
+# A custom command and target to turn the Vulkan kernel into a byte array header
+
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/scrypt-chacha-vulkan.inl
+    COMMAND ${CMAKE_COMMAND} ARGS
+    -DBIN2H_SOURCE_FILE="${CMAKE_CURRENT_SOURCE_DIR}/vulkan/scrypt-chacha.comp"
+    -DBIN2H_VARIABLE_NAME=scrypt_chacha_comp
+    -DBIN2H_HEADER_FILE="${CMAKE_CURRENT_BINARY_DIR}/scrypt-chacha-vulkan.inl"
+    -P "${CMAKE_CURRENT_SOURCE_DIR}/bin2h.cmake"
+    COMMENT "Generating Vulkan Kernel Byte Array"
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/scrypt-chacha.comp
 )
 
 include_directories(.)
@@ -174,6 +187,8 @@ if (SPACEMESHVULKAN)
         vulkan/vulkan-helpers.c
         vulkan/vulkan-helpers.h
         vulkan/glsl_compiler.cpp
+
+        ${CMAKE_CURRENT_BINARY_DIR}/scrypt-chacha-vulkan.inl
     )
 endif()
 

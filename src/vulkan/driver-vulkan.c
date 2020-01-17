@@ -15,6 +15,7 @@
 #ifdef HAVE_VULKAN
 #include "vulkan-helpers.h"
 #include "driver-vulkan.h"
+#include "scrypt-chacha-vulkan.inl"
 
 static const uint64_t keccak_round_constants[24] =
 {
@@ -198,7 +199,11 @@ static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameS
 	semaphoreCreateInfo.flags = 0;
 	CHECK_RESULT(vkCreateSemaphore(state->vkDevice, &semaphoreCreateInfo, NULL, &state->semaphore), "vkCreateSemaphore", NULL);
 
-	state->pipeline = compileShader(state->vkDevice, state->pipelineLayout, &state->shaderModule, "scrypt-jane.comp");
+	char options[256];
+	snprintf(options, sizeof(options), "#version 450\n#extension GL_ARB_gpu_shader_int64 : require\n#define LOOKUP_GAP %d\n#define CONCURRENT_THREADS %d\n#define WORKSIZE %d\n",
+		cgpu->lookup_gap, (unsigned int)cgpu->thread_concurrency, (int)cgpu->work_size);
+
+	state->pipeline = compileShader(state->vkDevice, state->pipelineLayout, &state->shaderModule, scrypt_chacha_comp, options);
 
 	VkCommandBufferBeginInfo commandBufferBeginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, 0, 0, 0 };
 	CHECK_RESULT(vkBeginCommandBuffer(state->commandBuffer, &commandBufferBeginInfo), "vkBeginCommandBuffer", NULL);
@@ -262,6 +267,7 @@ static int vulkan_detect(struct cgpu_info *gpus, int *active)
 			cgpu->platform = 0;
 			cgpu->drv = &vulkan_drv;
 			cgpu->driver_id = i;
+			cgpu->work_size = 64;
 
 			for (unsigned j = 0; j < memoryProperties.memoryTypeCount; j++) {
 				VkMemoryType t = memoryProperties.memoryTypes[j];
@@ -420,7 +426,7 @@ static void vulkan_shutdown(struct cgpu_info *cgpu)
 }
 
 struct device_drv vulkan_drv = {
-	SPACEMESH_API_OPENCL,
+	SPACEMESH_API_VULKAN,
 	"vulkan",
 	"GPU",
 	vulkan_detect,

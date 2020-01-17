@@ -35,9 +35,9 @@ int scryptPositions(
 	if (options & SPACEMESH_API_USE_LOCKED_DEVICE) {
 		cgpu = spacemesh_api_get_gpu((options >> 8) & 0x0f);
 	} else {
-		cgpu = spacemesh_api_get_available_gpu_by_type(options & 0x07);
+		cgpu = spacemesh_api_get_available_gpu_by_type(options & SPACEMESH_API_ALL);
 
-		if (!cgpu && (0 == (options & (SPACEMESH_API_CUDA | SPACEMESH_API_OPENCL | SPACEMESH_API_CPU)))) {
+		if (!cgpu && (0 == (options & SPACEMESH_API_ALL))) {
 			cgpu = spacemesh_api_get_available_gpu();
 		}
 	}

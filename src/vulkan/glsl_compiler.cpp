@@ -65,7 +65,7 @@ inline EShLanguage FindShaderLanguage(VkShaderStageFlagBits stage)
 
 bool compile_to_spirv(
 	VkShaderStageFlagBits stage,
-	const std::vector<uint8_t> &glsl_source,
+	const std::string &glsl_source,
 	const std::string &entry_point,
 	std::vector<std::uint32_t> &spirv,
 	std::string &info_log)
@@ -76,10 +76,9 @@ bool compile_to_spirv(
 	EShMessages messages = static_cast<EShMessages>(EShMsgDefault | EShMsgVulkanRules | EShMsgSpvRules);
 
 	EShLanguage language = FindShaderLanguage(stage);
-	std::string source   = std::string(glsl_source.begin(), glsl_source.end());
 
 	const char *file_name_list[1] = {""};
-	const char *shader_source     = reinterpret_cast<const char *>(source.data());
+	const char *shader_source     = reinterpret_cast<const char *>(glsl_source.data());
 
 	glslang::TShader shader(language);
 	shader.setStringsWithLengthsAndNames(&shader_source, nullptr, file_name_list, 1);
@@ -135,15 +134,14 @@ bool compile_to_spirv(
 	return true;
 }
 
-extern "C" VkPipeline compileShader(VkDevice vkDevice, VkPipelineLayout pipelineLayout, VkShaderModule *shader_module, const char * file_name)
+extern "C" bool loadSource(const char * file_name, std::vector<uint8_t> &buffer)
 {
 	size_t shader_size;
-	std::vector<uint8_t> buffer;
 
 	FILE *fp = fopen(file_name, "rb");
 	if (fp == NULL) {
 		applog(LOG_ERR, "Program %s not found\n", file_name);
-		return NULL;
+		return false;
 	}
 	fseek(fp, 0, SEEK_END);
 	shader_size = (size_t)(ftell(fp) * sizeof(char));
@@ -154,14 +152,26 @@ extern "C" VkPipeline compileShader(VkDevice vkDevice, VkPipelineLayout pipeline
 	fclose(fp);
 	if (read_size != shader_size) {
 		applog(LOG_ERR, "Failed to read shader %s!\n", file_name);
-		return NULL;
+		return false;
 	}
 
+	return true;
+}
+
+extern "C" VkPipeline compileShader(VkDevice vkDevice, VkPipelineLayout pipelineLayout, VkShaderModule *shader_module, const char *glsl_source, const char *options)
+{
 	std::vector<uint32_t> spirv;
 	std::string           info_log;
+	std::string           source;
+
+	if (options) {
+		source = options;
+		source += '\n';
+	}
+	source.append(glsl_source);
 
 	// Compile the GLSL source
-	if (!compile_to_spirv(VK_SHADER_STAGE_COMPUTE_BIT, buffer, "main", spirv, info_log))
+	if (!compile_to_spirv(VK_SHADER_STAGE_COMPUTE_BIT, source, "main", spirv, info_log))
 	{
 		applog(LOG_ERR, "Failed to compile shader, Error: %s\n", info_log.c_str());
 		return VK_NULL_HANDLE;

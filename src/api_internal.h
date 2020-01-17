@@ -293,6 +293,7 @@ struct cgpu_info {
 	uint32_t r;
 	uint32_t p;
 	int lookup_gap;
+	uint32_t work_size;
 	uint32_t block_count;
 	uint32_t thread_concurrency;
 	size_t buffer_size;
