@@ -82,6 +82,7 @@ extern "C" void spacemesh_api_init()
 struct cgpu_info * spacemesh_api_get_available_gpu()
 {
 	struct cgpu_info *cgpu = NULL;
+	spacemesh_api_init();
 	pthread_mutex_lock(&gpus_lock);
 	for (int i = 0; i < s_total_devices; ++i) {
 		if (s_gpus[i].available && (0 != (s_gpus[i].drv->type & SPACEMESH_API_GPU))) {
@@ -96,6 +97,7 @@ struct cgpu_info * spacemesh_api_get_available_gpu()
 
 struct cgpu_info * spacemesh_api_get_gpu(int id)
 {
+	spacemesh_api_init();
 	if (id >= 0 && id < s_total_devices) {
 		return &s_gpus[id];
 	}
@@ -105,6 +107,7 @@ struct cgpu_info * spacemesh_api_get_gpu(int id)
 struct cgpu_info * spacemesh_api_get_available_gpu_by_type(int type)
 {
 	struct cgpu_info *cgpu = NULL;
+	spacemesh_api_init();
 	pthread_mutex_lock(&gpus_lock);
 	for (int i = 0; i < s_total_devices; ++i) {
 		if (s_gpus[i].available && (type == s_gpus[i].drv->type)) {
@@ -122,6 +125,7 @@ struct cgpu_info * spacemesh_api_get_available_gpu_by_type(int type)
 
 void spacemesh_api_release_gpu(struct cgpu_info *cgpu)
 {
+	spacemesh_api_init();
 	pthread_mutex_lock(&gpus_lock);
 	cgpu->available = true;
 	pthread_mutex_unlock(&gpus_lock);
@@ -137,6 +141,7 @@ void _quit(int status)
 int spacemesh_api_stats()
 {
 	int devices = SPACEMESH_API_CPU;
+	spacemesh_api_init();
 	for (int i = 0; i < s_total_devices; ++i) {
 		devices |= s_gpus[i].drv->type;
 	}
@@ -146,6 +151,7 @@ int spacemesh_api_stats()
 int spacemesh_api_get_gpu_count(int type, int only_available)
 {
 	int devices = 0;
+	spacemesh_api_init();
 	if (0 == type) {
 		type = SPACEMESH_API_GPU;
 	}
@@ -169,6 +175,7 @@ int spacemesh_api_get_gpu_count(int type, int only_available)
 int spacemesh_api_lock_gpu(int type)
 {
 	int device = 0;
+	spacemesh_api_init();
 	if (0 == type) {
 		type = SPACEMESH_API_GPU;
 	}
@@ -186,6 +193,7 @@ int spacemesh_api_lock_gpu(int type)
 
 void spacemesh_api_unlock_gpu(int cookie)
 {
+	spacemesh_api_init();
 	pthread_mutex_lock(&gpus_lock);
 	int id = (cookie >> 8) & 0x0f;
 	if (id >= 0 && id < s_total_devices) {
@@ -201,25 +209,30 @@ int spacemesh_api_stop(uint32_t ms_timeout)
 		return SPACEMESH_API_ERROR_ALREADY;
 	}
 
-	abort_flag = true;
+	if (api_inited) {
+		abort_flag = true;
 
-	while (abort_flag) {
-		bool busy = false;
-		for (int i = 0; i < s_total_devices; ++i) {
-			if (s_gpus[i].busy) {
-				busy = true;
-				break;
+		while (abort_flag) {
+			bool busy = false;
+			for (int i = 0; i < s_total_devices; ++i) {
+				if (s_gpus[i].busy) {
+					busy = true;
+					break;
+				}
 			}
-		}
-		if (busy) {
-			if (timeout >= ms_timeout) {
-				abort_flag = false;
-				return SPACEMESH_API_ERROR_TIMEOUT;
+			if (busy) {
+				if (timeout >= ms_timeout) {
+					abort_flag = false;
+					return SPACEMESH_API_ERROR_TIMEOUT;
+				}
+				usleep(100000);
+				timeout += 100;
+				continue;
 			}
-			usleep(100000);
-			timeout += 100;
-			continue;
+			abort_flag = false;
 		}
+	}
+	else {
 		abort_flag = false;
 	}
 
