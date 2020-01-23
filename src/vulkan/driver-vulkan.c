@@ -121,6 +121,13 @@ static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameS
 	vkDestroyBuffer(state->vkDevice, tmpBuf, NULL);
 	vkFreeMemory(state->vkDevice, tmpMem, NULL);
 
+	if (state->alignment <= 16) {
+		cgpu->work_size = 128; // AMD
+	}
+	else {
+		cgpu->work_size = 128; // NVIDIA
+	}
+
 	applog(LOG_NOTICE, "GPU %d: selecting lookup gap of 4", cgpu->driver_id);
 	cgpu->lookup_gap = 4;
 
@@ -138,10 +145,12 @@ static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameS
 	if (cgpu->buffer_size) {
 		// use the buffer-size to overwrite the thread-concurrency
 		cgpu->thread_concurrency = (int)((cgpu->buffer_size * 1024 * 1024) / ipt / scrypt_mem);
-		applog(LOG_DEBUG, "GPU %d: setting thread_concurrency to %d based on buffer size %d and lookup gap %d", cgpu->driver_id, (int)(cgpu->thread_concurrency), (int)(cgpu->buffer_size), (int)(cgpu->lookup_gap));
 	}
 
+	cgpu->thread_concurrency = min(cgpu->thread_concurrency, /*cgpu->work_size*/ 32 * 1024);
 	uint32_t chunkSize = (cgpu->thread_concurrency * hash_len_bits + 7) / 8;
+
+	applog(LOG_DEBUG, "GPU %d: setting thread_concurrency to %d based on buffer size %d and lookup gap %d", cgpu->driver_id, (int)(cgpu->thread_concurrency), (int)(cgpu->buffer_size), (int)(cgpu->lookup_gap));
 
 	state->bufSize = alignBuffer(scrypt_mem * ipt * cgpu->thread_concurrency, state->alignment);
 	state->memConstantSize = alignBuffer(sizeof(AlgorithmConstants), state->alignment);
@@ -204,14 +213,20 @@ static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameS
 		cgpu->lookup_gap, (unsigned int)cgpu->thread_concurrency, (int)cgpu->work_size);
 
 	state->pipeline = compileShader(state->vkDevice, state->pipelineLayout, &state->shaderModule, scrypt_chacha_comp, options);
+	if (!state->pipeline) {
+		return NULL;
+	}
 
 	VkCommandBufferBeginInfo commandBufferBeginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, 0, 0, 0 };
 	CHECK_RESULT(vkBeginCommandBuffer(state->commandBuffer, &commandBufferBeginInfo), "vkBeginCommandBuffer", NULL);
 
 	vkCmdBindPipeline(state->commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, state->pipeline);
 	vkCmdBindDescriptorSets(state->commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, state->pipelineLayout, 0, 1, &state->descriptorSet, 0, 0);
-	vkCmdDispatch(state->commandBuffer, cgpu->thread_concurrency / 64, 1, 1);
-
+#if 1
+	vkCmdDispatch(state->commandBuffer, cgpu->thread_concurrency / cgpu->work_size, 1, 1);
+#else
+	vkCmdDispatch(state->commandBuffer, 1, 1, 1);
+#endif
 	CHECK_RESULT(vkEndCommandBuffer(state->commandBuffer), "vkEndCommandBuffer", NULL);
 
 	return state;
@@ -267,7 +282,6 @@ static int vulkan_detect(struct cgpu_info *gpus, int *active)
 			cgpu->platform = 0;
 			cgpu->drv = &vulkan_drv;
 			cgpu->driver_id = i;
-			cgpu->work_size = 64;
 
 			for (unsigned j = 0; j < memoryProperties.memoryTypeCount; j++) {
 				VkMemoryType t = memoryProperties.memoryTypes[j];
