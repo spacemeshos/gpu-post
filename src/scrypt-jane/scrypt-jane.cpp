@@ -219,14 +219,16 @@ static void scrypt_hmac_init(scrypt_hmac_state *st, const uint8_t *key, size_t k
 
 	/* inner = (key ^ 0x36) */
 	/* h(inner || ...) */
-	for (i = 0; i < SCRYPT_HASH_BLOCK_SIZE; i++)
+	for (i = 0; i < SCRYPT_HASH_BLOCK_SIZE; i++) {
 		pad[i] ^= 0x36;
+	}
 	scrypt_hash_update(&st->inner, pad, SCRYPT_HASH_BLOCK_SIZE);
 
 	/* outer = (key ^ 0x5c) */
 	/* h(outer || ...) */
-	for (i = 0; i < SCRYPT_HASH_BLOCK_SIZE; i++)
+	for (i = 0; i < SCRYPT_HASH_BLOCK_SIZE; i++) {
 		pad[i] ^= (0x5c ^ 0x36);
+	}
 	scrypt_hash_update(&st->outer, pad, SCRYPT_HASH_BLOCK_SIZE);
 }
 

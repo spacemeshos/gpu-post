@@ -70,9 +70,14 @@ uvec2 rotate2(uvec2 v, uint shift)
 {
 	uvec2 result;
 	if (shift >= 32) {
-		shift -= 32;
-		result.y = (v.x << shift) | (v.y >> (32 - shift));
-		result.x = (v.y << shift) | (v.x >> (32 - shift));
+		if (32 == shift) {
+			result.y = v.x;
+			result.x = v.y;
+		} else {
+			shift -= 32;
+			result.y = (v.x << shift) | (v.y >> (32 - shift));
+			result.x = (v.y << shift) | (v.x >> (32 - shift));
+		}
 	} else {
 		result.y = (v.y << shift) | (v.x >> (32 - shift));
 		result.x = (v.x << shift) | (v.y >> (32 - shift));
@@ -173,41 +178,11 @@ const uvec4 ROTATE_12 = uvec4(12, 12, 12, 12);
 const uvec4 ROTATE_8 =  uvec4(8, 8, 8, 8);
 const uvec4 ROTATE_7 =  uvec4(7, 7, 7, 7);
 
-void
-chacha_core(inout uvec4 state[8], uint offset)
-{
-	uvec4 x[4];
-	uvec4 t;
-	uint rounds;
-
-	x[0] = state[offset + 0];
-	x[1] = state[offset + 1];
-	x[2] = state[offset + 2];
-	x[3] = state[offset + 3];
-
-	for (rounds = 0; rounds < 4; rounds ++) {
-		x[0] += x[1]; t = x[3] ^ x[0]; x[3] = ROTL32(t, ROTATE_16);
-		x[2] += x[3]; t = x[1] ^ x[2]; x[1] = ROTL32(t, ROTATE_12);
-		x[0] += x[1]; t = x[3] ^ x[0]; x[3] = ROTL32(t, ROTATE_8);
-		x[2] += x[3]; t = x[1] ^ x[2]; x[1] = ROTL32(t, ROTATE_7);
-		
-		x[0]      += x[1].yzwx; t = x[3].wxyz ^ x[0];      x[3].wxyz = ROTL32(t, ROTATE_16);
-		x[2].zwxy += x[3].wxyz; t = x[1].yzwx ^ x[2].zwxy; x[1].yzwx = ROTL32(t, ROTATE_12);
-		x[0]      += x[1].yzwx; t = x[3].wxyz ^ x[0];      x[3].wxyz = ROTL32(t, ROTATE_8);
-		x[2].zwxy += x[3].wxyz; t = x[1].yzwx ^ x[2].zwxy; x[1].yzwx = ROTL32(t, ROTATE_7);
-	}
-
-	state[offset + 0] += x[0];
-	state[offset + 1] += x[1];
-	state[offset + 2] += x[2];
-	state[offset + 3] += x[3];
-}
-
-#define Coord(x,y,z) x+y*(x)+z*(y)*(x)
+#define Coord(x,y,z) x+y*(x ## SIZE)+z*(y ## SIZE)*(x ## SIZE)
 #define CO Coord(z,x,y)
 
 void
-scrypt_ROMix(uvec4 X[8], const uint N, const uint gid, const uint Nfactor)
+scrypt_ROMix(inout uvec4 X[8], const uint N, const uint gid, const uint Nfactor)
 {
 	const uint effective_concurrency = (CONCURRENT_THREADS << 9) >> Nfactor;
 	const uint zSIZE = 8;
@@ -216,6 +191,9 @@ scrypt_ROMix(uvec4 X[8], const uint N, const uint gid, const uint Nfactor)
 	const uint x = gid % xSIZE;
 	uint i, j, y, z;
 	uvec4 W[8];
+	uvec4 tmp[4];
+	uvec4 t;
+	uint rounds;
 
 	/* 1: X = B */
 	/* implicit */
@@ -236,14 +214,56 @@ scrypt_ROMix(uvec4 X[8], const uint N, const uint gid, const uint Nfactor)
 			X[2] ^= X[6];
 			X[3] ^= X[7];
 
-			chacha_core(X, 0);
+//			chacha_core(X);
+			tmp[0] = X[0];
+			tmp[1] = X[1];
+			tmp[2] = X[2];
+			tmp[3] = X[3];
+
+			for (rounds = 0; rounds < 4; rounds ++) {
+				tmp[0] += tmp[1]; t = tmp[3] ^ tmp[0]; tmp[3] = ROTL32(t, ROTATE_16);
+				tmp[2] += tmp[3]; t = tmp[1] ^ tmp[2]; tmp[1] = ROTL32(t, ROTATE_12);
+				tmp[0] += tmp[1]; t = tmp[3] ^ tmp[0]; tmp[3] = ROTL32(t, ROTATE_8);
+				tmp[2] += tmp[3]; t = tmp[1] ^ tmp[2]; tmp[1] = ROTL32(t, ROTATE_7);
+		
+				tmp[0]      += tmp[1].yzwx; t = tmp[3].wxyz ^ tmp[0];      tmp[3].wxyz = ROTL32(t, ROTATE_16);
+				tmp[2].zwxy += tmp[3].wxyz; t = tmp[1].yzwx ^ tmp[2].zwxy; tmp[1].yzwx = ROTL32(t, ROTATE_12);
+				tmp[0]      += tmp[1].yzwx; t = tmp[3].wxyz ^ tmp[0];      tmp[3].wxyz = ROTL32(t, ROTATE_8);
+				tmp[2].zwxy += tmp[3].wxyz; t = tmp[1].yzwx ^ tmp[2].zwxy; tmp[1].yzwx = ROTL32(t, ROTATE_7);
+			}
+
+			X[0] += tmp[0];
+			X[1] += tmp[1];
+			X[2] += tmp[2];
+			X[3] += tmp[3];
 
 			X[4] ^= X[0];
 			X[5] ^= X[1];
 			X[6] ^= X[2];
 			X[7] ^= X[3];
 
-			chacha_core(X, 4);
+//			chacha_core(X + 4);
+			tmp[0] = X[4];
+			tmp[1] = X[5];
+			tmp[2] = X[6];
+			tmp[3] = X[7];
+
+			for (rounds = 0; rounds < 4; rounds ++) {
+				tmp[0] += tmp[1]; t = tmp[3] ^ tmp[0]; tmp[3] = ROTL32(t, ROTATE_16);
+				tmp[2] += tmp[3]; t = tmp[1] ^ tmp[2]; tmp[1] = ROTL32(t, ROTATE_12);
+				tmp[0] += tmp[1]; t = tmp[3] ^ tmp[0]; tmp[3] = ROTL32(t, ROTATE_8);
+				tmp[2] += tmp[3]; t = tmp[1] ^ tmp[2]; tmp[1] = ROTL32(t, ROTATE_7);
+		
+				tmp[0]      += tmp[1].yzwx; t = tmp[3].wxyz ^ tmp[0];      tmp[3].wxyz = ROTL32(t, ROTATE_16);
+				tmp[2].zwxy += tmp[3].wxyz; t = tmp[1].yzwx ^ tmp[2].zwxy; tmp[1].yzwx = ROTL32(t, ROTATE_12);
+				tmp[0]      += tmp[1].yzwx; t = tmp[3].wxyz ^ tmp[0];      tmp[3].wxyz = ROTL32(t, ROTATE_8);
+				tmp[2].zwxy += tmp[3].wxyz; t = tmp[1].yzwx ^ tmp[2].zwxy; tmp[1].yzwx = ROTL32(t, ROTATE_7);
+			}
+
+			X[4] += tmp[0];
+			X[5] += tmp[1];
+			X[6] += tmp[2];
+			X[7] += tmp[3];
 		}
 	}
 
@@ -265,14 +285,56 @@ scrypt_ROMix(uvec4 X[8], const uint N, const uint gid, const uint Nfactor)
 			W[2] ^= W[6];
 			W[3] ^= W[7];
 
-			chacha_core(W, 0);
+//			chacha_core(W);
+			tmp[0] = W[0];
+			tmp[1] = W[1];
+			tmp[2] = W[2];
+			tmp[3] = W[3];
+
+			for (rounds = 0; rounds < 4; rounds ++) {
+				tmp[0] += tmp[1]; t = tmp[3] ^ tmp[0]; tmp[3] = ROTL32(t, ROTATE_16);
+				tmp[2] += tmp[3]; t = tmp[1] ^ tmp[2]; tmp[1] = ROTL32(t, ROTATE_12);
+				tmp[0] += tmp[1]; t = tmp[3] ^ tmp[0]; tmp[3] = ROTL32(t, ROTATE_8);
+				tmp[2] += tmp[3]; t = tmp[1] ^ tmp[2]; tmp[1] = ROTL32(t, ROTATE_7);
+		
+				tmp[0]      += tmp[1].yzwx; t = tmp[3].wxyz ^ tmp[0];      tmp[3].wxyz = ROTL32(t, ROTATE_16);
+				tmp[2].zwxy += tmp[3].wxyz; t = tmp[1].yzwx ^ tmp[2].zwxy; tmp[1].yzwx = ROTL32(t, ROTATE_12);
+				tmp[0]      += tmp[1].yzwx; t = tmp[3].wxyz ^ tmp[0];      tmp[3].wxyz = ROTL32(t, ROTATE_8);
+				tmp[2].zwxy += tmp[3].wxyz; t = tmp[1].yzwx ^ tmp[2].zwxy; tmp[1].yzwx = ROTL32(t, ROTATE_7);
+			}
+
+			W[0] += tmp[0];
+			W[1] += tmp[1];
+			W[2] += tmp[2];
+			W[3] += tmp[3];
 
 			W[4] ^= W[0];
 			W[5] ^= W[1];
 			W[6] ^= W[2];
 			W[7] ^= W[3];
 
-			chacha_core(W, 4);
+//			chacha_core(W + 4);
+			tmp[0] = W[4];
+			tmp[1] = W[5];
+			tmp[2] = W[6];
+			tmp[3] = W[7];
+
+			for (rounds = 0; rounds < 4; rounds ++) {
+				tmp[0] += tmp[1]; t = tmp[3] ^ tmp[0]; tmp[3] = ROTL32(t, ROTATE_16);
+				tmp[2] += tmp[3]; t = tmp[1] ^ tmp[2]; tmp[1] = ROTL32(t, ROTATE_12);
+				tmp[0] += tmp[1]; t = tmp[3] ^ tmp[0]; tmp[3] = ROTL32(t, ROTATE_8);
+				tmp[2] += tmp[3]; t = tmp[1] ^ tmp[2]; tmp[1] = ROTL32(t, ROTATE_7);
+		
+				tmp[0]      += tmp[1].yzwx; t = tmp[3].wxyz ^ tmp[0];      tmp[3].wxyz = ROTL32(t, ROTATE_16);
+				tmp[2].zwxy += tmp[3].wxyz; t = tmp[1].yzwx ^ tmp[2].zwxy; tmp[1].yzwx = ROTL32(t, ROTATE_12);
+				tmp[0]      += tmp[1].yzwx; t = tmp[3].wxyz ^ tmp[0];      tmp[3].wxyz = ROTL32(t, ROTATE_8);
+				tmp[2].zwxy += tmp[3].wxyz; t = tmp[1].yzwx ^ tmp[2].zwxy; tmp[1].yzwx = ROTL32(t, ROTATE_7);
+			}
+
+			W[4] += tmp[0];
+			W[5] += tmp[1];
+			W[6] += tmp[2];
+			W[7] += tmp[3];
 		}
 
 		/* 8: X = H(X ^ V_j) */
@@ -282,14 +344,56 @@ scrypt_ROMix(uvec4 X[8], const uint N, const uint gid, const uint Nfactor)
 		X[2] ^= X[6] ^ W[6] ^ W[2];
 		X[3] ^= X[7] ^ W[7] ^ W[3];
 		
-		chacha_core(X, 0);
+//		chacha_core(X);
+		tmp[0] = X[0];
+		tmp[1] = X[1];
+		tmp[2] = X[2];
+		tmp[3] = X[3];
+
+		for (rounds = 0; rounds < 4; rounds ++) {
+			tmp[0] += tmp[1]; t = tmp[3] ^ tmp[0]; tmp[3] = ROTL32(t, ROTATE_16);
+			tmp[2] += tmp[3]; t = tmp[1] ^ tmp[2]; tmp[1] = ROTL32(t, ROTATE_12);
+			tmp[0] += tmp[1]; t = tmp[3] ^ tmp[0]; tmp[3] = ROTL32(t, ROTATE_8);
+			tmp[2] += tmp[3]; t = tmp[1] ^ tmp[2]; tmp[1] = ROTL32(t, ROTATE_7);
+		
+			tmp[0]      += tmp[1].yzwx; t = tmp[3].wxyz ^ tmp[0];      tmp[3].wxyz = ROTL32(t, ROTATE_16);
+			tmp[2].zwxy += tmp[3].wxyz; t = tmp[1].yzwx ^ tmp[2].zwxy; tmp[1].yzwx = ROTL32(t, ROTATE_12);
+			tmp[0]      += tmp[1].yzwx; t = tmp[3].wxyz ^ tmp[0];      tmp[3].wxyz = ROTL32(t, ROTATE_8);
+			tmp[2].zwxy += tmp[3].wxyz; t = tmp[1].yzwx ^ tmp[2].zwxy; tmp[1].yzwx = ROTL32(t, ROTATE_7);
+		}
+
+		X[0] += tmp[0];
+		X[1] += tmp[1];
+		X[2] += tmp[2];
+		X[3] += tmp[3];
 
 		X[4] ^= X[0] ^ W[4];
 		X[5] ^= X[1] ^ W[5];
 		X[6] ^= X[2] ^ W[6];
 		X[7] ^= X[3] ^ W[7];
 		
-		chacha_core(X, 4);
+//		chacha_core(X + 4);
+		tmp[0] = X[4];
+		tmp[1] = X[5];
+		tmp[2] = X[6];
+		tmp[3] = X[7];
+
+		for (rounds = 0; rounds < 4; rounds ++) {
+			tmp[0] += tmp[1]; t = tmp[3] ^ tmp[0]; tmp[3] = ROTL32(t, ROTATE_16);
+			tmp[2] += tmp[3]; t = tmp[1] ^ tmp[2]; tmp[1] = ROTL32(t, ROTATE_12);
+			tmp[0] += tmp[1]; t = tmp[3] ^ tmp[0]; tmp[3] = ROTL32(t, ROTATE_8);
+			tmp[2] += tmp[3]; t = tmp[1] ^ tmp[2]; tmp[1] = ROTL32(t, ROTATE_7);
+		
+			tmp[0]      += tmp[1].yzwx; t = tmp[3].wxyz ^ tmp[0];      tmp[3].wxyz = ROTL32(t, ROTATE_16);
+			tmp[2].zwxy += tmp[3].wxyz; t = tmp[1].yzwx ^ tmp[2].zwxy; tmp[1].yzwx = ROTL32(t, ROTATE_12);
+			tmp[0]      += tmp[1].yzwx; t = tmp[3].wxyz ^ tmp[0];      tmp[3].wxyz = ROTL32(t, ROTATE_8);
+			tmp[2].zwxy += tmp[3].wxyz; t = tmp[1].yzwx ^ tmp[2].zwxy; tmp[1].yzwx = ROTL32(t, ROTATE_7);
+		}
+
+		X[4] += tmp[0];
+		X[5] += tmp[1];
+		X[6] += tmp[2];
+		X[7] += tmp[3];
 	}
 
 	/* 10: B' = X */
@@ -314,7 +418,7 @@ main()
 
 	scrypt_hmac_state hmac_pw, work;
 	uvec4 ti4[SCRYPT_HASH_BLOCK_SIZE/16 + 1];
-	uint i;
+	uint i = 0;
 
 	/* Determine the Nfactor */
 	while ((tmp & 1) == 0) {
@@ -327,7 +431,7 @@ main()
 	password[2] = buffer0[2];
 	password[3] = buffer0[3];
 	password[4] = buffer0[4];
-	password[2].xy = uvec2(unpackUint2x32(nonce));
+	password[2].xy = unpackUint2x32(nonce);
 
 	/* 1: X = PBKDF2(password, salt) */
 
@@ -403,7 +507,7 @@ main()
 		X[i] = work.outer.state4[i];
 	}
 //////////////////////////////////////////////////
-		
+
 	/* U1 = hmac(password, salt || be(i)) */
 	/* U32TO8_BE(be, i); */
 //////////////////////////////////////////////////
@@ -436,7 +540,6 @@ main()
 		X[i + 4] = hmac_pw.outer.state4[i];
 	}
 //////////////////////////////////////////////////
-
 	/* 2: X = ROMix(X) */
 	scrypt_ROMix(X, N, gid, Nfactor);
 
@@ -503,14 +606,14 @@ main()
 //	return scrypt_hash_finish_80_after_64_1(&st->outer);
 	hmac_pw.outer.buffer4[4].xy = uvec2(0x01, 0x80000000);
 	keccak_block(hmac_pw.outer, hmac_pw.outer.buffer4);
-	labels[lid] = hmac_pw.outer.state4[0].x;
+	labels[lid] = hmac_pw.outer.state4[0].x & 0xff;
 //////////////////////////////////////////////////
 //////////////////////////////////////////////////
 
 	memoryBarrierShared();
 
 	if (0 == lid) {
-		i = gid * 64 / 4;
+		i = gid / 4;
 
 		outputBuffer0[i++] = labels[0]  | (labels[1] << 8)  | (labels[2] << 16)  | (labels[3] << 24);
 		outputBuffer0[i++] = labels[4]  | (labels[5] << 8)  | (labels[6] << 16)  | (labels[7] << 24);
@@ -531,5 +634,26 @@ main()
 		outputBuffer0[i++] = labels[52] | (labels[53] << 8) | (labels[54] << 16) | (labels[55] << 24);
 		outputBuffer0[i++] = labels[56] | (labels[57] << 8) | (labels[58] << 16) | (labels[59] << 24);
 		outputBuffer0[i++] = labels[60] | (labels[61] << 8) | (labels[62] << 16) | (labels[63] << 24);
+#if WORKSIZE == 128
+		outputBuffer0[i++] = labels[64 + 0]  | (labels[64 + 1] << 8)  | (labels[64 + 2] << 16)  | (labels[64 + 3] << 24);
+		outputBuffer0[i++] = labels[64 + 4]  | (labels[64 + 5] << 8)  | (labels[64 + 6] << 16)  | (labels[64 + 7] << 24);
+		outputBuffer0[i++] = labels[64 + 8]  | (labels[64 + 9] << 8)  | (labels[64 + 10] << 16) | (labels[64 + 11] << 24);
+		outputBuffer0[i++] = labels[64 + 12] | (labels[64 + 13] << 8) | (labels[64 + 14] << 16) | (labels[64 + 15] << 24);
+
+		outputBuffer0[i++] = labels[64 + 16] | (labels[64 + 17] << 8) | (labels[64 + 18] << 16) | (labels[64 + 19] << 24);
+		outputBuffer0[i++] = labels[64 + 20] | (labels[64 + 21] << 8) | (labels[64 + 22] << 16) | (labels[64 + 23] << 24);
+		outputBuffer0[i++] = labels[64 + 24] | (labels[64 + 25] << 8) | (labels[64 + 26] << 16) | (labels[64 + 27] << 24);
+		outputBuffer0[i++] = labels[64 + 28] | (labels[64 + 29] << 8) | (labels[64 + 30] << 16) | (labels[64 + 31] << 24);
+
+		outputBuffer0[i++] = labels[64 + 32] | (labels[64 + 33] << 8) | (labels[64 + 34] << 16) | (labels[64 + 35] << 24);
+		outputBuffer0[i++] = labels[64 + 36] | (labels[64 + 37] << 8) | (labels[64 + 38] << 16) | (labels[64 + 39] << 24);
+		outputBuffer0[i++] = labels[64 + 40] | (labels[64 + 41] << 8) | (labels[64 + 42] << 16) | (labels[64 + 43] << 24);
+		outputBuffer0[i++] = labels[64 + 44] | (labels[64 + 45] << 8) | (labels[64 + 46] << 16) | (labels[64 + 47] << 24);
+
+		outputBuffer0[i++] = labels[64 + 48] | (labels[64 + 49] << 8) | (labels[64 + 50] << 16) | (labels[64 + 51] << 24);
+		outputBuffer0[i++] = labels[64 + 52] | (labels[64 + 53] << 8) | (labels[64 + 54] << 16) | (labels[64 + 55] << 24);
+		outputBuffer0[i++] = labels[64 + 56] | (labels[64 + 57] << 8) | (labels[64 + 58] << 16) | (labels[64 + 59] << 24);
+		outputBuffer0[i++] = labels[64 + 60] | (labels[64 + 61] << 8) | (labels[64 + 62] << 16) | (labels[64 + 63] << 24);
+#endif
 	}
 }

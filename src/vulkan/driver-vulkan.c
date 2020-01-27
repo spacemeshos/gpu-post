@@ -122,7 +122,7 @@ static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameS
 	vkFreeMemory(state->vkDevice, tmpMem, NULL);
 
 	if (state->alignment <= 16) {
-		cgpu->work_size = 128; // AMD
+		cgpu->work_size = 64; // AMD
 	}
 	else {
 		cgpu->work_size = 128; // NVIDIA
