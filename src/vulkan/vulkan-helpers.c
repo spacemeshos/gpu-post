@@ -1,5 +1,6 @@
 #include "api.h"
 #include "api_internal.h"
+#include <string.h>
 
 /**********************************************/
 

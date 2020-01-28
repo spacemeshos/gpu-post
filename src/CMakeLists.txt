@@ -174,7 +174,7 @@ if (SPACEMESHVULKAN)
     endif()
 
     include_directories(${VulkanIncludes})
-    include_directories(${VulkanIncludes}/../glslang)
+    include_directories(../third_party/glslang)
 
     message("------------------------------------------------------------------------")
     message("-- Vulkan API Includes ${VulkanIncludes}")
