@@ -23,10 +23,10 @@
 
 #include <SPIRV/GLSL.std.450.h>
 #include <SPIRV/GlslangToSpv.h>
-#include <StandAlone/ResourceLimits.h>
 #include <glslang/Include/ShHandle.h>
 #include <glslang/Include/revision.h>
 #include <glslang/OSDependent/osinclude.h>
+#include "ResourceLimits.h"
 
 #include "api_internal.h"
 

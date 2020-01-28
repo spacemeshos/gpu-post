@@ -98,7 +98,6 @@ if (SPACEMESHCL)
             opencl/ICD/linux/icd_linux_envvars.c
         )
     endif()
-    add_custom_target(clbin2h_spacemesh DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/scrypt-chacha-cl.inl ${CMAKE_CURRENT_SOURCE_DIR}/opencl/scrypt-chacha.cl)
     include_directories(${CMAKE_CURRENT_BINARY_DIR})
     include_directories(opencl)
 endif()
@@ -187,9 +186,13 @@ if (SPACEMESHVULKAN)
         vulkan/vulkan-helpers.c
         vulkan/vulkan-helpers.h
         vulkan/glsl_compiler.cpp
+        vulkan/ResourceLimits.cpp
+        vulkan/ResourceLimits.h
 
         ${CMAKE_CURRENT_BINARY_DIR}/scrypt-chacha-vulkan.inl
     )
+
+    include_directories(${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
 # add_library(gpu-setup STATIC ${SOURCES})
