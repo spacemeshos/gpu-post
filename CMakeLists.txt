@@ -9,8 +9,13 @@ if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release")
 endif ()
 
-option(SPACEMESHCL     "Build with OpenCL support" ON)
-option(SPACEMESHCUDA   "Build with CUDA support"   ON)
+if (APPLE)
+    option(SPACEMESHCL     "Build with OpenCL support" ON)
+    option(SPACEMESHCUDA   "Build with CUDA support"   ON)
+else()
+    option(SPACEMESHCL     "Build with OpenCL support" OFF)
+    option(SPACEMESHCUDA   "Build with CUDA support"   OFF)
+endif()
 option(SPACEMESHVULKAN "Build with Vulkan support" ON)
 
 # propagates CMake configuration options to the compiler
