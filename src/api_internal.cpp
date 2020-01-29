@@ -1,5 +1,6 @@
 #include "api.h"
 #include "api_internal.h"
+#include <stdarg.h>
 
 #ifdef HAVE_VULKAN
 #include "vulkan/driver-vulkan.h"
