@@ -85,7 +85,7 @@ VkDeviceMemory allocateGPUMemory(int index,  VkDevice vkDevice, const VkDeviceSi
 	if (isLocal) flag = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 	else flag = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT /*| VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT*/;
 	for (uint32_t k = 0; k < properties.memoryTypeCount; k++) {
-		if (properties.memoryTypes[k].propertyFlags == flag && memorySize < properties.memoryHeaps[properties.memoryTypes[k].heapIndex].size) {
+		if ((flag & properties.memoryTypes[k].propertyFlags) == flag && memorySize < properties.memoryHeaps[properties.memoryTypes[k].heapIndex].size) {
 			memoryTypeIndex = k;
 			break;
 		}

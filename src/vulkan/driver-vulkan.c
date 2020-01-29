@@ -209,7 +209,7 @@ static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameS
 	CHECK_RESULT(vkCreateSemaphore(state->vkDevice, &semaphoreCreateInfo, NULL, &state->semaphore), "vkCreateSemaphore", NULL);
 
 	char options[256];
-	snprintf(options, sizeof(options), "#version 450\n#extension GL_ARB_gpu_shader_int64 : require\n#define LOOKUP_GAP %d\n#define CONCURRENT_THREADS %d\n#define WORKSIZE %d\n",
+	snprintf(options, sizeof(options), "#version 450\n#define LOOKUP_GAP %d\n#define CONCURRENT_THREADS %d\n#define WORKSIZE %d\n",
 		cgpu->lookup_gap, (unsigned int)cgpu->thread_concurrency, (int)cgpu->work_size);
 
 	state->pipeline = compileShader(state->vkDevice, state->pipelineLayout, &state->shaderModule, scrypt_chacha_comp, options);
@@ -279,7 +279,6 @@ static int vulkan_detect(struct cgpu_info *gpus, int *active)
 			cgpu->pci_bus_id = 0;
 			cgpu->pci_device_id = 0;
 			cgpu->deven = DEV_ENABLED;
-			cgpu->platform = 0;
 			cgpu->drv = &vulkan_drv;
 			cgpu->driver_id = i;
 

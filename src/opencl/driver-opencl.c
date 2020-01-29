@@ -38,16 +38,6 @@ struct device_drv opencl_drv;
 #define CL_SET_ARG(var) status |= clSetKernelArg(*kernel, num++, sizeof(var), (void *)&var)
 #define CL_SET_VARG(args, var) status |= clSetKernelArg(*kernel, num++, args * sizeof(uint), (void *)var)
 
-static inline void
-be32enc_vect(uint32_t *dst, const uint32_t *src, uint32_t len)
-{
-	uint32_t i;
-
-	for (i = 0; i < len; i++) {
-		dst[i] = bswap_32(src[i]);
-	}
-}
-
 static void opencl_shutdown(struct cgpu_info *cgpu);
 
 static cl_int queue_scrypt_kernel(_clState *clState, uint8_t *pdata, uint64_t start_pos, uint32_t N, int nBuf, uint32_t hash_len_bits, uint32_t r, uint32_t p)

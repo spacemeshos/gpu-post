@@ -3,8 +3,6 @@ set(SOURCES
     ../include/api.h
     api_internal.cpp
     api_internal.h
-    util.c
-    util.h
 
     scrypt-jane/scrypt-jane-chacha.h
     scrypt-jane/scrypt-jane-mix_chacha.h

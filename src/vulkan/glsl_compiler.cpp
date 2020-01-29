@@ -25,7 +25,6 @@
 #include <SPIRV/GlslangToSpv.h>
 #include <glslang/Include/ShHandle.h>
 #include <glslang/Include/revision.h>
-#include <glslang/OSDependent/osinclude.h>
 #include "ResourceLimits.h"
 
 #include "api_internal.h"

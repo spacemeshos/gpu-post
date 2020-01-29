@@ -31,7 +31,6 @@ extern "C" {
 #else
 #include "compat/compat.h"
 #include <unistd.h>
-#include <byteswap.h>
 #endif
 
 #ifdef __INTELLISENSE__

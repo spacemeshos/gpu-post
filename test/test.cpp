@@ -10,7 +10,7 @@
 # define min(a, b)  ((a) < (b) ? (a) : (b))
 #endif
 
-#define	LABELS_COUNT	250000
+#define	LABELS_COUNT	25000000
 
 static void print(uint8_t *data)
 {
