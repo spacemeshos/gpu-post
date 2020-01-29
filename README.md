@@ -9,18 +9,26 @@
 - Windows 10 Pro.
 - Microsoft Visual Studio 2017 (any edition should be okay. Visual Studio 2019 is not supported. You may also need to install specific versions of the Windows SDK when prompted when attempting to build for the first time.
 - NVIDIA GPU Computing Toolkit 10.0 (but not later versions), and an NVIDIA GPU supporting CUDA 10.0 computation for CUDA testing.
+- Vulkan SDK 1.0, and an AMD GPU supporting Vulkan 1.0 for Vulkan testing.
 - An AMD GPU supporting OpenCL 1.2 or newer for OpenCL testing.
 
 ### Linux
 - Modern 64-bit Linux, such as Ubuntu, Debian.
 - NVIDIA GPU Computing Toolkit 9 or 10, and an NVIDIA GPU supporting CUDA 9 or 10 computation for CUDA testing.
+- Vulkan SDK 1.0.
 - An AMD GPU supporting OpenCL 1.2 or newer for OpenCL testing. Install the AMD Linux driver package (with the opencl option selected).
 
 ## Building
 
 Build options:
-SPACEMESHCL   "Build with OpenCL support" default: ON
-SPACEMESHCUDA "Build with CUDA support"   default: ON
+### Windows and Linux
+SPACEMESHCL     "Build with OpenCL support" default: ON
+SPACEMESHCUDA   "Build with CUDA support"   default: ON
+SPACEMESHVULKAN "Build with Vulkan support" default: ON
+### macOS
+SPACEMESHCL     "Build with OpenCL support" default: OFF
+SPACEMESHCUDA   "Build with CUDA support"   default: OFF
+SPACEMESHVULKAN "Build with Vulkan support" default: ON
 
 ### Windows
 1. Open project folder into Visual Studio 2017: `File -> Open -> Folder`.
@@ -135,3 +143,4 @@ Scrypt Benchmarks (n=512, r=1, p=1) 1 byte per leaf, batch size leaves per API c
 | 01/22/2020 	| seagiv   	| sm-scrypt 	| AMD Radeon 570 4GB               	| Windows 10          	| vulkan pre-optimized prototype         	| 269   	|  	|                                        	|                                          	|
 | 01/27/2020 	| seagiv   	| sm-scrypt 	| Nvidia GTX 1060 6G               	| Windows 10          	| vulkan optimized prototype	         	| 642   	|  	|                                        	|                                          	|
 | 01/27/2020 	| seagiv   	| sm-scrypt 	| AMD Radeon 570 4GB               	| Windows 10          	| vulkan optimized prototype    	     	| 966   	|  	|                                        	|                                          	|
+| 01/29/2020 	| seagiv   	| sm-scrypt 	| AMD Radeon Pro 555x 4GB              	| macOS 10.14.6        	| vulkan optimized prototype    	     	| 233   	|  	|                                        	|                                          	|
