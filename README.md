@@ -96,7 +96,7 @@ export DYLD_LIBRARY_PATH="$DYLD_LIBRARY_PATH:$VULKAN_SDK/lib/"
 ```
 int scryptPositions(
     const uint8_t *id,			// 32 bytes
-    uint64_t start_position,	// e.g. 0 
+    uint64_t start_position,	// e.g. 0
     uint64_t end_position,		// e.g. 49,999
     uint8_t hash_len_bits,		// (1...8) for each hash output, the number of prefix bits (not bytes) to copy into the buffer
     const uint8_t *salt,		// 32 bytes
@@ -162,3 +162,5 @@ Scrypt Benchmarks (n=512, r=1, p=1) 1 byte per leaf, batch size leaves per API c
 | 01/27/2020 	| seagiv   	| sm-scrypt 	| Nvidia GTX 1060 6G               	| Windows 10          	| vulkan optimized prototype	         	| 642   	|  	|                                        	|                                          	|
 | 01/27/2020 	| seagiv   	| sm-scrypt 	| AMD Radeon 570 4GB               	| Windows 10          	| vulkan optimized prototype    	     	| 966   	|  	|                                        	|                                          	|
 | 01/29/2020 	| seagiv   	| sm-scrypt 	| AMD Radeon Pro 555x 4GB              	| macOS 10.14.6        	| vulkan optimized prototype    	     	| 266   	|  	|                                        	|                                          	|
+| 01/31/2020 	| avive   	| sm-scrypt 	| AMD Radeon Pro 560x 4GB              	| macOS 10.14.6        	| vulkan optimized prototype    	     	| 406   	|  	|                                        	|                                          	|
+| 01/31/2020 	| seagiv   	| sm-scrypt 	| Intel(R) UHD Graphics 630 1536MB              	| macOS 10.14.6        	| vulkan optimized prototype    	     	| 53   	|  	
