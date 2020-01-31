@@ -77,6 +77,7 @@ For build with Vulkan on Windows and Linux, you need to copy the contents of the
 
 For build with Vulkan on macOS, please set environment vars:
 (for example, VulkanSDK 1.0.69.0 is located in $HOME/Downloads/vulkansdk-macos-1.0.69.0)
+```
 export VULKAN_ROOT_LOCATION="$HOME/Downloads/"
 export VULKAN_SDK_VERSION="1.0.69.0"
 export VULKAN_SDK="$VULKAN_ROOT_LOCATION/vulkansdk-macos-$VULKAN_SDK_VERSION/macOS"
@@ -84,6 +85,7 @@ export VK_ICD_FILENAMES="$VULKAN_SDK/etc/vulkan/icd.d/MoltenVK_icd.json"
 export VK_LAYER_PATH="$VULKAN_SDK/etc/vulkan/explicit_layers.d"
 export PATH="/usr/local/opt/python/libexec/bin:$VULKAN_SDK/bin:$PATH"
 export DYLD_LIBRARY_PATH="$DYLD_LIBRARY_PATH:$VULKAN_SDK/lib/"
+```
 
 ## API
 
