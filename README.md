@@ -22,13 +22,17 @@
 
 Build options:
 ### Windows and Linux
+```
 SPACEMESHCL     "Build with OpenCL support" default: ON
 SPACEMESHCUDA   "Build with CUDA support"   default: ON
 SPACEMESHVULKAN "Build with Vulkan support" default: ON
+```
 ### macOS
+```
 SPACEMESHCL     "Build with OpenCL support" default: OFF
 SPACEMESHCUDA   "Build with CUDA support"   default: OFF
 SPACEMESHVULKAN "Build with Vulkan support" default: ON
+```
 
 ### Windows
 1. Open project folder into Visual Studio 2017: `File -> Open -> Folder`.
