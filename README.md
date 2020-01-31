@@ -36,7 +36,7 @@ SPACEMESHVULKAN "Build with Vulkan support" default: ON
 3. Build: `CMake -> Rebuild All`.
 4. Run test: `CMake -> Debug from Build Folder -> gpu-setup-test.exe`
 
-### Linux
+### Linux and macOS
 1. Create build directory:
 ```
   cd gpu-post
@@ -72,6 +72,18 @@ You may need to set CUDA_TOOLKIT_ROOT_DIR:
 ```
   cmake .. -DCMAKE_C_COMPILER=gcc-6 -DCMAKE_CXX_COMPILER=g++-6 -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-9.0
 ```
+
+For build with Vulkan on Windows and Linux, you need to copy the contents of the "glslang" folder from Vulkan SDK to the "third_party/glslang" folder of the library sources.
+
+For build with Vulkan on macOS, please set environment vars:
+(for example, VulkanSDK 1.0.69.0 is located in $HOME/Downloads/vulkansdk-macos-1.0.69.0)
+export VULKAN_ROOT_LOCATION="$HOME/Downloads/"
+export VULKAN_SDK_VERSION="1.0.69.0"
+export VULKAN_SDK="$VULKAN_ROOT_LOCATION/vulkansdk-macos-$VULKAN_SDK_VERSION/macOS"
+export VK_ICD_FILENAMES="$VULKAN_SDK/etc/vulkan/icd.d/MoltenVK_icd.json"
+export VK_LAYER_PATH="$VULKAN_SDK/etc/vulkan/explicit_layers.d"
+export PATH="/usr/local/opt/python/libexec/bin:$VULKAN_SDK/bin:$PATH"
+export DYLD_LIBRARY_PATH="$DYLD_LIBRARY_PATH:$VULKAN_SDK/lib/"
 
 ## API
 
