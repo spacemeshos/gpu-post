@@ -111,9 +111,17 @@ static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameS
 	uint32_t scrypt_mem = 128 * cgpu->r;
 
 	uint32_t computeQueueFamillyIndex = getComputeQueueFamillyIndex(cgpu->driver_id);
+	if (computeQueueFamillyIndex < 0) {
+		applog(LOG_ERR, "GPU %d: Compute query familly not found\n", cgpu->driver_id);
+		return NULL;
+	}
 
 	state->deviceId = cgpu->driver_id;
 	state->vkDevice = createDevice(cgpu->driver_id, computeQueueFamillyIndex);
+	if (NULL == state->vkDevice) {
+		applog(LOG_NOTICE, "GPU %d: Create Vulkan device instance failed", cgpu->driver_id);
+		return NULL;
+	}
 
 	VkDeviceMemory tmpMem = allocateGPUMemory(state->deviceId, state->vkDevice, 1024, true, true);
 	VkBuffer tmpBuf = createBuffer(state->vkDevice, computeQueueFamillyIndex, tmpMem, 256, 0);

@@ -10,7 +10,7 @@
 # define min(a, b)  ((a) < (b) ? (a) : (b))
 #endif
 
-#define	LABELS_COUNT	25000000
+#define	LABELS_COUNT	25000
 
 static void print(uint8_t *data)
 {
@@ -63,7 +63,7 @@ int main()
 		scryptPositions(id, 0, LABELS_COUNT - 1, 8, salt, cookie1, out[2], 512, 1, 1);
 		print(out[2]);
 		if (0 != memcmp(out[1], out[2], LABELS_COUNT)) {
-			printf("WRONG result from NVIDIA Vulkan\n");
+			printf("WRONG result from Vulkan GPU 1\n");
 		}
 	}
 
@@ -71,7 +71,7 @@ int main()
 		scryptPositions(id, 0, LABELS_COUNT - 1, 8, salt, cookie2, out[3], 512, 1, 1);
 		print(out[3]);
 		if (0 != memcmp(out[1], out[3], LABELS_COUNT)) {
-			printf("WRONG result from AMD Vulkan\n");
+			printf("WRONG result from Vulkan GPU 2\n");
 		}
 	}
 

@@ -184,28 +184,28 @@ extern "C" VkPipeline compileShader(VkDevice vkDevice, VkPipelineLayout pipeline
 		spirv.data()
 	};
 
-	CHECK_RESULT(vkCreateShaderModule(vkDevice, &shaderModuleCreateInfo, 0, shader_module), "vkCreateShaderModule", NULL);
+	CHECK_RESULT(vkCreateShaderModule(vkDevice, &shaderModuleCreateInfo, 0, shader_module), "vkCreateShaderModule", VK_NULL_HANDLE);
 
 	VkComputePipelineCreateInfo computePipelineCreateInfo = {
 		VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
 		0,
 		0,
-	{
-		VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-		0,
-		0,
-		VK_SHADER_STAGE_COMPUTE_BIT,
-		*shader_module,
-		"main",
-		0
-	},
+		{
+			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+			0,
+			0,
+			VK_SHADER_STAGE_COMPUTE_BIT,
+			*shader_module,
+			"main",
+			0
+		},
 		pipelineLayout,
 		0,
 		0
 	};
 
 	VkPipeline pipeline;
-	CHECK_RESULT(vkCreateComputePipelines(vkDevice, 0, 1, &computePipelineCreateInfo, 0, &pipeline), "vkCreateComputePipelines", NULL);
+	CHECK_RESULT(vkCreateComputePipelines(vkDevice, 0, 1, &computePipelineCreateInfo, 0, &pipeline), "vkCreateComputePipelines", VK_NULL_HANDLE);
 
 	return pipeline;
 }
