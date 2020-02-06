@@ -11,6 +11,7 @@
 #endif
 
 #define	LABELS_COUNT	25000
+#define	LABEL_SIZE		8
 
 static void print(uint8_t *data)
 {
@@ -39,10 +40,10 @@ int main()
 	memset(out[3], 0, LABELS_COUNT);
 
 #if LABELS_COUNT <= 250000
-	scryptPositions(id, 0, LABELS_COUNT - 1, 8, salt, SPACEMESH_API_CPU, out[0], 512, 1, 1);
+	scryptPositions(id, 0, LABELS_COUNT - 1, LABEL_SIZE, salt, SPACEMESH_API_CPU, out[0], 512, 1, 1);
 #endif
-	scryptPositions(id, 0, LABELS_COUNT - 1, 8, salt, SPACEMESH_API_CUDA/*   | SPACEMESH_API_THROTTLED_MODE*/, out[1], 512, 1, 1);
-	scryptPositions(id, 0, LABELS_COUNT - 1, 8, salt, SPACEMESH_API_OPENCL/* | SPACEMESH_API_THROTTLED_MODE*/, out[2], 512, 1, 1);
+	scryptPositions(id, 0, LABELS_COUNT - 1, LABEL_SIZE, salt, SPACEMESH_API_CUDA/*   | SPACEMESH_API_THROTTLED_MODE*/, out[1], 512, 1, 1);
+	scryptPositions(id, 0, LABELS_COUNT - 1, LABEL_SIZE, salt, SPACEMESH_API_OPENCL/* | SPACEMESH_API_THROTTLED_MODE*/, out[2], 512, 1, 1);
 
 	print(out[0]);
 	print(out[1]);
@@ -60,7 +61,7 @@ int main()
 	int cookie2 = spacemesh_api_lock_gpu(SPACEMESH_API_VULKAN);
 
 	if (cookie1) {
-		scryptPositions(id, 0, LABELS_COUNT - 1, 8, salt, cookie1, out[2], 512, 1, 1);
+		scryptPositions(id, 0, LABELS_COUNT - 1, LABEL_SIZE, salt, cookie1, out[2], 512, 1, 1);
 		print(out[2]);
 		if (0 != memcmp(out[1], out[2], LABELS_COUNT)) {
 			printf("WRONG result from Vulkan GPU 1\n");
@@ -68,7 +69,7 @@ int main()
 	}
 
 	if (cookie2) {
-		scryptPositions(id, 0, LABELS_COUNT - 1, 8, salt, cookie2, out[3], 512, 1, 1);
+		scryptPositions(id, 0, LABELS_COUNT - 1, LABEL_SIZE, salt, cookie2, out[3], 512, 1, 1);
 		print(out[3]);
 		if (0 != memcmp(out[1], out[3], LABELS_COUNT)) {
 			printf("WRONG result from Vulkan GPU 2\n");

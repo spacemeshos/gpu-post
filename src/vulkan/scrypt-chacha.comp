@@ -399,6 +399,8 @@ const uvec2 KEY_0X36_2          = uvec2(0x36363636);
 const uvec4 KEY_0X36_XOR_0X5C   = uvec4(0x6A6A6A6A);
 const uvec2 KEY_0X36_XOR_0X5C_2 = uvec2(0x6A6A6A6A);
 
+#define	LABEL_MASK	((1 << LABEL_SIZE) - 1)
+
 void
 main() 
 {
@@ -408,7 +410,7 @@ main()
 	const uint gid = gl_GlobalInvocationID.x;
 	uint Nfactor = 0;
 	uint tmp = N >> 1;
-	uvec2 nonce = uvec2(global_work_offset.x + gid, 0);
+	uvec2 nonce;
 
 	scrypt_hmac_state hmac_pw, work;
 	uvec4 ti4[SCRYPT_HASH_BLOCK_SIZE/16 + 1];
@@ -611,15 +613,15 @@ main()
 //	return scrypt_hash_finish_80_after_64_1(&st->outer);
 	hmac_pw.outer.buffer4[4].xy = uvec2(0x01, 0x80000000);
 	keccak_block(hmac_pw.outer, hmac_pw.outer.buffer4);
-	labels[lid] = hmac_pw.outer.state4[0].x & 0xff;
+	labels[lid] = hmac_pw.outer.state4[0].x & LABEL_MASK;
 //////////////////////////////////////////////////
 //////////////////////////////////////////////////
 
 	memoryBarrierShared();
 
 	if (0 == lid) {
-		i = gid / 4;
-
+		i = (gid * LABEL_SIZE) >> 5;
+#if LABEL_SIZE == 8
 		outputBuffer0[i++] = labels[0]  | (labels[1] << 8)  | (labels[2] << 16)  | (labels[3] << 24);
 		outputBuffer0[i++] = labels[4]  | (labels[5] << 8)  | (labels[6] << 16)  | (labels[7] << 24);
 		outputBuffer0[i++] = labels[8]  | (labels[9] << 8)  | (labels[10] << 16) | (labels[11] << 24);
@@ -659,6 +661,328 @@ main()
 		outputBuffer0[i++] = labels[64 + 52] | (labels[64 + 53] << 8) | (labels[64 + 54] << 16) | (labels[64 + 55] << 24);
 		outputBuffer0[i++] = labels[64 + 56] | (labels[64 + 57] << 8) | (labels[64 + 58] << 16) | (labels[64 + 59] << 24);
 		outputBuffer0[i++] = labels[64 + 60] | (labels[64 + 61] << 8) | (labels[64 + 62] << 16) | (labels[64 + 63] << 24);
+#endif
+#endif
+#if LABEL_SIZE == 7
+#define	MAKE_LABELS32(a) \
+		nonce.x  = labels[a+0]; \
+		nonce.x |= labels[a+1] << 7; \
+		nonce.x |= labels[a+2] << 14; \
+		nonce.x |= labels[a+3] << 21; \
+		nonce.y  = labels[a+4]; \
+		nonce.x |= nonce.y << 28; \
+		outputBuffer0[i++] = nonce.x; \
+		 \
+		nonce.y >>= 4; \
+		nonce.y |= labels[a+5] << 3; \
+		nonce.y |= labels[a+6] << 10; \
+		nonce.y |= labels[a+7] << 17; \
+		nonce.y |= labels[a+8] << 24; \
+		nonce.x  = labels[a+9]; \
+		nonce.y |= nonce.x << 31; \
+		outputBuffer0[i++] = nonce.y; \
+		 \
+		nonce.x >>= 1; \
+		nonce.x |= labels[a+10] << 6; \
+		nonce.x |= labels[a+11] << 13; \
+		nonce.x |= labels[a+12] << 20; \
+		nonce.y  = labels[a+13]; \
+		nonce.x |= nonce.y << 27; \
+		outputBuffer0[i++] = nonce.x; \
+		 \
+		nonce.y >>= 5; \
+		nonce.y |= labels[a+14] << 2; \
+		nonce.y |= labels[a+15] << 9; \
+		nonce.y |= labels[a+16] << 16; \
+		nonce.y |= labels[a+17] << 23; \
+		nonce.x  = labels[a+18]; \
+		nonce.y |= nonce.x << 30; \
+		outputBuffer0[i++] = nonce.y; \
+		 \
+		nonce.x >>= 2; \
+		nonce.x |= labels[a+19] << 5; \
+		nonce.x |= labels[a+20] << 12; \
+		nonce.x |= labels[a+21] << 19; \
+		nonce.y  = labels[a+22]; \
+		nonce.x |= nonce.y << 26; \
+		outputBuffer0[i++] = nonce.x; \
+		 \
+		nonce.y >>= 6; \
+		nonce.y |= labels[a+23] << 1; \
+		nonce.y |= labels[a+24] << 8; \
+		nonce.y |= labels[a+25] << 15; \
+		nonce.y |= labels[a+26] << 22; \
+		nonce.x  = labels[a+27]; \
+		nonce.y |= nonce.x << 29; \
+		outputBuffer0[i++] = nonce.y; \
+		 \
+		nonce.x >>= 3; \
+		nonce.x |= labels[a+28] << 4; \
+		nonce.x |= labels[a+29] << 11; \
+		nonce.x |= labels[a+30] << 18; \
+		nonce.x |= labels[a+31] << 25; \
+		outputBuffer0[i++] = nonce.x;
+
+		MAKE_LABELS32(0)
+		MAKE_LABELS32(32)
+#if WORKSIZE == 128
+		MAKE_LABELS32(64)
+		MAKE_LABELS32(96)
+#endif
+#endif
+#if LABEL_SIZE == 6
+#define	MAKE_LABELS16(a) \
+		nonce.x  = labels[(a)+0]; \
+		nonce.x |= labels[(a)+1] << 6; \
+		nonce.x |= labels[(a)+2] << 12; \
+		nonce.x |= labels[(a)+3] << 18; \
+		nonce.x |= labels[(a)+4] << 24; \
+		nonce.y  = labels[(a)+5]; \
+		nonce.x |= nonce.y << 30; \
+		outputBuffer0[i++] = nonce.x; \
+		 \
+		nonce.y >>= 2; \
+		nonce.y |= labels[(a)+6] << 4; \
+		nonce.y |= labels[(a)+7] << 10; \
+		nonce.y |= labels[(a)+8] << 16; \
+		nonce.y |= labels[(a)+9] << 22; \
+		nonce.x  = labels[(a)+10]; \
+		nonce.y |= nonce.x << 28; \
+		outputBuffer0[i++] = nonce.y; \
+		 \
+		nonce.x >>= 4; \
+		nonce.x |= labels[(a)+11] << 2; \
+		nonce.x |= labels[(a)+12] << 8; \
+		nonce.x |= labels[(a)+13] << 14; \
+		nonce.x |= labels[(a)+14] << 20; \
+		nonce.x |= labels[(a)+15] << 26; \
+		outputBuffer0[i++] = nonce.x;
+
+		MAKE_LABELS16(0*16)
+		MAKE_LABELS16(1*16)
+		MAKE_LABELS16(2*16)
+		MAKE_LABELS16(3*16)
+#if WORKSIZE == 128
+		MAKE_LABELS16(4*16)
+		MAKE_LABELS16(5*16)
+		MAKE_LABELS16(6*16)
+		MAKE_LABELS16(7*16)
+#endif
+#endif
+#if LABEL_SIZE == 5
+#define	MAKE_LABELS32(a) \
+		nonce.x  = labels[(a)+0]; \
+		nonce.x |= labels[(a)+1] << 5; \
+		nonce.x |= labels[(a)+2] << 10; \
+		nonce.x |= labels[(a)+3] << 15; \
+		nonce.x |= labels[(a)+4] << 20; \
+		nonce.x |= labels[(a)+5] << 25; \
+		nonce.y  = labels[(a)+6]; \
+		nonce.x |= nonce.y << 30; \
+		outputBuffer0[i++] = nonce.x; \
+		 \
+		nonce.y >>= 2; \
+		nonce.y |= labels[(a)+7] << 3; \
+		nonce.y |= labels[(a)+8] << 8; \
+		nonce.y |= labels[(a)+9] << 13; \
+		nonce.y |= labels[(a)+10] << 18; \
+		nonce.y |= labels[(a)+11] << 23; \
+		nonce.x  = labels[(a)+12]; \
+		nonce.y |= nonce.x << 28; \
+		outputBuffer0[i++] = nonce.y; \
+		 \
+		nonce.x >>= 4; \
+		nonce.x |= labels[(a)+13] << 1; \
+		nonce.x |= labels[(a)+14] << 6; \
+		nonce.x |= labels[(a)+15] << 11; \
+		nonce.x |= labels[(a)+16] << 16; \
+		nonce.x |= labels[(a)+17] << 21; \
+		nonce.x |= labels[(a)+18] << 26; \
+		nonce.y  = labels[(a)+19]; \
+		nonce.x |= nonce.y << 31; \
+		outputBuffer0[i++] = nonce.x; \
+		 \
+		nonce.y >>= 1; \
+		nonce.y |= labels[(a)+20] << 4; \
+		nonce.y |= labels[(a)+21] << 9; \
+		nonce.y |= labels[(a)+22] << 14; \
+		nonce.y |= labels[(a)+23] << 19; \
+		nonce.y |= labels[(a)+24] << 24; \
+		nonce.x  = labels[(a)+25]; \
+		nonce.y |= nonce.x << 29; \
+		outputBuffer0[i++] = nonce.y; \
+		 \
+		nonce.x >>= 3; \
+		nonce.x |= labels[(a)+26] << 2; \
+		nonce.x |= labels[(a)+27] << 7; \
+		nonce.x |= labels[(a)+28] << 12; \
+		nonce.x |= labels[(a)+29] << 17; \
+		nonce.x |= labels[(a)+30] << 22; \
+		nonce.x |= labels[(a)+31] << 27; \
+		outputBuffer0[i++] = nonce.x;
+
+		MAKE_LABELS32(0)
+		MAKE_LABELS32(32)
+#if WORKSIZE == 128
+		MAKE_LABELS32(64)
+		MAKE_LABELS32(96)
+#endif
+#endif
+#if LABEL_SIZE == 4
+#define	MAKE_LABELS8(a) \
+		nonce.x  = labels[(a)+0]; \
+		nonce.x |= labels[(a)+1] << 4; \
+		nonce.x |= labels[(a)+2] << 8; \
+		nonce.x |= labels[(a)+3] << 12; \
+		nonce.x |= labels[(a)+4] << 16; \
+		nonce.x |= labels[(a)+5] << 20; \
+		nonce.x |= labels[(a)+6] << 24; \
+		nonce.x |= labels[(a)+7] << 28; \
+		outputBuffer0[i++] = nonce.x;
+
+		MAKE_LABELS8(8*0)
+		MAKE_LABELS8(8*1)
+		MAKE_LABELS8(8*2)
+		MAKE_LABELS8(8*3)
+		MAKE_LABELS8(8*4)
+		MAKE_LABELS8(8*5)
+		MAKE_LABELS8(8*6)
+		MAKE_LABELS8(8*7)
+#if WORKSIZE == 128
+		MAKE_LABELS8(8*8)
+		MAKE_LABELS8(8*9)
+		MAKE_LABELS8(8*10)
+		MAKE_LABELS8(8*11)
+		MAKE_LABELS8(8*12)
+		MAKE_LABELS8(8*13)
+		MAKE_LABELS8(8*14)
+		MAKE_LABELS8(8*15)
+#endif
+#endif
+#if LABEL_SIZE == 3
+#define	MAKE_LABELS32(a) \
+		nonce.x  = labels[(a)+0]; \
+		nonce.x |= labels[(a)+1] << 3; \
+		nonce.x |= labels[(a)+2] << 6; \
+		nonce.x |= labels[(a)+3] << 9; \
+		nonce.x |= labels[(a)+4] << 12; \
+		nonce.x |= labels[(a)+5] << 15; \
+		nonce.x |= labels[(a)+6] << 18; \
+		nonce.x |= labels[(a)+7] << 21; \
+		nonce.x |= labels[(a)+8] << 24; \
+		nonce.x |= labels[(a)+9] << 27; \
+		nonce.y  = labels[(a)+10]; \
+		nonce.x |= nonce.y << 30; \
+		outputBuffer0[i++] = nonce.x; \
+		 \
+		nonce.y >>= 2; \
+		nonce.y |= labels[(a)+11] << 1; \
+		nonce.y |= labels[(a)+12] << 4; \
+		nonce.y |= labels[(a)+13] << 7; \
+		nonce.y |= labels[(a)+14] << 10; \
+		nonce.y |= labels[(a)+15] << 13; \
+		nonce.y |= labels[(a)+16] << 16; \
+		nonce.y |= labels[(a)+17] << 19; \
+		nonce.y |= labels[(a)+18] << 22; \
+		nonce.y |= labels[(a)+19] << 25; \
+		nonce.y |= labels[(a)+20] << 28; \
+		nonce.x  = labels[(a)+21]; \
+		nonce.y |= nonce.x << 31; \
+		outputBuffer0[i++] = nonce.y; \
+		 \
+		nonce.x >>= 1; \
+		nonce.x |= labels[(a)+22] << 2; \
+		nonce.x |= labels[(a)+23] << 5; \
+		nonce.x |= labels[(a)+24] << 8; \
+		nonce.x |= labels[(a)+25] << 11; \
+		nonce.x |= labels[(a)+26] << 14; \
+		nonce.x |= labels[(a)+27] << 17; \
+		nonce.x |= labels[(a)+28] << 20; \
+		nonce.x |= labels[(a)+29] << 23; \
+		nonce.x |= labels[(a)+30] << 26; \
+		nonce.x |= labels[(a)+31] << 29; \
+		outputBuffer0[i++] = nonce.x;
+
+		MAKE_LABELS32(0)
+		MAKE_LABELS32(32)
+#if WORKSIZE == 128
+		MAKE_LABELS32(64)
+		MAKE_LABELS32(96)
+#endif
+#endif
+#if LABEL_SIZE == 2
+#define	MAKE_LABELS16(a) \
+		nonce.x  = labels[(a)+0]; \
+		nonce.x |= labels[(a)+1] << 2; \
+		nonce.x |= labels[(a)+2] << 4; \
+		nonce.x |= labels[(a)+3] << 6; \
+		nonce.x |= labels[(a)+4] << 8; \
+		nonce.x |= labels[(a)+5] << 10; \
+		nonce.x |= labels[(a)+6] << 12; \
+		nonce.x |= labels[(a)+7] << 14; \
+		nonce.x |= labels[(a)+8] << 16; \
+		nonce.x |= labels[(a)+9] << 18; \
+		nonce.x |= labels[(a)+10] << 20; \
+		nonce.x |= labels[(a)+11] << 22; \
+		nonce.x |= labels[(a)+12] << 24; \
+		nonce.x |= labels[(a)+13] << 26; \
+		nonce.x |= labels[(a)+14] << 28; \
+		nonce.x |= labels[(a)+15] << 30; \
+		outputBuffer0[i++] = nonce.x;
+
+		MAKE_LABELS16(0*16)
+		MAKE_LABELS16(1*16)
+		MAKE_LABELS16(2*16)
+		MAKE_LABELS16(3*16)
+#if WORKSIZE == 128
+		MAKE_LABELS16(4*16)
+		MAKE_LABELS16(5*16)
+		MAKE_LABELS16(6*16)
+		MAKE_LABELS16(7*16)
+#endif
+#endif
+#if LABEL_SIZE == 1
+#define	MAKE_LABELS32(a) \
+		nonce.x  = labels[(a)+0]; \
+		nonce.x |= labels[(a)+1] << 1; \
+		nonce.x |= labels[(a)+2] << 2; \
+		nonce.x |= labels[(a)+3] << 3; \
+		nonce.x |= labels[(a)+4] << 4; \
+		nonce.x |= labels[(a)+5] << 5; \
+		nonce.x |= labels[(a)+6] << 6; \
+		nonce.x |= labels[(a)+7] << 7; \
+		nonce.x |= labels[(a)+8] << 8; \
+		nonce.x |= labels[(a)+9] << 9; \
+		nonce.x |= labels[(a)+10] << 10; \
+		nonce.x |= labels[(a)+11] << 11; \
+		nonce.x |= labels[(a)+12] << 12; \
+		nonce.x |= labels[(a)+13] << 13; \
+		nonce.x |= labels[(a)+14] << 14; \
+		nonce.x |= labels[(a)+15] << 15; \
+		nonce.x |= labels[(a)+16] << 16; \
+		nonce.x |= labels[(a)+17] << 17; \
+		nonce.x |= labels[(a)+18] << 18; \
+		nonce.x |= labels[(a)+19] << 19; \
+		nonce.x |= labels[(a)+20] << 20; \
+		nonce.x |= labels[(a)+21] << 21; \
+		nonce.x |= labels[(a)+22] << 22; \
+		nonce.x |= labels[(a)+23] << 23; \
+		nonce.x |= labels[(a)+24] << 24; \
+		nonce.x |= labels[(a)+25] << 25; \
+		nonce.x |= labels[(a)+26] << 26; \
+		nonce.x |= labels[(a)+27] << 27; \
+		nonce.x |= labels[(a)+28] << 28; \
+		nonce.x |= labels[(a)+29] << 29; \
+		nonce.x |= labels[(a)+30] << 30; \
+		nonce.x |= labels[(a)+31] << 31; \
+		outputBuffer0[i++] = nonce.x;
+
+		MAKE_LABELS32(0)
+		MAKE_LABELS32(32)
+#if WORKSIZE == 128
+		MAKE_LABELS32(64)
+		MAKE_LABELS32(96)
+#endif
 #endif
 	}
 }

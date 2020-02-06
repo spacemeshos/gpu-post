@@ -217,8 +217,8 @@ static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameS
 	CHECK_RESULT(vkCreateSemaphore(state->vkDevice, &semaphoreCreateInfo, NULL, &state->semaphore), "vkCreateSemaphore", NULL);
 
 	char options[256];
-	snprintf(options, sizeof(options), "#version 450\n#define LOOKUP_GAP %d\n#define CONCURRENT_THREADS %d\n#define WORKSIZE %d\n",
-		cgpu->lookup_gap, (unsigned int)cgpu->thread_concurrency, (int)cgpu->work_size);
+	snprintf(options, sizeof(options), "#version 450\n#define LOOKUP_GAP %d\n#define CONCURRENT_THREADS %d\n#define WORKSIZE %d\n#define LABEL_SIZE %d\n",
+		cgpu->lookup_gap, (unsigned int)cgpu->thread_concurrency, (int)cgpu->work_size, hash_len_bits);
 
 	state->pipeline = compileShader(state->vkDevice, state->pipelineLayout, &state->shaderModule, scrypt_chacha_comp, options);
 	if (!state->pipeline) {
