@@ -45,7 +45,9 @@ VkDevice createDevice(int index, uint32_t computeQueueFamillyIndex)
 
 	static VkPhysicalDeviceFeatures enabledFeatures;
 	memset(&enabledFeatures, 0, sizeof(enabledFeatures));
+#if 0
 	enabledFeatures.shaderInt64 = VK_TRUE;
+#endif
 	const char * deviceExtensions[1];
 	uint32_t extensionsCount = 0;
 #if 0
