@@ -25,7 +25,7 @@
 #include <SPIRV/GlslangToSpv.h>
 #endif
 
-#include "ResourceLimits.h"
+#include <glslang/Include/ResourceLimits.h>
 
 #include "api_internal.h"
 

@@ -170,7 +170,7 @@ if (SPACEMESHVULKAN)
         message(FATAL_ERROR "Can't find folder containing vulkan.h")
     endif()
 
-    find_path(GLSLANG_SPIRV_INCLUDE_DIR SPIRV/spirv.hpp HINTS "${VulkanIncludes}/../source/glslang/" "${VulkanIncludes}/../glslang" DOC "Path to SPIRV/spirv.hpp")
+    find_path(GLSLANG_SPIRV_INCLUDE_DIR SPIRV/spirv.hpp HINTS "${VulkanIncludes}" "${VulkanIncludes}/../source/glslang/" "${VulkanIncludes}/../glslang" DOC "Path to SPIRV/spirv.hpp")
     if (NOT GLSLANG_SPIRV_INCLUDE_DIR)
         message(FATAL_ERROR "Can't find folder containing spirv.hpp")
     endif()
