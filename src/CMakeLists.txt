@@ -170,8 +170,14 @@ if (SPACEMESHVULKAN)
         message(FATAL_ERROR "Can't find folder containing vulkan.h")
     endif()
 
+    find_path(GLSLANG_SPIRV_INCLUDE_DIR SPIRV/spirv.hpp HINTS "${VulkanIncludes}/../source/glslang/" "${VulkanIncludes}/../glslang" DOC "Path to SPIRV/spirv.hpp")
+    if (NOT GLSLANG_SPIRV_INCLUDE_DIR)
+        message(FATAL_ERROR "Can't find folder containing spirv.hpp")
+    endif()
+
     include_directories(${VulkanIncludes})
-    include_directories(../third_party/glslang)
+    include_directories(${GLSLANG_SPIRV_INCLUDE_DIR})
+#    include_directories(../third_party/glslang)
 
     message("------------------------------------------------------------------------")
     message("-- Vulkan API Includes ${VulkanIncludes}")
@@ -184,8 +190,6 @@ if (SPACEMESHVULKAN)
         vulkan/vulkan-helpers.c
         vulkan/vulkan-helpers.h
         vulkan/glsl_compiler.cpp
-        vulkan/ResourceLimits.cpp
-        vulkan/ResourceLimits.h
 
         ${CMAKE_CURRENT_BINARY_DIR}/scrypt-chacha-vulkan.inl
     )

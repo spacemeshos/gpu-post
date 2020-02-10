@@ -94,6 +94,8 @@ typedef struct AlgorithmParams {
 
 struct device_drv vulkan_drv;
 
+void init_glslang();
+
 static uint64_t alignBuffer(uint64_t size, uint64_t align)
 {
 	if (align == 1) {
@@ -311,6 +313,8 @@ static int vulkan_detect(struct cgpu_info *gpus, int *active)
 	memcpy(gpuConstants.keccakf_rndc, keccak_round_constants, sizeof(keccak_round_constants));
 	memcpy(gpuConstants.keccakf_rotc, keccak_rotc, sizeof(keccak_rotc));
 	memcpy(gpuConstants.keccakf_piln, keccak_piln, sizeof(keccak_piln));
+
+	init_glslang();
 
 	return gPhysicalDeviceCount;
 }

@@ -31,6 +31,9 @@ function(configureProject)
     endif()
     if (SPACEMESHVULKAN)
         add_definitions(-DHAVE_VULKAN=1)
+        add_definitions(-D_ITERATOR_DEBUG_LEVEL=0)
+#        if (${CMAKE_BUILD_TYPE} MATCHES "Debug")
+#        endif()
     endif()
 endfunction()
 
@@ -66,7 +69,7 @@ if(UNIX AND NOT APPLE)
 endif()
 
 # Add third party libraries
-add_subdirectory(third_party)
+# add_subdirectory(third_party)
 
 add_subdirectory(src)
 add_subdirectory(test)
