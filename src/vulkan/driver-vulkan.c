@@ -279,9 +279,6 @@ static int vulkan_detect(struct cgpu_info *gpus, int *active)
 			VkPhysicalDeviceProperties physicalDeviceProperties;
 			vkGetPhysicalDeviceProperties(gPhysicalDevices[i], &physicalDeviceProperties);
 
-			VkPhysicalDeviceFeatures physicalDeviceFeatures;
-			vkGetPhysicalDeviceFeatures(gPhysicalDevices[i], &physicalDeviceFeatures);
-
 			VkPhysicalDeviceMemoryProperties memoryProperties;
 			vkGetPhysicalDeviceMemoryProperties(gPhysicalDevices[i], &memoryProperties);
 
