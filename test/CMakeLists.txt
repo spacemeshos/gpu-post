@@ -2,14 +2,18 @@ set(SOURCES
     test.cpp
 )
 
-set(CUDA_LIB_PATH ${CUDA_TOOLKIT_ROOT_DIR}/lib64/stubs/)
-
 add_executable(gpu-setup-test ${SOURCES})
 
 target_include_directories(gpu-setup-test PRIVATE ..)
-target_link_libraries(gpu-setup-test PRIVATE gpu-setup -ldl)
+target_link_libraries(gpu-setup-test PRIVATE gpu-setup)
+if(APPLE)
+    target_link_libraries(gpu-setup-test PRIVATE -ldl)
+elseif(UNIX)
+    target_link_libraries(gpu-setup-test PRIVATE -ldl)
+endif()
 
 if (SPACEMESHCUDA)
+    set(CUDA_LIB_PATH ${CUDA_TOOLKIT_ROOT_DIR}/lib64/stubs/)
     if(MSVC)
         target_link_libraries(gpu-setup-test PRIVATE "${CUDA_TOOLKIT_ROOT_DIR}/lib/x64/cuda.lib" "${CUDA_TOOLKIT_ROOT_DIR}/lib/x64/cudart_static.lib")
     else()
