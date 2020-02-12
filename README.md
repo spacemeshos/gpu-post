@@ -89,6 +89,15 @@ export PATH="/usr/local/opt/python/libexec/bin:$VULKAN_SDK/bin:$PATH"
 export DYLD_LIBRARY_PATH="$DYLD_LIBRARY_PATH:$VULKAN_SDK/lib/"
 ```
 
+## Recommendations
+
+Recommendations for choosing an implementation:
+
+| GPU      	| Windows 	| Linux      	| macOS        	|
+|------------	|----------	|-----------	|--------------	|
+| Nvidia	| CUDA      	| CUDA      	| Vulkan      	|
+| AMD		| Vulkan      	| Vulkan      	| Vulkan      	|
+
 ## API
 
 ```
