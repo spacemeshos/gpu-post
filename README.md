@@ -97,6 +97,7 @@ Recommendations for choosing an implementation:
 |------------	|----------	|-----------	|--------------	|
 | Nvidia	| CUDA      	| CUDA      	| Vulkan      	|
 | AMD		| Vulkan      	| Vulkan      	| Vulkan      	|
+| Intel		| Vulkan      	| Vulkan      	| Vulkan      	|
 
 ## API
 
