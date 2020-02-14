@@ -98,7 +98,6 @@ int main()
 	printf("\nPress any key to continue...\n");
 	_getch();
 #endif
-	
+
 	return 0;
 }
-
