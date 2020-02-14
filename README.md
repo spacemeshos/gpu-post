@@ -7,7 +7,7 @@ A c libraray implementing the POST API setup method for cpu, cuda and openCL com
 
 ### Windows
 - Windows 10 Pro.
-- Microsoft Visual Studio 2017 (any edition should be okay. Visual Studio 2019 is not supported. You may also need to install specific versions of the Windows SDK when prompted when attempting to build for the first time.
+- Microsoft Visual Studio 2017 (any edition such as community is okay). Visual Studio 2019 is NOT supported. You may also need to install specific versions of the Windows SDK when prompted when attempting to build for the first time.
 - NVIDIA GPU Computing Toolkit 10.0 (but not later versions), and an NVIDIA GPU supporting CUDA 10.0 computation for CUDA testing.
 - Vulkan SDK 1.1, and an AMD GPU supporting Vulkan 1.1 for Vulkan testing.
 - An AMD GPU supporting OpenCL 1.2 or newer for OpenCL testing.
