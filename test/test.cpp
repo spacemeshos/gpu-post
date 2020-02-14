@@ -10,7 +10,7 @@
 # define min(a, b)  ((a) < (b) ? (a) : (b))
 #endif
 
-#define	LABELS_COUNT	25000
+#define	LABELS_COUNT	25000000
 #define	LABEL_SIZE		8
 
 static void print(uint8_t *data)
@@ -93,7 +93,6 @@ int main()
 	printf("\nPress any key to continue...\n");
 	_getch();
 #endif
-	
+
 	return 0;
 }
-

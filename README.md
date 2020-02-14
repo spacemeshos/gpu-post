@@ -68,7 +68,7 @@ Disable CUDA:
   ./test/gpu-setup-test
 ```
 
-For configure with CUDA 9:
+CUDA 9 Configuration:
 ```
   cmake .. -DCMAKE_C_COMPILER=gcc-6 -DCMAKE_CXX_COMPILER=g++-6
 ```
@@ -77,10 +77,11 @@ You may need to set CUDA_TOOLKIT_ROOT_DIR:
   cmake .. -DCMAKE_C_COMPILER=gcc-6 -DCMAKE_CXX_COMPILER=g++-6 -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-9.0
 ```
 
-For build with Vulkan on macOS, please set environment vars:
-(for example, VulkanSDK 1.1.130.0 is located in $HOME/Downloads/vulkansdk-macos-1.1.130.0)
+To build with Vulkan on OS X, please set environment the following env vars.
+For example, if `VulkanSDK 1.1.130.0` is located in ``$HOME/dev/vulkansdk-macos-1.1.130.0` then set:
+
 ```
-export VULKAN_ROOT_LOCATION="$HOME/Downloads/"
+export VULKAN_ROOT_LOCATION="$HOME/dev/"
 export VULKAN_SDK_VERSION="1.1.130.0"
 export VULKAN_SDK="$VULKAN_ROOT_LOCATION/vulkansdk-macos-$VULKAN_SDK_VERSION/macOS"
 export VK_ICD_FILENAMES="$VULKAN_SDK/etc/vulkan/icd.d/MoltenVK_icd.json"
@@ -93,7 +94,7 @@ export DYLD_LIBRARY_PATH="$DYLD_LIBRARY_PATH:$VULKAN_SDK/lib/"
 
 Recommendations for choosing an implementation:
 
-| GPU      	| Windows 	| Linux      	| macOS        	|
+| OS / GPU     	| Windows 	| Linux      	| macOS        	|
 |------------	|----------	|-----------	|--------------	|
 | Nvidia	| CUDA      	| CUDA      	| Vulkan      	|
 | AMD		| Vulkan      	| Vulkan      	| Vulkan      	|
