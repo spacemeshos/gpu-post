@@ -1,9 +1,9 @@
 # GPU Proof of Spacemesh Time Init (aka Smeshing Setup) Prototype
 
 ## Current functionality
-- A c libraray implementing the POST API setup method for cpu, cuda and openCL compute platforms.
+A c libraray implementing the POST API setup method for cpu, cuda and openCL compute platforms.
 
-## System Requirements
+## Build System Requirements
 
 ### Windows
 - Windows 10 Pro.
