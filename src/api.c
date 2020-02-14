@@ -54,7 +54,9 @@ int scryptPositions(
 	}
 
 	t = 1e-6 * (tv_end.tv_usec - tv_start.tv_usec) + (tv_end.tv_sec - tv_start.tv_sec);
+	printf("--------------------------------\n");
 	printf("Performance: %.0f (%u positions in %.2fs)\n", (end_position - start_position + 1) / t, (unsigned)(end_position - start_position + 1), t);
+	printf("--------------------------------\n");
 
 	return 0;
 }
