@@ -18,6 +18,20 @@ A c libraray implementing the POST API setup method for cpu, cuda and openCL com
 - Vulkan SDK 1.1.
 - An AMD GPU supporting OpenCL 1.2 or newer for OpenCL testing. Install the AMD Linux driver package (with the opencl option selected).
 
+### OS X
+- Vulkan SDK version 1.1.130.0 (and not a newer version). Download and install from: https://vulkan.lunarg.com/sdk/home
+- Set the following env vars. For example, if `VulkanSDK 1.1.130.0` is located in ``$HOME/dev/vulkansdk-macos-1.1.130.0` then set:
+
+```
+export VULKAN_ROOT_LOCATION="$HOME/dev/"
+export VULKAN_SDK_VERSION="1.1.130.0"
+export VULKAN_SDK="$VULKAN_ROOT_LOCATION/vulkansdk-macos-$VULKAN_SDK_VERSION/macOS"
+export VK_ICD_FILENAMES="$VULKAN_SDK/etc/vulkan/icd.d/MoltenVK_icd.json"
+export VK_LAYER_PATH="$VULKAN_SDK/etc/vulkan/explicit_layers.d"
+export PATH="/usr/local/opt/python/libexec/bin:$VULKAN_SDK/bin:$PATH"
+export DYLD_LIBRARY_PATH="$DYLD_LIBRARY_PATH:$VULKAN_SDK/lib/"
+```
+
 ## Building
 
 Build options:
@@ -40,7 +54,7 @@ SPACEMESHVULKAN "Build with Vulkan support" default: ON
 3. Build: `CMake -> Rebuild All`.
 4. Run test: `CMake -> Debug from Build Folder -> gpu-setup-test.exe`
 
-### Linux and macOS
+### Linux or macOS
 1. Create build directory:
 ```
   cd gpu-post
@@ -75,19 +89,6 @@ CUDA 9 Configuration:
 You may need to set CUDA_TOOLKIT_ROOT_DIR:
 ```
   cmake .. -DCMAKE_C_COMPILER=gcc-6 -DCMAKE_CXX_COMPILER=g++-6 -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-9.0
-```
-
-To build with Vulkan on OS X, please set environment the following env vars.
-For example, if `VulkanSDK 1.1.130.0` is located in ``$HOME/dev/vulkansdk-macos-1.1.130.0` then set:
-
-```
-export VULKAN_ROOT_LOCATION="$HOME/dev/"
-export VULKAN_SDK_VERSION="1.1.130.0"
-export VULKAN_SDK="$VULKAN_ROOT_LOCATION/vulkansdk-macos-$VULKAN_SDK_VERSION/macOS"
-export VK_ICD_FILENAMES="$VULKAN_SDK/etc/vulkan/icd.d/MoltenVK_icd.json"
-export VK_LAYER_PATH="$VULKAN_SDK/etc/vulkan/explicit_layers.d"
-export PATH="/usr/local/opt/python/libexec/bin:$VULKAN_SDK/bin:$PATH"
-export DYLD_LIBRARY_PATH="$DYLD_LIBRARY_PATH:$VULKAN_SDK/lib/"
 ```
 
 ## Recommendations
