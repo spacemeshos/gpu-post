@@ -20,7 +20,7 @@ A c libraray implementing the POST API setup method for cpu, cuda and openCL com
 
 ### OS X
 - Vulkan SDK version 1.1.130.0 (and not a newer version). Download and install from: https://vulkan.lunarg.com/sdk/home
-- Set the following env vars. For example, if `VulkanSDK 1.1.130.0` is located in ``$HOME/dev/vulkansdk-macos-1.1.130.0` then set:
+- Set the following env vars. For example, if `VulkanSDK 1.1.130.0` is located in `$HOME/dev/vulkansdk-macos-1.1.130.0` then set:
 
 ```
 export VULKAN_ROOT_LOCATION="$HOME/dev/"
