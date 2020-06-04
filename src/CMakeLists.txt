@@ -1,3 +1,5 @@
+add_definitions(-DSPACEMESHAPI_BUILD=1)
+
 set(SOURCES
     api.c
     ../include/api.h
@@ -197,11 +199,37 @@ if (SPACEMESHVULKAN)
     include_directories(${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
-# add_library(gpu-setup STATIC ${SOURCES})
-# cuda_add_library(gpu-setup STATIC ${SOURCES})
-if (SPACEMESHCUDA)
-    cuda_add_library(gpu-setup ${SOURCES})
+if (SPACEMESH_LIB_SHARED)
+    if (SPACEMESHCUDA)
+        cuda_add_library(gpu-setup SHARED ${SOURCES})
+    else()
+        add_library(gpu-setup SHARED ${SOURCES})
+    endif()
+
+    if (SPACEMESHCUDA)
+        set(CUDA_LIB_PATH ${CUDA_TOOLKIT_ROOT_DIR}/lib64/stubs/)
+        if(MSVC)
+            target_link_libraries(gpu-setup "${CUDA_TOOLKIT_ROOT_DIR}/lib/x64/cuda.lib" "${CUDA_TOOLKIT_ROOT_DIR}/lib/x64/cudart_static.lib")
+        else()
+            target_link_libraries(gpu-setup -L${CUDA_LIB_PATH} -lcuda)
+        endif()
+    endif()
+
+    if (SPACEMESHVULKAN)
+        # Add Include/Lib (Windows) and include/lib (Linux)
+        if(WIN32)
+            target_link_libraries(gpu-setup "$ENV{VULKAN_SDK}/Lib/vulkan-1.lib" "$ENV{VULKAN_SDK}/Lib/shaderc_combined.lib")
+        elseif(APPLE)
+            target_link_libraries(gpu-setup -L$ENV{VULKAN_SDK}/lib -lvulkan shaderc_combined)
+        elseif(UNIX)
+            target_link_libraries(gpu-setup -L$ENV{VULKAN_SDK}/lib -lvulkan shaderc_combined)
+        endif()
+    endif()
 else()
-    add_library(gpu-setup ${SOURCES})
+    if (SPACEMESHCUDA)
+        cuda_add_library(gpu-setup ${SOURCES})
+    else()
+        add_library(gpu-setup ${SOURCES})
+    endif()
 endif()
 

@@ -20,6 +20,7 @@ else()
     option(SPACEMESHCUDA   "Build with CUDA support"   ON)
 endif()
 option(SPACEMESHVULKAN "Build with Vulkan support" ON)
+option(SPACEMESH_LIB_SHARED "Build as shared library" ON)
 
 # propagates CMake configuration options to the compiler
 function(configureProject)
