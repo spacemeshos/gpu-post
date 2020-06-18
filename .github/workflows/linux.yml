@@ -22,7 +22,6 @@ jobs:
 
     - name: Install CUDA
       env:
-        OS: ${{ matrix.os }}
         CUDA: ${{ matrix.cuda }}
       run: .github/tools/linux-install-cuda.sh
 
@@ -31,3 +30,8 @@ jobs:
 
     - name: make
       run: make .
+
+    - uses: actions/upload-artifact@v2
+      with:
+        name: library
+        path: 
