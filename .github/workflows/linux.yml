@@ -25,11 +25,9 @@ jobs:
         CUDA: ${{ matrix.cuda }}
       run: .github/tools/linux-install-cuda.sh
 
-    - name: cmake
-      run: cmake . -DSPACEMESHVULKAN=OFF
+    - run: cmake . -DSPACEMESHVULKAN=OFF
 
-    - name: make
-      run: make
+    - run: make
 
     - uses: actions/upload-artifact@v2
       with:
