@@ -3,33 +3,39 @@ name: Build
 on: push
 
 jobs:
-  cuda:
-    runs-on: ${{ matrix.os }}
+#  linux:
+#    runs-on: ${{ matrix.os }}
+#
+#    strategy:
+#      matrix:
+#        include:
+#        - os: ubuntu-18.04
+#          cuda: "10.2"
+#        - os: ubuntu-16.04
+#          cuda: "9.2"
+#
+#    steps:
+#    - uses: actions/checkout@v2
+#
+#    - name: Install CUDA
+#      env:
+#        CUDA: ${{ matrix.cuda }}
+#      run: .github/tools/linux-install-cuda.sh
+#
+#    - name: Install Vulkan
+#      run: .github/tools/linux-install-vulkan.sh
+#
+#    - run: cmake .
+#
+#    - run: make
+#
+#    - uses: actions/upload-artifact@v2
+#      with:
+#        name: libgpu-setup-cuda-${{ matrix.cuda }}-${{ matrix.os }}.so
+#        path: src/libgpu-setup.so
 
-    strategy:
-      matrix:
-        include:
-        - os: ubuntu-18.04
-          cuda: "10.2"
-        - os: ubuntu-16.04
-          cuda: "9.2"
+  windows:
+    runs-on: windows-2016
 
     steps:
-    - uses: actions/checkout@v2
-
-    - name: Install CUDA
-      env:
-        CUDA: ${{ matrix.cuda }}
-      run: .github/tools/linux-install-cuda.sh
-
-    - name: Install Vulkan
-      run: .github/tools/linux-install-vulkan.sh
-
-    - run: cmake .
-
-    - run: make
-
-    - uses: actions/upload-artifact@v2
-      with:
-        name: libgpu-setup-cuda-${{ matrix.cuda }}-${{ matrix.os }}.so
-        path: src/libgpu-setup.so
+      - run: env
