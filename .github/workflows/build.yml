@@ -22,36 +22,14 @@ jobs:
         CUDA: ${{ matrix.cuda }}
       run: .github/tools/linux-install-cuda.sh
 
-    - run: cmake . -DSPACEMESHVULKAN=OFF
+    - name: Install Vulkan
+      run: .github/tools/linux-install-vulkan.sh
+
+    - run: cmake .
 
     - run: make
 
     - uses: actions/upload-artifact@v2
       with:
         name: libgpu-setup-cuda-${{ matrix.cuda }}-${{ matrix.os }}.so
-        path: src/libgpu-setup.so
-
-  vulkan:
-    runs-on: ${{ matrix.os }}
-
-    strategy:
-      matrix:
-        os:
-        - ubuntu-18.04
-        - ubuntu-16.04
-
-    steps:
-    - uses: actions/checkout@v2
-
-    - name: Install Vulkan
-      run: .github/tools/linux-install-vulkan.sh
-
-    - run: cmake . -DSPACEMESHCUDA=OFF
-
-    - run: make
-
-    - uses: actions/upload-artifact@v2
-      with:
-        # VULKAN_VERSION set in linux-install-vulkan.sh
-        name: libgpu-setup-vulkan-$VULKAN_VERSION-${{ matrix.os }}.so
         path: src/libgpu-setup.so
