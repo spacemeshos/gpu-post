@@ -38,6 +38,16 @@ jobs:
     runs-on: windows-2016
 
     steps:
-      - run: env
-      - run: find "/c/Program Files (x86)/Microsoft Visual Studio/" -iname ninja.exe
+    - uses: actions/checkout@v2
+
+    - run: pwd
+      shell: bash
+
+    - run: pwd
+
+    - run: |
+      cd "c:\Program Files (x86)/Microsoft Visual Studio/2017/Enterprise/VC/Auxiliary/Build"
+      vcvars64.bat
+
+    - run: find "/c/Program Files (x86)/Microsoft Visual Studio/" -iname ninja.exe
         shell: bash
