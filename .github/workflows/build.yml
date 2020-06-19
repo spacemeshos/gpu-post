@@ -40,13 +40,10 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - run: pwd
-      shell: bash
-
-    - run: pwd
-
-    - run: ls d:\a\gpu-post\gpu-post
-
     - run: |
         cd "c:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build"
-        pwd
+        cmd.exe /c vcvars64.bat
+
+    - run: cmake -G "Ninja" -DCMAKE_BUILD_TYPE="Debug" -DCMAKE_MAKE_PROGRAM="c:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe"
+
+    - run: cmake --build .
