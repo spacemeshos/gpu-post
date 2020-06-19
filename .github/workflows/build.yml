@@ -40,3 +40,4 @@ jobs:
     steps:
       - run: env
       - run: find /c -name vcvars64.bat
+        shell: bash
