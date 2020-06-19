@@ -44,6 +44,8 @@ jobs:
         cd "c:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build"
         cmd.exe /c vcvars64.bat
 
+    - run: .github/tools/windows-install-cuda.ps1
+
     - run: cmake -G "Ninja" -DCMAKE_BUILD_TYPE="Debug" -DCMAKE_MAKE_PROGRAM="c:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe"
 
     - run: cmake --build .
