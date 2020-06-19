@@ -39,5 +39,5 @@ jobs:
 
     steps:
       - run: env
-      - run: find /c -name vcvars64.bat
+      - run: find "/c/Program Files (x86)/Microsoft Visual Studio/" -iname ninja.exe
         shell: bash
