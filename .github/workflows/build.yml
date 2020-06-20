@@ -40,21 +40,5 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - run: cmd.exe /c "c:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvars64.bat; set"
-      shell: bash
-
-#    - run: .github/tools/windows-install-cuda.ps1
-#
-#    - uses: actions/upload-artifact@v2
-#      with:
-#        path: "c:/Program Files (x86)/Microsoft Visual Studio/2017/Enterprise/VC/Auxiliary/Build/vcvars64.bat"
-#
-#    - run: env
-#
-#    - run: cmake -G "Ninja" -DCMAKE_IGNORE_PATH="C:/Strawberry/c/bin;C:/ProgramData/chocolatey/bin" -DCMAKE_BUILD_TYPE="Debug" -DCMAKE_MAKE_PROGRAM="c:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe" .
-#
-#    - uses: actions/upload-artifact@v2
-#      with:
-#        path: "D:/a/gpu-post/gpu-post/CMakeFiles/CMakeOutput.log"
-#
-#    - run: cmake --build .
+    - run: Invoke-BatchFile
+    # - run: .github/tools/windows-build.ps1
