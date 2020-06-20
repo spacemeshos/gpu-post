@@ -37,15 +37,15 @@ jobs:
   windows:
     runs-on: windows-2016
 
+    env:
+      CUDA_TOOLKIT_ROOT_DIR: "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.2"
+
     steps:
     - uses: actions/checkout@v2
 
     - run: choco install cuda --version=10.2.89 --checksum b538271c4d9ffce1a8520bf992d9bd23854f0f29cee67f48c6139e4cf301e253
 
     - run: choco install vulkan-sdk
-
-    - run: call refreshenv; set
-      shell: cmd
 
     - run: |
         c:
@@ -54,6 +54,4 @@ jobs:
         cd "Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin"
         cmake -G "Ninja" -DCMAKE_BUILD_TYPE="Debug" -DCMAKE_IGNORE_PATH="C:/Strawberry/c/bin;C:/ProgramData/chocolatey/bin" -DCMAKE_MAKE_PROGRAM="c:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe" d:\a\gpu-post\gpu-post
         cmake --build d:\a\gpu-post\gpu-post
-      env:
-        CUDA_TOOLKIT_ROOT_DIR: "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.2"
       shell: cmd
