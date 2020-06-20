@@ -48,6 +48,7 @@ jobs:
     - run: choco install vulkan-sdk
 
     - run: find /c/VulkanSDK/1.2.135.0 -name spirv.hpp
+      shell: bash
 
     - run: |
         c:
