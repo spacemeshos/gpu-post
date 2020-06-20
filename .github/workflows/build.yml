@@ -48,7 +48,7 @@ jobs:
         where cmake
         c:
         cd "c:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build"
-        vcvars64.bat
+        call vcvars64.bat
         cd "c:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\Common7\IDE\CommonExtentions\Microsoft\CMake\CMake\bin"
         dir
         cmake -G "Ninja" -DCMAKE_BUILD_TYPE="Debug" -DCMAKE_MAKE_PROGRAM="c:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe" d:\a\gpu-post\gpu-post
