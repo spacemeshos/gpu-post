@@ -44,6 +44,9 @@ jobs:
 
     #- run: choco install vulkan-sdk
 
+    - run: find /c -iname "cmake*"
+      shell: bash
+
     - run: |
         where cmake
         c:
