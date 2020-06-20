@@ -47,6 +47,22 @@ jobs:
     - run: |
         call "c:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
         c:
+        cd "c:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise"
+        dir
+        cd Common7
+        dir
+        cd IDE
+        dir
+        cd CommonExtentions
+        dir
+        cd Microsoft
+        dir
+        cd CMake
+        dir
+        cd CMake
+        dir
+        cd bin
+        dir
         cd "c:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\Common7\IDE\CommonExtentions\Microsoft\CMake\CMake\bin"
         dir
         where cmake
