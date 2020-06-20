@@ -40,9 +40,9 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - run: choco install cuda --version=10.2.89 --checksum b538271c4d9ffce1a8520bf992d9bd23854f0f29cee67f48c6139e4cf301e253
+    # - run: choco install cuda --version=10.2.89 --checksum b538271c4d9ffce1a8520bf992d9bd23854f0f29cee67f48c6139e4cf301e253
 
-    - run: choco install vulkan-sdk
+    # - run: choco install vulkan-sdk
 
     - run: |
         call refreshenv
