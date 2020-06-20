@@ -49,7 +49,7 @@ jobs:
         c:
         cd "c:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin"
         where cmake
-        refreshenv
+        call refreshenv
         set
         cmake -G "Ninja" -DCMAKE_BUILD_TYPE="Debug" -DCMAKE_IGNORE_PATH="C:/Strawberry/c/bin;C:/ProgramData/chocolatey/bin" -DCMAKE_MAKE_PROGRAM="c:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe" d:\a\gpu-post\gpu-post
         cmake --build d:\a\gpu-post\gpu-post
