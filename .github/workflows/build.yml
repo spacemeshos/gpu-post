@@ -40,7 +40,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - run: cmd.exe /c "c:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvars64.bat"; env
+    - run: cmd.exe /c "c:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvars64.bat; env"
       shell: bash
 
 #    - run: .github/tools/windows-install-cuda.ps1
