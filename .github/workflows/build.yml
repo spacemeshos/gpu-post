@@ -44,13 +44,11 @@ jobs:
 
     #- run: choco install vulkan-sdk
 
-    - run: find "/c/Program Files (x86)\Microsoft Visual Studio\2017\Enterprise" -iname cmake.exe -type f
-      shell: bash
-
     - run: |
         call "c:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
         cd "c:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\Common7\IDE\CommonExtentions\Microsoft\CMake\CMake\bin"
         dir
+        where cmake
         cmake -G "Ninja" -DCMAKE_BUILD_TYPE="Debug" -DCMAKE_MAKE_PROGRAM="c:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe" d:\a\gpu-post\gpu-post
         cmake --build d:\a\gpu-post\gpu-post
       shell: cmd
