@@ -40,5 +40,11 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - run: Invoke-BatchFile
+    - run: choco install cuda --version=10.2.89
+
+    - run: choco install vulkan-sdk
+
+    - run: c:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvars64.bat; cmake -G "Ninja" -DCMAKE_IGNORE_PATH="C:/Strawberry/c/bin;C:/ProgramData/chocolatey/bin" -DCMAKE_BUILD_TYPE="Debug" -DCMAKE_MAKE_PROGRAM="c:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe" .; cmake --build .
+      shell: cmd
+
     # - run: .github/tools/windows-build.ps1
