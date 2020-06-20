@@ -44,7 +44,7 @@ jobs:
 
     #- run: choco install vulkan-sdk
 
-    - run: find "/c/Program Files (x86)\Microsoft Visual Studio\2017\Enterprise" -iname "cmake*"
+    - run: find "/c/Program Files (x86)\Microsoft Visual Studio\2017\Enterprise" -iname cmake.exe -type f
       shell: bash
 
     - run: |
