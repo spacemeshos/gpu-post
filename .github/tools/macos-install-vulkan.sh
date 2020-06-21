@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 
 set -e
 
@@ -9,7 +9,7 @@ wget -q -O vulkansdk-macos-1.1.130.0.tar.gz $url
 shasum -c .github/tools/vulkan.sha256
 tar zxf ${url##*/}
 
-VULKAN_ROOT_LOCATION=.
+VULKAN_ROOT_LOCATION=$PWD
 VULKAN_SDK_VERSION=1.1.130.0
 VULKAN_SDK=${VULKAN_ROOT_LOCATION}/vulkansdk-macos-${VULKAN_SDK_VERSION}/macOS
 echo "::set-env name=VULKAN_ROOT_LOCATION::$VULKAN_ROOT_LOCATION"

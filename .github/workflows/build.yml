@@ -90,5 +90,5 @@ jobs:
 
     - uses: actions/upload-artifact@v2
       with:
-        name: libgpu-setup-cuda-${{ matrix.cuda }}-${{ matrix.os }}.so
-        path: src/libgpu-setup.so
+        name: libgpu-setup.dylib
+        path: src/libgpu-setup.dylib
