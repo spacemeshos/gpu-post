@@ -80,8 +80,6 @@ jobs:
     - uses: actions/checkout@v2
 
     - name: Install Vulkan
-      env:
-        CUDA: ${{ matrix.cuda }}
       run: .github/tools/macos-install-vulkan.sh
 
 #    - name: Install Vulkan
