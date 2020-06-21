@@ -64,11 +64,11 @@ jobs:
         cd build
         "${{ matrix.vs_path }}\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake" -G "Ninja" -DCMAKE_IGNORE_PATH="C:/Strawberry/c/bin;C:/ProgramData/chocolatey/bin" -DCUDA_TOOLKIT_ROOT_DIR="C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.2" -DCMAKE_MAKE_PROGRAM="${{ matrix.vs_path }}\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe" ..
         cmake --build .
-        cd ..\src
+        cd src
         rename gpu-setup.dll gpu-setup-cuda-${{ matrix.cuda }}.dll
         rename gpu-setup.lib gpu-setup-cuda-${{ matrix.cuda }}.lib
       shell: cmd
 
     - uses: actions/upload-artifact@v2
       with:
-        path: src/gpu-setup-cuda-${{ matrix.cuda }}.*
+        path: build/src/gpu-setup-cuda-${{ matrix.cuda }}.*
