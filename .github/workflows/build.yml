@@ -38,7 +38,7 @@ jobs:
     runs-on: windows-2016
 
     env:
-      VULKAN_SDK: c:/VulkanSDK/1.2.135.0
+      VULKAN_SDK: c:/VulkanSDK/1.1.126.0
 
     steps:
     - uses: actions/checkout@v2
