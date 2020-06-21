@@ -82,14 +82,13 @@ jobs:
     - name: Install Vulkan
       run: .github/tools/macos-install-vulkan.sh
 
-#    - name: Install Vulkan
-#      run: .github/tools/linux-install-vulkan.sh
-#
-#    - run: cmake .
-#
-#    - run: make
-#
-#    - uses: actions/upload-artifact@v2
-#      with:
-#        name: libgpu-setup-cuda-${{ matrix.cuda }}-${{ matrix.os }}.so
-#        path: src/libgpu-setup.so
+    - run: env
+
+    - run: cmake -DSPACEMESHCL=OFF -DSPACEMESHCUDA=OFF .
+
+    - run: make
+
+    - uses: actions/upload-artifact@v2
+      with:
+        name: libgpu-setup-cuda-${{ matrix.cuda }}-${{ matrix.os }}.so
+        path: src/libgpu-setup.so
