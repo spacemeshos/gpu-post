@@ -35,25 +35,40 @@ jobs:
 #        path: src/libgpu-setup.so
 
   windows:
-    runs-on: windows-2016
+    runs-on: ${{ matrix.os }}
 
-    env:
-      VULKAN_SDK: c:/VulkanSDK/1.1.126.0
+    strategy:
+      matrix:
+        include:
+        - os: windows-2016
+          cuda: "10.2.89"
+          cuda_hash: b538271c4d9ffce1a8520bf992d9bd23854f0f29cee67f48c6139e4cf301e253
+          vulkan: "1.1.126.0"
+          vs_path: c:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise
 
     steps:
     - uses: actions/checkout@v2
 
     - name: Install CUDA
-      run: choco install cuda --version=10.2.89 --checksum b538271c4d9ffce1a8520bf992d9bd23854f0f29cee67f48c6139e4cf301e253
+      run: choco install cuda --version=${{ matrix.cuda }} --checksum ${{ matrix.cuda_hash }}
 
     - name: Install Vulkan
-      run: choco install vulkan-sdk --version=1.1.126.0
+      run: choco install vulkan-sdk --version=${{ matrix.vulkan }}
 
     - name: Build
+      env:
+        VULKAN_SDK: c:/VulkanSDK/${{ matrix.vulkan }}
       run: |
-        call "c:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        call "${{ matrix.vs_path }}\VC\Auxiliary\Build\vcvars64.bat"
         mkdir build
         cd build
-        "c:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake" -G "Ninja" -DCMAKE_IGNORE_PATH="C:/Strawberry/c/bin;C:/ProgramData/chocolatey/bin" -DCUDA_TOOLKIT_ROOT_DIR="C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.2" -DCMAKE_MAKE_PROGRAM="c:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe" ..
+        "${{ matrix.vs_path }}\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake" -G "Ninja" -DCMAKE_IGNORE_PATH="C:/Strawberry/c/bin;C:/ProgramData/chocolatey/bin" -DCUDA_TOOLKIT_ROOT_DIR="C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.2" -DCMAKE_MAKE_PROGRAM="${{ matrix.vs_path }}\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe" ..
         cmake --build .
+        cd ..\src
+        rename gpu-setup.dll gpu-setup-cuda-${{ matrix.cuda }}.dll
+        rename gpu-setup.lib gpu-setup-cuda-${{ matrix.cuda }}.lib
       shell: cmd
+
+    - uses: actions/upload-artifact@v2
+      with:
+        path: src/gpu-setup-cuda-${{ matrix.cuda }}.*
