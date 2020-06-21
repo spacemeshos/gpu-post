@@ -43,11 +43,11 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-#    - name: Install CUDA
-#      run: choco install cuda --version=10.2.89 --checksum b538271c4d9ffce1a8520bf992d9bd23854f0f29cee67f48c6139e4cf301e253
-#
-#    - name: Install Vulkan
-#      run: choco install vulkan-sdk --version=1.1.126.0
+    - name: Install CUDA
+      run: choco install cuda --version=10.2.89 --checksum b538271c4d9ffce1a8520bf992d9bd23854f0f29cee67f48c6139e4cf301e253
+
+    - name: Install Vulkan
+      run: choco install vulkan-sdk --version=1.1.126.0
 
     - name: Build
       run: |
