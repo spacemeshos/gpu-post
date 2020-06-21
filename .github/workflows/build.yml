@@ -43,15 +43,20 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - run: choco install cuda --version=10.2.89 --checksum b538271c4d9ffce1a8520bf992d9bd23854f0f29cee67f48c6139e4cf301e253
+    - name: Install CUDA
+      run: choco install cuda --version=10.2.89 --checksum b538271c4d9ffce1a8520bf992d9bd23854f0f29cee67f48c6139e4cf301e253
 
-    - run: choco install vulkan-sdk --version=1.1.126.0
+    - name: Install Vulkan
+      run: choco install vulkan-sdk --version=1.1.126.0
 
-    - run: |
+    - name: Build
+      run: |
         c:
         cd "c:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise"
         call "VC\Auxiliary\Build\vcvars64.bat"
         cd "Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin"
         cmake -G "Ninja" -DCMAKE_BUILD_TYPE="Debug" -DCMAKE_IGNORE_PATH="C:/Strawberry/c/bin;C:/ProgramData/chocolatey/bin" -DCUDA_TOOLKIT_ROOT_DIR="C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.2" -DCMAKE_MAKE_PROGRAM="c:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe" d:\a\gpu-post\gpu-post
-        cmake --build d:\a\gpu-post\gpu-post
+        d:
+        cd d:\a\gpu-post\gpu-post
+        cmake --build
       shell: cmd
