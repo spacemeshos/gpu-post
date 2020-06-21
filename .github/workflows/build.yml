@@ -69,9 +69,17 @@ jobs:
         rename gpu-setup.lib gpu-setup-cuda-${{ matrix.cuda }}.lib
       shell: cmd
 
-    - uses: actions/upload-artifact@v2
+    - name: Upload DLL
+      uses: actions/upload-artifact@v2
       with:
-        path: build/src/gpu-setup-cuda-${{ matrix.cuda }}.*
+        name: gpu-setup-cuda-${{ matrix.cuda }}.dll
+        path: build/src/gpu-setup-cuda-${{ matrix.cuda }}.dll
+
+    - name: Upload lib
+      uses: actions/upload-artifact@v2
+      with:
+        name: gpu-setup-cuda-${{ matrix.cuda }}.lib
+        path: build/src/gpu-setup-cuda-${{ matrix.cuda }}.lib
 
   macos:
     runs-on: macos-10.15
