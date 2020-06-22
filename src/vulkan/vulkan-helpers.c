@@ -24,7 +24,7 @@ int initVulkanLibrary()
 	if (!gVulkan.library) {
 #if defined( __linux__ )
 		gVulkan.library = dlopen("libvulkan.so", RTLD_NOW | RTLD_LOCAL);
-		if (gVulkan.library == nullptr) {
+		if (gVulkan.library == 0) {
 			gVulkan.library = dlopen("libvulkan.so.1", RTLD_NOW | RTLD_LOCAL);
 		}
 #elif defined( __APPLE__ )
