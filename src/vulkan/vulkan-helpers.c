@@ -15,6 +15,7 @@ uint32_t gPhysicalDeviceCount = 0;
 #if defined(_MSC_VER) || defined(_WIN32) || defined(_WIN64)
 #define	LOAD_VULKAN_FUNCTION(func)	gVulkan.func = (PFN_##func)GetProcAddress(gVulkan.library, #func); if (!gVulkan.func) return -1
 #else
+#include <dlfcn.h>
 #define	LOAD_VULKAN_FUNCTION(func)	gVulkan.func = (PFN_##func)dlsym(gVulkan.library, #func); if (!gVulkan.func) return -1
 #endif
 

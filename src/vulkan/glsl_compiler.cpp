@@ -30,12 +30,6 @@
 
 #include <glslang/Include/ResourceLimits.h>
 
-#define CHECK_RESULT(result,msg,errorRet) \
-  if (VK_SUCCESS != (result)) {\
-	applog(LOG_ERR, "Failure in %s at %u %s  ErrCode=%d\n", msg,__LINE__, __FILE__, result); \
-	return (errorRet);\
-  }
-
 static void init_resources(TBuiltInResource &Resources)
 {
 	Resources.maxLights = 32;
