@@ -110,14 +110,18 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - uses: actions/download-artifact@v2
-
-      - run: find .
+      - run: find .github
 
       - uses: release-drafter/release-drafter@v5
         id: release
+        with:
+          config-name: .github/release-drafter.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/download-artifact@v2
+
+      - run: find .
 
       - uses: actions/upload-release-asset@v1
         with:
