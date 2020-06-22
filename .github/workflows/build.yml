@@ -108,25 +108,19 @@ jobs:
     # if: startsWith(github.event.ref, 'refs/tags/v')
 
     steps:
-      - uses: actions/checkout@v2
-
-      - run: find .github
-
       - uses: release-drafter/release-drafter@v5
-        id: release
-        with:
-          config-name: .github/release-drafter.yml
+        #id: release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: actions/download-artifact@v2
-
-      - run: find .
-
-      - uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ steps.release.outputs.upload_url }}
-          asset_path: ./libgpu-setup.dylib/libgpu-setup.dylib
-          asset_name: libgpu-setup.dylib
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#      - uses: actions/download-artifact@v2
+#
+#      - run: find .
+#
+#      - uses: actions/upload-release-asset@v1
+#        with:
+#          upload_url: ${{ steps.release.outputs.upload_url }}
+#          asset_path: ./libgpu-setup.dylib/libgpu-setup.dylib
+#          asset_name: libgpu-setup.dylib
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
