@@ -109,7 +109,7 @@ jobs:
 
     steps:
       - uses: release-drafter/release-drafter@v5
-        #id: release
+        id: release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
