@@ -1,7 +1,9 @@
 #ifndef	_SPACEMESH_VULKAN_VULKAN_HELPERS_H__
 #define	_SPACEMESH_VULKAN_VULKAN_HELPERS_H__
 
+#define	VK_NO_PROTOTYPES 1
 #include <vulkan/vulkan.h>
+#include <vulkan/vulkan_core.h>
 
 #define CHECK_RESULT(result,msg,errorRet) \
   if (VK_SUCCESS != (result)) {\
@@ -15,10 +17,64 @@
 	return;\
   }
 
+#define	DECLARE_VULKAN_FUNCTION(func)	PFN_##func	func
+
+typedef struct _Vulkan {
+	void *library;
+
+	DECLARE_VULKAN_FUNCTION(vkCreateInstance);
+	DECLARE_VULKAN_FUNCTION(vkGetPhysicalDeviceQueueFamilyProperties);
+	DECLARE_VULKAN_FUNCTION(vkCreateDevice);
+	DECLARE_VULKAN_FUNCTION(vkGetPhysicalDeviceMemoryProperties);
+	DECLARE_VULKAN_FUNCTION(vkAllocateMemory);
+	DECLARE_VULKAN_FUNCTION(vkCreateBuffer);
+	DECLARE_VULKAN_FUNCTION(vkBindBufferMemory);
+	DECLARE_VULKAN_FUNCTION(vkCreateDescriptorSetLayout);
+	DECLARE_VULKAN_FUNCTION(vkCreatePipelineLayout);
+	DECLARE_VULKAN_FUNCTION(vkCreateDescriptorPool);
+	DECLARE_VULKAN_FUNCTION(vkAllocateDescriptorSets);
+	DECLARE_VULKAN_FUNCTION(vkUpdateDescriptorSets);
+	DECLARE_VULKAN_FUNCTION(vkGetBufferMemoryRequirements);
+	DECLARE_VULKAN_FUNCTION(vkCreateShaderModule);
+	DECLARE_VULKAN_FUNCTION(vkCreateComputePipelines);
+	DECLARE_VULKAN_FUNCTION(vkDestroyBuffer);
+	DECLARE_VULKAN_FUNCTION(vkFreeMemory);
+	DECLARE_VULKAN_FUNCTION(vkGetDeviceQueue);
+	DECLARE_VULKAN_FUNCTION(vkMapMemory);
+	DECLARE_VULKAN_FUNCTION(vkUnmapMemory);
+	DECLARE_VULKAN_FUNCTION(vkCreateCommandPool);
+	DECLARE_VULKAN_FUNCTION(vkAllocateCommandBuffers);
+	DECLARE_VULKAN_FUNCTION(vkCreateSemaphore);
+	DECLARE_VULKAN_FUNCTION(vkBeginCommandBuffer);
+	DECLARE_VULKAN_FUNCTION(vkCmdBindPipeline);
+	DECLARE_VULKAN_FUNCTION(vkCmdBindDescriptorSets);
+	DECLARE_VULKAN_FUNCTION(vkCmdDispatch);
+	DECLARE_VULKAN_FUNCTION(vkEndCommandBuffer);
+	DECLARE_VULKAN_FUNCTION(vkEnumeratePhysicalDevices);
+	DECLARE_VULKAN_FUNCTION(vkGetPhysicalDeviceProperties);
+	DECLARE_VULKAN_FUNCTION(vkQueueSubmit);
+	DECLARE_VULKAN_FUNCTION(vkQueueWaitIdle);
+	DECLARE_VULKAN_FUNCTION(vkDestroyPipelineLayout);
+	DECLARE_VULKAN_FUNCTION(vkDestroyDescriptorSetLayout);
+	DECLARE_VULKAN_FUNCTION(vkDestroyPipeline);
+	DECLARE_VULKAN_FUNCTION(vkDestroyCommandPool);
+	DECLARE_VULKAN_FUNCTION(vkDestroyDescriptorPool);
+	DECLARE_VULKAN_FUNCTION(vkDestroyShaderModule);
+	DECLARE_VULKAN_FUNCTION(vkDestroySemaphore);
+} Vulkan;
+
+#undef	DECLARE_VULKAN_FUNCTION
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+	extern Vulkan gVulkan;
 extern VkInstance gInstance;
 extern VkPhysicalDevice* gPhysicalDevices;
 extern uint32_t gPhysicalDeviceCount;
 
+int initVulkanLibrary();
 int getComputeQueueFamillyIndex(uint32_t index);
 VkDevice createDevice(int index, uint32_t computeQueueFamillyIndex);
 VkDeviceMemory allocateGPUMemory(int index,  VkDevice vkDevice, const VkDeviceSize memorySize, char isLocal, bool isFatal);
@@ -27,5 +83,9 @@ VkPipelineLayout bindBuffers(VkDevice vkDevice, VkDescriptorSet *descriptorSet, 
 uint64_t getBufferMemoryRequirements(VkDevice vkDevice, VkBuffer b);
 VkPipeline loadShader(VkDevice vkDevice, VkPipelineLayout pipelineLayout, VkShaderModule *shader_module, const char * spirv_file_name);
 VkPipeline compileShader(VkDevice vkDevice, VkPipelineLayout pipelineLayout, VkShaderModule *shader_module, const char *glsl_source, const char *options);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif	// _SPACEMESH_VULKAN_VULKAN_HELPERS_H__

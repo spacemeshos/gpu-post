@@ -17,7 +17,10 @@
 
 #include <string>
 #include <vector>
-#include <vulkan/vulkan.h>
+
+#include "api_internal.h"
+#undef max
+#include "vulkan-helpers.h"
 
 #if (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
 #include <MoltenVKGLSLToSPIRVConverter/GLSLToSPIRVConverter.h>
@@ -26,8 +29,6 @@
 #endif
 
 #include <glslang/Include/ResourceLimits.h>
-
-#include "api_internal.h"
 
 #define CHECK_RESULT(result,msg,errorRet) \
   if (VK_SUCCESS != (result)) {\
@@ -322,7 +323,7 @@ extern "C" VkPipeline compileShader(VkDevice vkDevice, VkPipelineLayout pipeline
 		spirv.data()
 	};
 
-	CHECK_RESULT(vkCreateShaderModule(vkDevice, &shaderModuleCreateInfo, 0, shader_module), "vkCreateShaderModule", VK_NULL_HANDLE);
+	CHECK_RESULT(gVulkan.vkCreateShaderModule(vkDevice, &shaderModuleCreateInfo, 0, shader_module), "vkCreateShaderModule", VK_NULL_HANDLE);
 
 	VkComputePipelineCreateInfo computePipelineCreateInfo = {
 		VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
@@ -343,7 +344,7 @@ extern "C" VkPipeline compileShader(VkDevice vkDevice, VkPipelineLayout pipeline
 	};
 
 	VkPipeline pipeline;
-	CHECK_RESULT(vkCreateComputePipelines(vkDevice, 0, 1, &computePipelineCreateInfo, 0, &pipeline), "vkCreateComputePipelines", VK_NULL_HANDLE);
+	CHECK_RESULT(gVulkan.vkCreateComputePipelines(vkDevice, 0, 1, &computePipelineCreateInfo, 0, &pipeline), "vkCreateComputePipelines", VK_NULL_HANDLE);
 
 	return pipeline;
 }
