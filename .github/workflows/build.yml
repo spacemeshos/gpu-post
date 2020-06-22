@@ -105,7 +105,7 @@ jobs:
     needs: [linux, windows, macos]
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    # if: startsWith(github.event.ref, 'refs/tags/v')
+    if: startsWith(github.event.ref, 'refs/tags/v')
 
     steps:
       - id: release
