@@ -37,7 +37,6 @@ jobs:
         path: libgpu-setup-${{ matrix.os }}.so
 
   windows:
-    name: windows
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -116,10 +115,34 @@ jobs:
 
       - run: find .
 
-#      - name: Upload Linux Library
-#        uses: actions/upload-release-asset@v1
-#        with:
-#          upload_url: ${{ steps.release.outputs.upload_url }}
-#          asset_path: ./macos/libgpu-setup.dylib
-#          asset_name: libgpu-setup.dylib
-#          asset_content_type: binary/octet-stream
+      - name: Upload Linux Library
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.release.outputs.upload_url }}
+          asset_path: ./linux/libgpu-setup-ubuntu-18.04.so
+          asset_name: libgpu-setup-ubuntu-18.04.so
+          asset_content_type: binary/octet-stream
+
+      - name: Upload Windows Library DLL
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.release.outputs.upload_url }}
+          asset_path: ./windows/gpu-setup.dll
+          asset_name: gpu-setup.dll
+          asset_content_type: binary/octet-stream
+
+      - name: Upload Windows Library LIB file
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.release.outputs.upload_url }}
+          asset_path: ./windows/gpu-setup.lib
+          asset_name: gpu-setup.lib
+          asset_content_type: binary/octet-stream
+
+      - name: Upload MacOS Library
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.release.outputs.upload_url }}
+          asset_path: ./macos/libgpu-setup.dylib
+          asset_name: libgpu-setup.dylib
+          asset_content_type: binary/octet-stream
