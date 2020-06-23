@@ -20,6 +20,7 @@
 
 #include "api_internal.h"
 #undef max
+#undef min
 #include "vulkan-helpers.h"
 
 #if (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
