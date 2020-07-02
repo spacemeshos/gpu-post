@@ -29,7 +29,7 @@ jobs:
 
     - run: make
 
-    - name: rename library
+    - name: Rename library
       run: |
         REF="${{ github.ref }}"
         if [[ "$REF" == refs/tags/v* ]]; then
@@ -78,7 +78,7 @@ jobs:
         cmake --build .
       shell: cmd
 
-    - name: rename library
+    - name: Rename library
       shell: bash
       run: |
         REF="${{ github.ref }}"
@@ -118,7 +118,7 @@ jobs:
 
     - run: make
 
-    - name: rename library
+    - name: Rename library
       run: |
         REF="${{ github.ref }}"
         if [[ "$REF" == refs/tags/v* ]]; then
@@ -157,14 +157,6 @@ jobs:
       - name: Archive Linux Library
         run: zip --junk-paths linux-${{ env.VERSION }} linux/*
 
-      - name: Archive Windows Library
-        run: zip --junk-paths windows-${{ env.VERSION }} windows/*
-
-      - name: Archive MacOS Library
-        run: zip --junk-paths macos-${{ env.VERSION }} macos/*
-
-      - run: find . -ls
-
       - name: Upload Linux Library
         uses: actions/upload-release-asset@v1
         with:
@@ -173,6 +165,9 @@ jobs:
           asset_name: linux-${{ env.VERSION }}.zip
           asset_content_type: application/zip
 
+      - name: Archive Windows Library
+        run: zip --junk-paths windows-${{ env.VERSION }} windows/*
+
       - name: Upload Windows Library
         uses: actions/upload-release-asset@v1
         with:
@@ -180,6 +175,9 @@ jobs:
           asset_path: ./windows-${{ env.VERSION }}.zip
           asset_name: windows-${{ env.VERSION }}.zip
           asset_content_type: application/zip
+
+      - name: Archive MacOS Library
+        run: zip --junk-paths macos-${{ env.VERSION }} macos/*
 
       - name: Upload MacOS Library
         uses: actions/upload-release-asset@v1
