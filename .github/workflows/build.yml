@@ -95,12 +95,15 @@ jobs:
 
     - run: make
 
-    - run: find . -name api.h
-
     - uses: actions/upload-artifact@v2
       with:
         name: macos
         path: src/libgpu-setup.dylib
+
+    - uses: actions/upload-artifact@v2
+      with:
+        name: macos
+        path: include/api.h
 
 #  release:
 #    runs-on: ubuntu-latest
