@@ -3,49 +3,49 @@ name: Build
 on: push
 
 jobs:
-  linux:
-    runs-on: ${{ matrix.os }}
-
-    strategy:
-      matrix:
-        include:
-        - os: ubuntu-18.04
-          cuda: "10.2"
-        # - os: ubuntu-16.04
-        #   cuda: "9.2"
-
-    steps:
-    - uses: actions/checkout@v2
-
-    - name: Install CUDA
-      env:
-        CUDA: ${{ matrix.cuda }}
-      run: .github/tools/linux-install-cuda.sh
-
-    - name: Install Vulkan
-      run: .github/tools/linux-install-vulkan.sh
-
-    - run: cmake .
-
-    - run: make
-
-    - name: rename library
-      run: |
-        REF="${{ github.ref }}"
-        [[ "$REF" == refs/tags/v* ]] &&
-        mv src/libgpu-setup.so src/libgpu-setup-${REF#refs/tags/v}.so ||
-        mv src/libgpu-setup.so src/libgpu-setup-${{ github.sha }}.so
-
-    - uses: actions/upload-artifact@v2
-      with:
-        name: linux
-        path: libgpu-setup*.so
-
-    - uses: actions/upload-artifact@v2
-      with:
-        name: linux
-        path: include/api.h
-
+#  linux:
+#    runs-on: ${{ matrix.os }}
+#
+#    strategy:
+#      matrix:
+#        include:
+#        - os: ubuntu-18.04
+#          cuda: "10.2"
+#        # - os: ubuntu-16.04
+#        #   cuda: "9.2"
+#
+#    steps:
+#    - uses: actions/checkout@v2
+#
+#    - name: Install CUDA
+#      env:
+#        CUDA: ${{ matrix.cuda }}
+#      run: .github/tools/linux-install-cuda.sh
+#
+#    - name: Install Vulkan
+#      run: .github/tools/linux-install-vulkan.sh
+#
+#    - run: cmake .
+#
+#    - run: make
+#
+#    # - name: rename library
+#    #   run: |
+#    #     REF="${{ github.ref }}"
+#    #     [[ "$REF" == refs/tags/v* ]] &&
+#    #     mv src/libgpu-setup.so src/libgpu-setup-${REF#refs/tags/v}.so ||
+#    #     mv src/libgpu-setup.so src/libgpu-setup-${{ github.sha }}.so
+#
+#    - uses: actions/upload-artifact@v2
+#      with:
+#        name: linux
+#        path: libgpu-setup*.so
+#
+#    - uses: actions/upload-artifact@v2
+#      with:
+#        name: linux
+#        path: include/api.h
+#
 #  windows:
 #    runs-on: ${{ matrix.os }}
 #
@@ -82,13 +82,13 @@ jobs:
 #      uses: actions/upload-artifact@v2
 #      with:
 #        name: windows
-#        path: build/src/gpu-setup.dll
+#        path: build/src/gpu-setup*.dll
 #
 #    - name: Upload lib
 #      uses: actions/upload-artifact@v2
 #      with:
 #        name: windows
-#        path: build/src/gpu-setup.lib
+#        path: build/src/gpu-setup*.lib
 #
 #    - name: Upload api.h
 #      uses: actions/upload-artifact@v2
@@ -109,12 +109,11 @@ jobs:
 
     - run: make
 
-    - name: rename library
-      run: |
-        REF="${{ github.ref }}"
-        [[ "$REF" == refs/tags/v* ]] &&
-        mv src/libgpu-setup.dylib src/libgpu-setup-${REF#refs/tags/v}.dylib ||
-        mv src/libgpu-setup.dylib src/libgpu-setup-${{ github.sha }}.dylib
+    # - name: rename library
+    #   run: |
+    #     REF="${{ github.ref }}"
+    #     [[ "$REF" == refs/tags/v* ]] &&
+    #     mv src/libgpu-setup.dylib src/libgpu-setup-${REF#refs/tags/v}.dylib
 
     - uses: actions/upload-artifact@v2
       with:
@@ -129,7 +128,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
 #    needs: [linux, windows, macos]
-    needs: [linux, macos]
+    needs: [macos]
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     if: startsWith(github.ref, 'refs/tags/v')
@@ -140,34 +139,34 @@ jobs:
 
       - uses: actions/download-artifact@v2
 
-      - name: Upload Linux Library
-        uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ steps.release.outputs.upload_url }}
-          asset_path: ./linux/libgpu-setup-ubuntu-18.04.so
-          asset_name: libgpu-setup-ubuntu-18.04.so
-          asset_content_type: binary/octet-stream
-
-      - name: Upload Windows Library DLL
-        uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ steps.release.outputs.upload_url }}
-          asset_path: ./windows/gpu-setup.dll
-          asset_name: gpu-setup.dll
-          asset_content_type: binary/octet-stream
-
-      - name: Upload Windows Library LIB file
-        uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ steps.release.outputs.upload_url }}
-          asset_path: ./windows/gpu-setup.lib
-          asset_name: gpu-setup.lib
-          asset_content_type: binary/octet-stream
+#      - name: Upload Linux Library
+#        uses: actions/upload-release-asset@v1
+#        with:
+#          upload_url: ${{ steps.release.outputs.upload_url }}
+#          asset_path: ./linux/libgpu-setup-ubuntu-18.04.so
+#          asset_name: libgpu-setup-ubuntu-18.04.so
+#          asset_content_type: binary/octet-stream
+#
+#      - name: Upload Windows Library DLL
+#        uses: actions/upload-release-asset@v1
+#        with:
+#          upload_url: ${{ steps.release.outputs.upload_url }}
+#          asset_path: ./windows/gpu-setup.dll
+#          asset_name: gpu-setup.dll
+#          asset_content_type: binary/octet-stream
+#
+#      - name: Upload Windows Library LIB file
+#        uses: actions/upload-release-asset@v1
+#        with:
+#          upload_url: ${{ steps.release.outputs.upload_url }}
+#          asset_path: ./windows/gpu-setup.lib
+#          asset_name: gpu-setup.lib
+#          asset_content_type: binary/octet-stream
 
       - name: Upload MacOS Library
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.release.outputs.upload_url }}
-          asset_path: ./macos/libgpu-setup.dylib
-          asset_name: libgpu-setup.dylib
+          asset_path: macos
+          asset_name: macos-1.2.3
           asset_content_type: binary/octet-stream
