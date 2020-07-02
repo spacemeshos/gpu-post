@@ -39,7 +39,7 @@ jobs:
     - uses: actions/upload-artifact@v2
       with:
         name: linux
-        path: libgpu-setup*.so
+        path: src/libgpu-setup*.so
 
     - uses: actions/upload-artifact@v2
       with:
@@ -155,34 +155,34 @@ jobs:
           echo "::set-env name=VERSION::${VER#refs/tags/v}"
 
       - name: Archive Linux Library
-        run: zip --junk-paths linux-${{ env.VERSION }}.zip linux/*
+        run: zip --junk-paths libgpu-setup-linux-${{ env.VERSION }}.zip linux/*
 
       - name: Upload Linux Library
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.release.outputs.upload_url }}
-          asset_path: ./linux-${{ env.VERSION }}.zip
-          asset_name: linux-${{ env.VERSION }}.zip
+          asset_path: ./libgpu-setup-linux-${{ env.VERSION }}.zip
+          asset_name: libgpu-setup-linux-${{ env.VERSION }}.zip
           asset_content_type: application/zip
 
       - name: Archive Windows Library
-        run: zip --junk-paths windows-${{ env.VERSION }}.zip windows/*
+        run: zip --junk-paths libgpu-setup-windows-${{ env.VERSION }}.zip windows/*
 
       - name: Upload Windows Library
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.release.outputs.upload_url }}
-          asset_path: ./windows-${{ env.VERSION }}.zip
-          asset_name: windows-${{ env.VERSION }}.zip
+          asset_path: ./libgpu-setup-windows-${{ env.VERSION }}.zip
+          asset_name: libgpu-setup-windows-${{ env.VERSION }}.zip
           asset_content_type: application/zip
 
       - name: Archive MacOS Library
-        run: zip --junk-paths macos-${{ env.VERSION }}.zip macos/*
+        run: zip --junk-paths libgpu-setup-macos-${{ env.VERSION }}.zip macos/*
 
       - name: Upload MacOS Library
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.release.outputs.upload_url }}
-          asset_path: ./macos-${{ env.VERSION }}.zip
-          asset_name: macos-${{ env.VERSION }}.zip
+          asset_path: ./libgpu-setup-macos-${{ env.VERSION }}.zip
+          asset_name: libgpu-setup-macos-${{ env.VERSION }}.zip
           asset_content_type: application/zip
