@@ -109,11 +109,11 @@ jobs:
 
     - run: make
 
-    # - name: rename library
-    #   run: |
-    #     REF="${{ github.ref }}"
-    #     [[ "$REF" == refs/tags/v* ]] &&
-    #     mv src/libgpu-setup.dylib src/libgpu-setup-${REF#refs/tags/v}.dylib
+    - name: rename library
+      run: |
+        REF="${{ github.ref }}"
+        [[ "$REF" == refs/tags/v* ]] &&
+        mv src/libgpu-setup.dylib src/libgpu-setup-${REF#refs/tags/v}.dylib
 
     - uses: actions/upload-artifact@v2
       with:
@@ -169,4 +169,4 @@ jobs:
           upload_url: ${{ steps.release.outputs.upload_url }}
           asset_path: macos
           asset_name: macos-1.2.3
-          asset_content_type: binary/octet-stream
+          asset_content_type: application/zip
