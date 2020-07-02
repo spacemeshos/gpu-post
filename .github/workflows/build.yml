@@ -29,12 +29,22 @@ jobs:
 
     - run: make
 
-    - run: mv src/libgpu-setup.so libgpu-setup-${{ matrix.os }}.so
+    - name: Rename library
+      run: |
+        REF="${{ github.ref }}"
+        if [[ "$REF" == refs/tags/v* ]]; then
+          mv src/libgpu-setup.so src/libgpu-setup-${REF#refs/tags/v}.so
+        fi
 
     - uses: actions/upload-artifact@v2
       with:
         name: linux
-        path: libgpu-setup-${{ matrix.os }}.so
+        path: src/libgpu-setup*.so
+
+    - uses: actions/upload-artifact@v2
+      with:
+        name: linux
+        path: include/api.h
 
   windows:
     runs-on: ${{ matrix.os }}
@@ -68,17 +78,32 @@ jobs:
         cmake --build .
       shell: cmd
 
+    - name: Rename library
+      shell: bash
+      run: |
+        REF="${{ github.ref }}"
+        if [[ "$REF" == refs/tags/v* ]]; then
+          mv build/src/gpu-setup.dll build/src/gpu-setup-${REF#refs/tags/v}.dll
+          mv build/src/gpu-setup.lib build/src/gpu-setup-${REF#refs/tags/v}.lib
+        fi
+
     - name: Upload DLL
       uses: actions/upload-artifact@v2
       with:
         name: windows
-        path: build/src/gpu-setup.dll
+        path: build/src/gpu-setup*.dll
 
     - name: Upload lib
       uses: actions/upload-artifact@v2
       with:
         name: windows
-        path: build/src/gpu-setup.lib
+        path: build/src/gpu-setup*.lib
+
+    - name: Upload api.h
+      uses: actions/upload-artifact@v2
+      with:
+        name: windows
+        path: include/api.h
 
   macos:
     runs-on: macos-latest
@@ -89,23 +114,35 @@ jobs:
     - name: Install Vulkan
       run: .github/tools/macos-install-vulkan.sh
 
-    - run: env
-
     - run: cmake -DSPACEMESHCL=OFF -DSPACEMESHCUDA=OFF .
 
     - run: make
 
-    - uses: actions/upload-artifact@v2
+    - name: Rename library
+      run: |
+        REF="${{ github.ref }}"
+        if [[ "$REF" == refs/tags/v* ]]; then
+          mv src/libgpu-setup.dylib src/libgpu-setup-${REF#refs/tags/v}.dylib
+        fi
+
+    - name: Upload library
+      uses: actions/upload-artifact@v2
       with:
         name: macos
-        path: src/libgpu-setup.dylib
+        path: src/libgpu-setup*.dylib
+
+    - name: Upload api.h
+      uses: actions/upload-artifact@v2
+      with:
+        name: macos
+        path: include/api.h
 
   release:
     runs-on: ubuntu-latest
     needs: [linux, windows, macos]
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    if: startsWith(github.event.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v')
 
     steps:
       - id: release
@@ -113,36 +150,39 @@ jobs:
 
       - uses: actions/download-artifact@v2
 
-      - run: find .
+      - run: |
+          VER="${{ github.ref }}"
+          echo "::set-env name=VERSION::${VER#refs/tags/v}"
+
+      - name: Archive Linux Library
+        run: zip --junk-paths libgpu-setup-linux-${{ env.VERSION }}.zip linux/*
 
       - name: Upload Linux Library
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.release.outputs.upload_url }}
-          asset_path: ./linux/libgpu-setup-ubuntu-18.04.so
-          asset_name: libgpu-setup-ubuntu-18.04.so
-          asset_content_type: binary/octet-stream
+          asset_path: ./libgpu-setup-linux-${{ env.VERSION }}.zip
+          asset_name: libgpu-setup-linux-${{ env.VERSION }}.zip
+          asset_content_type: application/zip
 
-      - name: Upload Windows Library DLL
+      - name: Archive Windows Library
+        run: zip --junk-paths libgpu-setup-windows-${{ env.VERSION }}.zip windows/*
+
+      - name: Upload Windows Library
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.release.outputs.upload_url }}
-          asset_path: ./windows/gpu-setup.dll
-          asset_name: gpu-setup.dll
-          asset_content_type: binary/octet-stream
+          asset_path: ./libgpu-setup-windows-${{ env.VERSION }}.zip
+          asset_name: libgpu-setup-windows-${{ env.VERSION }}.zip
+          asset_content_type: application/zip
 
-      - name: Upload Windows Library LIB file
-        uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ steps.release.outputs.upload_url }}
-          asset_path: ./windows/gpu-setup.lib
-          asset_name: gpu-setup.lib
-          asset_content_type: binary/octet-stream
+      - name: Archive MacOS Library
+        run: zip --junk-paths libgpu-setup-macos-${{ env.VERSION }}.zip macos/*
 
       - name: Upload MacOS Library
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.release.outputs.upload_url }}
-          asset_path: ./macos/libgpu-setup.dylib
-          asset_name: libgpu-setup.dylib
-          asset_content_type: binary/octet-stream
+          asset_path: ./libgpu-setup-macos-${{ env.VERSION }}.zip
+          asset_name: libgpu-setup-macos-${{ env.VERSION }}.zip
+          asset_content_type: application/zip
