@@ -29,7 +29,6 @@ jobs:
 
     - run: make
 
-    - run: mv src/libgpu-setup.so libgpu-setup-${{ matrix.os }}.so
     - name: rename library
       run: |
         REF="${{ github.ref }}"
@@ -98,11 +97,10 @@ jobs:
 #        path: include/api.h
 
   macos:
+    runs-on: macos-latest
 
     steps:
     - uses: actions/checkout@v2
-
-    - run: echo '${{ toJSON(github) }}'
 
     - name: Install Vulkan
       run: .github/tools/macos-install-vulkan.sh
