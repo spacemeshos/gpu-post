@@ -142,7 +142,18 @@ jobs:
 
       - uses: actions/download-artifact@v2
 
-      - run: find .
+      - run: |
+          VER="${{ github.ref }}"
+          echo "::set-env name=VERSION::${VER#refs/tags/v}"
+
+#      - name: Archive Linux Library
+#        run: zip --junk-paths linux-${{ env.VERSION }} linux/*
+#
+#      - name: Archive Windows Library
+#        run: zip --junk-paths windows-${{ env.VERSION }} windows/*
+
+      - name: Archive MacOS Library
+        run: zip --junk-paths macos-${{ env.VERSION }} macos/*
 
 #      - name: Upload Linux Library
 #        uses: actions/upload-release-asset@v1
@@ -172,6 +183,6 @@ jobs:
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.release.outputs.upload_url }}
-          asset_path: macos
-          asset_name: macos-1.2.3
+          asset_path: macos-${{ env.VERSION }}.zip
+          asset_name: macos-${{ env.VERSION }}.zip
           asset_content_type: application/zip
