@@ -97,7 +97,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - run: ${{ toJSON(github) }}
+    - run: echo '${{ toJSON(github) }}'
 
 #    - name: Install Vulkan
 #      run: .github/tools/macos-install-vulkan.sh
