@@ -155,7 +155,7 @@ jobs:
           echo "::set-env name=VERSION::${VER#refs/tags/v}"
 
       - name: Archive Linux Library
-        run: zip --junk-paths linux-${{ env.VERSION }} linux/*
+        run: zip --junk-paths linux-${{ env.VERSION }}.zip linux/*
 
       - name: Upload Linux Library
         uses: actions/upload-release-asset@v1
@@ -166,7 +166,7 @@ jobs:
           asset_content_type: application/zip
 
       - name: Archive Windows Library
-        run: zip --junk-paths windows-${{ env.VERSION }} windows/*
+        run: zip --junk-paths windows-${{ env.VERSION }}.zip windows/*
 
       - name: Upload Windows Library
         uses: actions/upload-release-asset@v1
@@ -177,7 +177,7 @@ jobs:
           asset_content_type: application/zip
 
       - name: Archive MacOS Library
-        run: zip --junk-paths macos-${{ env.VERSION }} macos/*
+        run: zip --junk-paths macos-${{ env.VERSION }}.zip macos/*
 
       - name: Upload MacOS Library
         uses: actions/upload-release-asset@v1
