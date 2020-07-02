@@ -29,12 +29,12 @@ jobs:
 #
 #    - run: make
 #
-#    # - name: rename library
-#    #   run: |
-#    #     REF="${{ github.ref }}"
-#    #     [[ "$REF" == refs/tags/v* ]] &&
-#    #     mv src/libgpu-setup.so src/libgpu-setup-${REF#refs/tags/v}.so ||
-#    #     mv src/libgpu-setup.so src/libgpu-setup-${{ github.sha }}.so
+#    - name: rename library
+#      run: |
+#        REF="${{ github.ref }}"
+#        if [[ "$REF" == refs/tags/v* ]]; then
+#          mv src/libgpu-setup.so src/libgpu-setup-${REF#refs/tags/v}.so
+#        fi
 #
 #    - uses: actions/upload-artifact@v2
 #      with:
@@ -141,6 +141,8 @@ jobs:
         uses: release-drafter/release-drafter@v5
 
       - uses: actions/download-artifact@v2
+
+      - run: find .
 
 #      - name: Upload Linux Library
 #        uses: actions/upload-release-asset@v1
