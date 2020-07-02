@@ -102,11 +102,13 @@ jobs:
 #    - name: Install Vulkan
 #      run: .github/tools/macos-install-vulkan.sh
 #
-#    - run: env
-#
 #    - run: cmake -DSPACEMESHCL=OFF -DSPACEMESHCUDA=OFF .
 #
 #    - run: make
+#
+##    - name: rename library
+##      run: mv src/libgpu-setup.dylib src/libgpu-setup.dylib
+##      if: startsWith(github.event.ref, 'refs/tags/v')
 #
 #    - uses: actions/upload-artifact@v2
 #      with:
