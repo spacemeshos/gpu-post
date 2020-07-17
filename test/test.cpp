@@ -27,72 +27,44 @@ int main()
 	uint8_t id[32] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31 };
 	uint8_t salt[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 	uint8_t *out[4];
+	int providersCount = spacemesh_api_get_providers(NULL, 0);
 
-	out[0] = (uint8_t *)malloc(LABELS_COUNT);
-	memset(out[0], 0, LABELS_COUNT);
+	if (providersCount > 0) {
+		PostComputeProvider *providers = (PostComputeProvider *)malloc(providersCount * sizeof(PostComputeProvider));
 
-	out[1] = (uint8_t *)malloc(LABELS_COUNT);
-	memset(out[1], 0, LABELS_COUNT);
-
-	out[2] = (uint8_t *)malloc(LABELS_COUNT);
-	memset(out[2], 0, LABELS_COUNT);
-
-	out[3] = (uint8_t *)malloc(LABELS_COUNT);
-	memset(out[3], 0, LABELS_COUNT);
+		if (spacemesh_api_get_providers(providers, providersCount) == providersCount) {
+			int i;
+			uint8_t *out = (uint8_t *)malloc(providersCount * LABELS_COUNT);
+			bool checkOuitput = false;
+			int cpu;
 
 #if LABELS_COUNT <= 250000
-	scryptPositions(id, 0, LABELS_COUNT - 1, LABEL_SIZE, salt, SPACEMESH_API_CPU, out[0], 512, 1, 1);
+			for (i = 0; i < providersCount; i++) {
+				if (providers[i].compute_api == COMPUTE_API_CLASS_CPU) {
+					memset(out + i * LABELS_COUNT, 0, LABELS_COUNT);
+					scryptPositions(providers[i].id, id, 0, LABELS_COUNT - 1, LABEL_SIZE, salt, 0, out + i * LABELS_COUNT, 512, 1, 1);
+					cpu = i;
+					checkOuitput = true;
+					break;
+				}
+			}
 #endif
-	scryptPositions(id, 0, LABELS_COUNT - 1, LABEL_SIZE, salt, SPACEMESH_API_CUDA/*   | SPACEMESH_API_THROTTLED_MODE*/, out[1], 512, 1, 1);
-	scryptPositions(id, 0, LABELS_COUNT - 1, LABEL_SIZE, salt, SPACEMESH_API_OPENCL/* | SPACEMESH_API_THROTTLED_MODE*/, out[2], 512, 1, 1);
-#if DO_COMPARE_RESULTS
-	print(out[0]);
-	print(out[1]);
-	print(out[2]);
-
-	if (0 != memcmp(out[0], out[1], LABELS_COUNT)) {
-		printf("WRONG result from CUDA\n");
-	}
-
-	if (0 != memcmp(out[0], out[2], LABELS_COUNT)) {
-		printf("WRONG result from OpenCL\n");
-	}
-#endif
-	int cookie1 = spacemesh_api_lock_gpu(SPACEMESH_API_VULKAN);
-	int cookie2 = spacemesh_api_lock_gpu(SPACEMESH_API_VULKAN);
-
-	if (cookie1) {
-		scryptPositions(id, 0, LABELS_COUNT - 1, LABEL_SIZE, salt, cookie1, out[2], 512, 1, 1);
-#if DO_COMPARE_RESULTS
-		print(out[2]);
-		if (0 != memcmp(out[1], out[2], LABELS_COUNT)) {
-			printf("WRONG result from Vulkan GPU 1\n");
+			for (i = 0; i < providersCount; i++) {
+				if (providers[i].compute_api != COMPUTE_API_CLASS_CPU) {
+					memset(out + i * LABELS_COUNT, 0, LABELS_COUNT);
+					scryptPositions(providers[i].id, id, 0, LABELS_COUNT - 1, LABEL_SIZE, salt, 0, out + i * LABELS_COUNT, 512, 1, 1);
+					if (checkOuitput) {
+						if (0 != memcmp(out + i * LABELS_COUNT, out + cpu * LABELS_COUNT, LABELS_COUNT)) {
+							printf("WRONG result from provider %d [%s]\n", i, providers[i].model);
+						}
+					}
+				}
+			}
+			free(out);
 		}
-#endif
-	}
 
-	if (cookie2) {
-		scryptPositions(id, 0, LABELS_COUNT - 1, LABEL_SIZE, salt, cookie2, out[3], 512, 1, 1);
-#if DO_COMPARE_RESULTS
-		print(out[3]);
-		if (0 != memcmp(out[1], out[3], LABELS_COUNT)) {
-			printf("WRONG result from Vulkan GPU 2\n");
-		}
-#endif
+		free(providers);
 	}
-
-	if (cookie1) {
-		spacemesh_api_unlock_gpu(cookie1);
-	}
-
-	if (cookie2) {
-		spacemesh_api_unlock_gpu(cookie2);
-	}
-
-	free(out[0]);
-	free(out[1]);
-	free(out[2]);
-	free(out[3]);
 
 #ifdef WIN32
 	printf("\nPress any key to continue...\n");

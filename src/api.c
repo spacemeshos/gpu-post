@@ -5,7 +5,8 @@
 extern void spacemesh_api_init();
 
 int scryptPositions(
-    const uint8_t *id, // 32 bytes
+	uint32_t provider_id, // POST compute provider ID
+	const uint8_t *id, // 32 bytes
     uint64_t start_position,  // e.g. 0 
     uint64_t end_position, // e.g. 49,999
     uint8_t hash_len_bits, // (1...8) for each hash output, the number of prefix bits (not bytes) to copy into the buffer
@@ -32,15 +33,7 @@ int scryptPositions(
 
 	spacemesh_api_init();
 
-	if (options & SPACEMESH_API_USE_LOCKED_DEVICE) {
-		cgpu = spacemesh_api_get_gpu((options >> 8) & 0x0f);
-	} else {
-		cgpu = spacemesh_api_get_available_gpu_by_type(options & SPACEMESH_API_ALL);
-
-		if (!cgpu && (0 == (options & SPACEMESH_API_ALL))) {
-			cgpu = spacemesh_api_get_available_gpu();
-		}
-	}
+	cgpu = spacemesh_api_get_gpu(provider_id);
 
 	if (NULL == cgpu) {
 		return -1;
@@ -49,9 +42,6 @@ int scryptPositions(
 	memset(out, 0, (end_position - start_position + 1));
 #endif
 	cgpu->drv->scrypt_positions(cgpu, (uint8_t*)data, start_position, end_position, hash_len_bits, options, out, N, R, P, &tv_start, &tv_end);
-	if (0 == (options & SPACEMESH_API_USE_LOCKED_DEVICE)) {
-		spacemesh_api_release_gpu(cgpu);
-	}
 
 	t = 1e-6 * (tv_end.tv_usec - tv_start.tv_usec) + (tv_end.tv_sec - tv_start.tv_sec);
 	printf("--------------------------------\n");
@@ -65,13 +55,6 @@ int scryptMany()
 {
 	spacemesh_api_init();
 	return 0;
-}
-
-// return to the client the system GPU capabilities. E.g. OPENCL, CUDA/NVIDIA or NONE
-int stats()
-{
-	spacemesh_api_init();
-	return spacemesh_api_stats();
 }
 
 // stop all GPU work and don’t fill the passed-in buffer with any more results.

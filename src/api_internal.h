@@ -279,7 +279,7 @@ struct cgpu_info {
 	int id; // Global GPU index
 	int driver_id; // GPU index by driver
 
-	char *name;
+	char name[256];
 	void *device_data;
 	char *device_config;
 	enum dev_enable deven;

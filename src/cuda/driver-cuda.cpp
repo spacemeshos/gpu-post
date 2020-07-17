@@ -26,6 +26,7 @@ static void cuda_shutdown(struct cgpu_info *cgpu);
 
 static int cuda_detect(struct cgpu_info *gpus, int *active)
 {
+	int most_devices = 0;
 	int version = 0, GPU_N = 0;
 	cudaError_t err = cudaDriverGetVersion(&version);
 	if (err != cudaSuccess) {
@@ -60,23 +61,18 @@ static int cuda_detect(struct cgpu_info *gpus, int *active)
 		cgpu->pci_bus_id = props.pciBusID;
 		cgpu->pci_device_id = props.pciDeviceID;
 
-		cgpu->name = NULL;
+		memcpy(cgpu->name, props.name, min(sizeof(cgpu->name), sizeof(props.name)));
+		cgpu->name[sizeof(cgpu->name) - 1] = 0;
 		cgpu->device_config = NULL;
 		cgpu->backoff = is_windows() ? 12 : 2;
 		cgpu->lookup_gap = 1;
 		cgpu->batchsize = 1024;
-#if 0
-		if (device_name[dev_id]) {
-			free(device_name[dev_id]);
-			device_name[dev_id] = NULL;
-		}
 
-		device_name[dev_id] = strdup(props.name);
-#endif
 		*active += 1;
+		most_devices++;
 	}
 
-	return 0;
+	return most_devices;
 }
 
 static void reinit_cuda_device(struct cgpu_info *gpu)

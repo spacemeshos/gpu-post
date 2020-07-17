@@ -244,6 +244,8 @@ static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameS
 
 static int vulkan_detect(struct cgpu_info *gpus, int *active)
 {
+	int most_devices = 0;
+
 	const VkApplicationInfo applicationInfo = {
 		VK_STRUCTURE_TYPE_APPLICATION_INFO,
 		0,
@@ -283,6 +285,9 @@ static int vulkan_detect(struct cgpu_info *gpus, int *active)
 			VkPhysicalDeviceProperties physicalDeviceProperties;
 			gVulkan.vkGetPhysicalDeviceProperties(gPhysicalDevices[i], &physicalDeviceProperties);
 
+			memcpy(cgpu->name, physicalDeviceProperties.deviceName, min(sizeof(cgpu->name),sizeof(physicalDeviceProperties.deviceName)));
+			cgpu->name[sizeof(cgpu->name) - 1] = 0;
+
 			VkPhysicalDeviceMemoryProperties memoryProperties;
 			gVulkan.vkGetPhysicalDeviceMemoryProperties(gPhysicalDevices[i], &memoryProperties);
 
@@ -304,8 +309,7 @@ static int vulkan_detect(struct cgpu_info *gpus, int *active)
 			}
 
 			*active += 1;
-
-			have_vulkan = true;
+			most_devices++;
 		}
 	} else {
 		applog(LOG_ERR, "No graphic cards were found by Vulkan. Use Adrenalin not Crimson and check your drivers with VulkanInfo.");
@@ -317,7 +321,7 @@ static int vulkan_detect(struct cgpu_info *gpus, int *active)
 
 	init_glslang();
 
-	return gPhysicalDeviceCount;
+	return most_devices;
 }
 
 static void reinit_vulkan_device(struct cgpu_info *gpu)

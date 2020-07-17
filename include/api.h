@@ -31,10 +31,24 @@ extern "C" {
 
 #define	SPACEMESH_API_THROTTLED_MODE	0x00008000
 
-#define SPACEMESH_API_USE_LOCKED_DEVICE	0x00001000
+// Compute API class
+typedef enum _ComputeApiClass {
+	COMPUTE_API_CLASS_UNSPECIFIED = 0,
+	COMPUTE_API_CLASS_CPU = 1, // useful for testing on systems without a cuda or vulkan GPU
+	COMPUTE_API_CLASS_CUDA = 2,
+	COMPUTE_API_CLASS_VULKAN = 3
+} ComputeApiClass;
+
+typedef struct _PostComputeProvider {
+	uint32_t id; // 0, 1, 2...
+	char model[256]; // e.g. Nvidia GTX 2700
+	ComputeApiClass compute_api; // A provided compute api
+	uint64_t performance; // Estimated performance in hashes per second
+} PostComputeProvider;
 
 SPACEMESHAPI int scryptPositions(
-    const uint8_t *id,			// 32 bytes
+	uint32_t provider_id,		// POST compute provider ID
+	const uint8_t *id,			// 32 bytes
     uint64_t start_position,	// e.g. 0 
     uint64_t end_position,		// e.g. 49,999
     uint8_t hash_len_bits,		// (1...8) for each hash output, the number of prefix bits (not bytes) to copy into the buffer
@@ -46,28 +60,15 @@ SPACEMESHAPI int scryptPositions(
     uint32_t P					// scrypt p
 );
 
-// return to the client the system GPU capabilities. E.g. OPENCL, CUDA/NVIDIA or NONE
-SPACEMESHAPI int stats();
-
 // stop all GPU work and don’t fill the passed-in buffer with any more results.
 SPACEMESHAPI int stop(
 	uint32_t ms_timeout			// timeout in milliseconds
 );
 
-// return count of GPUs
-SPACEMESHAPI int spacemesh_api_get_gpu_count(
-	int type,					// GPU type SPACEMESH_API_CUDA or SPACEMESH_API_OPENCL
-	int only_available			// return count of available GPUs only
-);
-
-// lock GPU for persistent exclusive use. returned cookie used as options in scryptPositions call
-SPACEMESHAPI int spacemesh_api_lock_gpu(
-	int type					// GPU type SPACEMESH_API_CUDA or SPACEMESH_API_OPENCL
-);
-
-// unlock GPU, locked by previous spacemesh_api_lock_gpu call
-SPACEMESHAPI void spacemesh_api_unlock_gpu(
-	int cookie					// cookie, returned by previous spacemesh_api_lock_gpu call
+// return POST compute providers info
+SPACEMESHAPI int spacemesh_api_get_providers(
+	PostComputeProvider *providers, // out providers info buffer, if NULL - return count of available providers
+	int max_providers			    // buffer size
 );
 
 #ifdef __cplusplus
@@ -76,3 +77,18 @@ SPACEMESHAPI void spacemesh_api_unlock_gpu(
 
 #endif	// #ifndef __SPACEMESH_API_H__
 
+#if 0
+	SPACEMESHAPI int scryptPositions(
+		uint32_t provider_id,		// POST compute provider ID
+		const uint8_t *id,			// 32 bytes
+		uint64_t start_position,	// e.g. 0 
+		uint64_t end_position,		// e.g. 49,999
+		uint8_t hash_len_bits,		// (1...8) for each hash output, the number of prefix bits (not bytes) to copy into the buffer
+		const uint8_t *salt,		// 32 bytes
+		uint32_t options,			// throttle etc.
+		uint8_t *out,				// memory buffer large enough to include hash_len_bits * number of requested hashes
+		uint32_t N,					// scrypt N
+		uint32_t R,					// scrypt r
+		uint32_t P					// scrypt p
+	);
+#endif
