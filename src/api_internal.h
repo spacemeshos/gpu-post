@@ -48,6 +48,13 @@ typedef unsigned __int32 time_t;
 typedef char *  va_list;
 #endif
 
+#define	SPACEMESH_API_CPU				0x00000001
+#define	SPACEMESH_API_CUDA				0x00000002
+#define	SPACEMESH_API_OPENCL			0x00000004
+#define	SPACEMESH_API_VULKAN			0x00000008
+#define	SPACEMESH_API_GPU				(SPACEMESH_API_CUDA | SPACEMESH_API_OPENCL | SPACEMESH_API_VULKAN)
+#define	SPACEMESH_API_ALL				(SPACEMESH_API_CPU | SPACEMESH_API_GPU)
+
 enum {
 	LOG_ERR,
 	LOG_WARNING,
@@ -263,7 +270,7 @@ struct device_drv {
 
 	bool(*init)(struct cgpu_info *);
 
-	int64_t(*scrypt_positions)(struct cgpu_info *, uint8_t *pdata, uint64_t start_pos, uint64_t end_position, uint8_t hash_len_bits, uint32_t options, uint8_t *out, uint32_t N, uint32_t r, uint32_t p, struct timeval *tv_start, struct timeval *tv_end); // (thr, pdata, start_pos, end_position, out, N, r, p, tv_start, tv_end)
+	int64_t(*scrypt_positions)(struct cgpu_info *, uint8_t *pdata, uint64_t start_pos, uint64_t end_position, uint8_t hash_len_bits, uint8_t *out, uint32_t N, uint32_t r, uint32_t p, struct timeval *tv_start, struct timeval *tv_end); // (thr, pdata, start_pos, end_position, out, N, r, p, tv_start, tv_end)
 
 	void(*shutdown)(struct cgpu_info *);
 

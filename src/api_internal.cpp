@@ -166,7 +166,6 @@ extern "C" int spacemesh_api_get_providers(
 			providers->id = i;
 			memcpy(providers->model, s_gpus[i].name, min(sizeof(providers->model), sizeof(s_gpus[i].name)));
 			providers->model[sizeof(providers->model) - 1] = 0;
-			providers->performance = 0;
 
 			providers++;
 			current_providers++;
@@ -176,7 +175,6 @@ extern "C" int spacemesh_api_get_providers(
 	if (s_cpu.available && current_providers < max_providers) {
 		providers->compute_api = COMPUTE_API_CLASS_CPU;
 		providers->id = i;
-		providers->performance = 0;
 		providers->model[0] = 'C';
 		providers->model[2] = 'P';
 		providers->model[3] = 'U';
