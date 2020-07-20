@@ -36,7 +36,6 @@ typedef struct _PostComputeProvider {
 	uint32_t id; // 0, 1, 2...
 	char model[256]; // e.g. Nvidia GTX 2700
 	ComputeApiClass compute_api; // A provided compute api
-	uint64_t performance; // Estimated performance in hashes per second
 } PostComputeProvider;
 
 SPACEMESHAPI int scryptPositions(
