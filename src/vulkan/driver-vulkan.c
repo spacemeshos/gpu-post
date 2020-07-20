@@ -362,10 +362,10 @@ static bool vulkan_init(struct cgpu_info *cgpu)
 	return true;
 }
 
-static int64_t vulkan_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uint64_t start_position, uint64_t end_position, uint8_t hash_len_bits, uint8_t *output, uint32_t N, uint32_t r, uint32_t p, struct timeval *tv_start, struct timeval *tv_end)
+static int64_t vulkan_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uint64_t start_position, uint64_t end_position, uint8_t hash_len_bits, uint32_t options, uint8_t *output, uint32_t N, uint32_t r, uint32_t p, struct timeval *tv_start, struct timeval *tv_end)
 {
 	cgpu->busy = 1;
-	if (vulkan_prepare(cgpu, N, r, p, hash_len_bits, false))
+	if (vulkan_prepare(cgpu, N, r, p, hash_len_bits, 0 != (options & SPACEMESH_API_THROTTLED_MODE)))
 	{
 		_vulkanState *state = (_vulkanState *)cgpu->device_data;
 		AlgorithmParams params;

@@ -22,6 +22,8 @@ extern "C" {
 #define	SPACEMESH_API_ERROR_TIMEOUT		-2
 #define	SPACEMESH_API_ERROR_ALREADY		-3
 
+#define	SPACEMESH_API_THROTTLED_MODE	0x00008000
+
 // Compute API class
 typedef enum _ComputeApiClass {
 	COMPUTE_API_CLASS_UNSPECIFIED = 0,
@@ -34,6 +36,7 @@ typedef struct _PostComputeProvider {
 	uint32_t id; // 0, 1, 2...
 	char model[256]; // e.g. Nvidia GTX 2700
 	ComputeApiClass compute_api; // A provided compute api
+	uint64_t performance; // Estimated performance in hashes per second
 } PostComputeProvider;
 
 SPACEMESHAPI int scryptPositions(
@@ -43,6 +46,7 @@ SPACEMESHAPI int scryptPositions(
     uint64_t end_position,		// e.g. 49,999
     uint8_t hash_len_bits,		// (1...8) for each hash output, the number of prefix bits (not bytes) to copy into the buffer
     const uint8_t *salt,		// 32 bytes
+    uint32_t options,			// throttle etc.
     uint8_t *out,				// memory buffer large enough to include hash_len_bits * number of requested hashes
     uint32_t N,					// scrypt N
     uint32_t R,					// scrypt r

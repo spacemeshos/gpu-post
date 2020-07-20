@@ -218,10 +218,10 @@ static bool opencl_init(struct cgpu_info *cgpu)
 
 #define	USE_ASYNC_BUFFER_READ	1
 
-static int64_t opencl_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uint64_t start_position, uint64_t end_position, uint8_t hash_len_bits, uint8_t *output, uint32_t N, uint32_t r, uint32_t p, struct timeval *tv_start, struct timeval *tv_end)
+static int64_t opencl_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uint64_t start_position, uint64_t end_position, uint8_t hash_len_bits, uint32_t options, uint8_t *output, uint32_t N, uint32_t r, uint32_t p, struct timeval *tv_start, struct timeval *tv_end)
 {
 	cgpu->busy = 1;
-	if (opencl_prepare(cgpu, N, r, p, hash_len_bits, false))
+	if (opencl_prepare(cgpu, N, r, p, hash_len_bits, 0 != (options & SPACEMESH_API_THROTTLED_MODE)))
 	{
 		_clState *clState = (_clState *)cgpu->device_data;
 		const cl_kernel *kernel = &clState->kernel[hash_len_bits];
