@@ -95,7 +95,7 @@ static int opencl_detect(struct cgpu_info *gpus, int *active)
 	char pbuff[256];
 	cl_uint numDevices;
 	cl_uint numPlatforms;
-	int most_devices = -1;
+	int most_devices = 0;
 	cl_platform_id *platforms;
 	cl_platform_id platform = NULL;
 	unsigned int i;
@@ -141,9 +141,6 @@ static int opencl_detect(struct cgpu_info *gpus, int *active)
 			continue;
 		}
 		applog(LOG_INFO, "Platform %d devices: %d", i, numDevices);
-		if ((int)numDevices > most_devices) {
-			most_devices = numDevices;
-		}
 		if (numDevices) {
 			unsigned int j;
 			cl_device_id *devices = (cl_device_id *)malloc(numDevices * sizeof(cl_device_id));
@@ -157,7 +154,7 @@ static int opencl_detect(struct cgpu_info *gpus, int *active)
 					if (topology.raw.type == CL_DEVICE_TOPOLOGY_TYPE_PCIE_AMD)
 					{
 						struct cgpu_info *cgpu = &gpus[*active];
-						clGetDeviceInfo(devices[j], CL_DEVICE_NAME, sizeof(pbuff), pbuff, NULL);
+						clGetDeviceInfo(devices[j], CL_DEVICE_NAME, sizeof(cgpu->name), cgpu->name, NULL);
 						applog(LOG_INFO, "\t%i\t%s", j, pbuff);
 
 						cgpu->id = *active;
@@ -170,7 +167,7 @@ static int opencl_detect(struct cgpu_info *gpus, int *active)
 
 						*active += 1;
 
-						have_opencl = true;
+						most_devices++;
 					}
 				}
 			}
@@ -191,8 +188,7 @@ static uint32_t *blank_res;
 static bool opencl_prepare(struct cgpu_info *cgpu, unsigned N, uint32_t r, uint32_t p, cl_uint hash_len_bits, bool throttled)
 {
 	if (N != cgpu->N || r != cgpu->r || p != cgpu->p) {
-		char name[256];
-		strcpy(name, "");
+		cgpu->name[0] = 0;
 		applog(LOG_INFO, "Init GPU thread for GPU %i, platform GPU %i, pci [%d:%d]", cgpu->id, cgpu->driver_id, cgpu->pci_bus_id, cgpu->pci_device_id);
 		if (cgpu->device_data) {
 			opencl_shutdown(cgpu);
@@ -202,17 +198,14 @@ static bool opencl_prepare(struct cgpu_info *cgpu, unsigned N, uint32_t r, uint3
 		cgpu->r = r;
 		cgpu->p = p;
 
-		cgpu->device_data = initCl(cgpu, name, sizeof(name), hash_len_bits, throttled);
+		cgpu->device_data = initCl(cgpu, hash_len_bits, throttled);
 		if (!cgpu->device_data) {
 			applog(LOG_ERR, "Failed to init GPU, disabling device %d", cgpu->id);
 			cgpu->deven = DEV_DISABLED;
 			cgpu->status = LIFE_NOSTART;
 			return false;
 		}
-		if (!cgpu->name) {
-			cgpu->name = strdup(name);
-		}
-		applog(LOG_INFO, "initCl() finished. Found %s", name);
+		applog(LOG_INFO, "initCl() finished. Found %s", cgpu->name);
 	}
 	return true;
 }

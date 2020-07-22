@@ -43,6 +43,6 @@ typedef struct {
 	size_t compute_shaders;
 } _clState;
 
-extern _clState *initCl(struct cgpu_info *cgpu, char *name, size_t nameSize, cl_uint hash_len_bits, bool throttled);
+extern _clState *initCl(struct cgpu_info *cgpu, cl_uint hash_len_bits, bool throttled);
 
 #endif /* __OCL_H__ */

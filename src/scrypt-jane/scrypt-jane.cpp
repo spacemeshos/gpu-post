@@ -416,7 +416,7 @@ static int cpu_detect(struct cgpu_info *cgpu, int *active)
 		*active += 1;
 	}
 
-	return 0;
+	return 1;
 }
 
 static void reinit_cpu_device(struct cgpu_info *gpu)

@@ -48,6 +48,13 @@ typedef unsigned __int32 time_t;
 typedef char *  va_list;
 #endif
 
+#define	SPACEMESH_API_CPU				0x00000001
+#define	SPACEMESH_API_CUDA				0x00000002
+#define	SPACEMESH_API_OPENCL			0x00000004
+#define	SPACEMESH_API_VULKAN			0x00000008
+#define	SPACEMESH_API_GPU				(SPACEMESH_API_CUDA | SPACEMESH_API_OPENCL | SPACEMESH_API_VULKAN)
+#define	SPACEMESH_API_ALL				(SPACEMESH_API_CPU | SPACEMESH_API_GPU)
+
 enum {
 	LOG_ERR,
 	LOG_WARNING,
@@ -279,7 +286,7 @@ struct cgpu_info {
 	int id; // Global GPU index
 	int driver_id; // GPU index by driver
 
-	char *name;
+	char name[256];
 	void *device_data;
 	char *device_config;
 	enum dev_enable deven;

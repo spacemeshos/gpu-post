@@ -28,7 +28,7 @@
 #include "ICD/icd_dispatch.h"
 #include "scrypt-chacha-cl.inl"
 
-_clState *initCl(struct cgpu_info *cgpu, char *name, size_t nameSize, cl_uint hash_len_bits, bool throttled)
+_clState *initCl(struct cgpu_info *cgpu, cl_uint hash_len_bits, bool throttled)
 {
 	_clState *clState = calloc(1, sizeof(_clState));
 	bool patchbfi = false, prog_built = false;
@@ -106,14 +106,11 @@ _clState *initCl(struct cgpu_info *cgpu, char *name, size_t nameSize, cl_uint ha
 				applog(LOG_ERR, "Error %d: Getting Device Info", status);
 				return NULL;
 			}
-
 			applog(LOG_INFO, "Selected %i: %s", cgpu->driver_id, pbuff);
-			strncpy(name, pbuff, nameSize);
 		} else {
 			applog(LOG_ERR, "Invalid GPU %i", cgpu->driver_id);
 			return NULL;
 		}
-
 	}
 	else {
 		return NULL;

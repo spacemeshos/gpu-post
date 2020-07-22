@@ -20,10 +20,8 @@ volatile bool abort_flag = false;
 bool opt_debug = false;
 #ifdef WIN32
 CRITICAL_SECTION applog_lock;
-CRITICAL_SECTION gpus_lock;
 #else
 pthread_mutex_t applog_lock;
-pthread_mutex_t gpus_lock;
 #endif
 
 static int s_total_devices = 0;
@@ -42,27 +40,26 @@ extern "C" void spacemesh_api_init()
 		api_inited = 1;
 #ifdef WIN32
 		InitializeCriticalSection(&applog_lock);
-		InitializeCriticalSection(&gpus_lock);
 #else
 		pthread_mutex_init(&applog_lock, NULL);
-		pthread_mutex_init(&gpus_lock, NULL);
 #endif
 
 		memset(s_gpus, 0, sizeof(s_gpus));
+		memset(&s_cpu, 0, sizeof(s_cpu));
 
 #ifdef HAVE_VULKAN
-		vulkan_drv.drv_detect(s_gpus, &s_total_devices);
+		have_vulkan = vulkan_drv.drv_detect(s_gpus, &s_total_devices) > 0;
 #endif
 
 #ifdef HAVE_CUDA
-		cuda_drv.drv_detect(s_gpus, &s_total_devices);
+		have_cuda = cuda_drv.drv_detect(s_gpus, &s_total_devices) > 0;
 #endif
 
 #ifdef HAVE_OPENCL
-		opencl_drv.drv_detect(s_gpus, &s_total_devices);
+		have_opencl = opencl_drv.drv_detect(s_gpus, &s_total_devices) > 0;
 #endif
 
-		if (0 == cpu_drv.drv_detect(&s_cpu, NULL)) {
+		if (cpu_drv.drv_detect(&s_cpu, NULL) > 0) {
 			s_cpu.drv->init(&s_cpu);
 			s_cpu.available = true;
 		}
@@ -80,56 +77,16 @@ extern "C" void spacemesh_api_init()
 	}
 }
 
-struct cgpu_info * spacemesh_api_get_available_gpu()
-{
-	struct cgpu_info *cgpu = NULL;
-	spacemesh_api_init();
-	pthread_mutex_lock(&gpus_lock);
-	for (int i = 0; i < s_total_devices; ++i) {
-		if (s_gpus[i].available && (0 != (s_gpus[i].drv->type & SPACEMESH_API_GPU))) {
-			cgpu = &s_gpus[i];
-			cgpu->available = false;
-			break;
-		}
-	}
-	pthread_mutex_unlock(&gpus_lock);
-	return cgpu;
-}
-
-struct cgpu_info * spacemesh_api_get_gpu(int id)
+extern "C" struct cgpu_info * spacemesh_api_get_gpu(int id)
 {
 	spacemesh_api_init();
 	if (id >= 0 && id < s_total_devices) {
 		return &s_gpus[id];
 	}
+	if (s_total_devices > 0 && id == s_total_devices) {
+		return &s_cpu;
+	}
 	return NULL;
-}
-
-struct cgpu_info * spacemesh_api_get_available_gpu_by_type(int type)
-{
-	struct cgpu_info *cgpu = NULL;
-	spacemesh_api_init();
-	pthread_mutex_lock(&gpus_lock);
-	for (int i = 0; i < s_total_devices; ++i) {
-		if (s_gpus[i].available && (type == s_gpus[i].drv->type)) {
-			cgpu = &s_gpus[i];
-			cgpu->available = false;
-			break;
-		}
-	}
-	pthread_mutex_unlock(&gpus_lock);
-	if (NULL == cgpu && (0 != (type & SPACEMESH_API_CPU))) {
-		cgpu = &s_cpu;
-	}
-	return cgpu;
-}
-
-void spacemesh_api_release_gpu(struct cgpu_info *cgpu)
-{
-	spacemesh_api_init();
-	pthread_mutex_lock(&gpus_lock);
-	cgpu->available = true;
-	pthread_mutex_unlock(&gpus_lock);
 }
 
 void _quit(int status)
@@ -139,71 +96,7 @@ void _quit(int status)
 	exit(status);
 }
 
-int spacemesh_api_stats()
-{
-	int devices = SPACEMESH_API_CPU;
-	spacemesh_api_init();
-	for (int i = 0; i < s_total_devices; ++i) {
-		devices |= s_gpus[i].drv->type;
-	}
-	return devices;
-}
-
-int spacemesh_api_get_gpu_count(int type, int only_available)
-{
-	int devices = 0;
-	spacemesh_api_init();
-	if (0 == type) {
-		type = SPACEMESH_API_GPU;
-	}
-	pthread_mutex_lock(&gpus_lock);
-	for (int i = 0; i < s_total_devices; ++i) {
-		if (0 != (type & s_gpus[i].drv->type)) {
-			if (only_available) {
-				if (s_gpus[i].available) {
-					devices++;
-				}
-			}
-			else {
-				devices++;
-			}
-		}
-	}
-	pthread_mutex_unlock(&gpus_lock);
-	return devices;
-}
-
-int spacemesh_api_lock_gpu(int type)
-{
-	int device = 0;
-	spacemesh_api_init();
-	if (0 == type) {
-		type = SPACEMESH_API_GPU;
-	}
-	pthread_mutex_lock(&gpus_lock);
-	for (int i = 0; i < s_total_devices; ++i) {
-		if (s_gpus[i].available && (0 != (type & s_gpus[i].drv->type))) {
-			s_gpus[i].available = false;
-			device = SPACEMESH_API_USE_LOCKED_DEVICE | (i << 8);
-			break;
-		}
-	}
-	pthread_mutex_unlock(&gpus_lock);
-	return device;
-}
-
-void spacemesh_api_unlock_gpu(int cookie)
-{
-	spacemesh_api_init();
-	pthread_mutex_lock(&gpus_lock);
-	int id = (cookie >> 8) & 0x0f;
-	if (id >= 0 && id < s_total_devices) {
-		s_gpus[id].available = true;
-	}
-	pthread_mutex_unlock(&gpus_lock);
-}
-
-int spacemesh_api_stop(uint32_t ms_timeout)
+extern "C" int spacemesh_api_stop(uint32_t ms_timeout)
 {
 	uint32_t timeout = 0;
 	if (abort_flag) {/* already called */
@@ -238,6 +131,58 @@ int spacemesh_api_stop(uint32_t ms_timeout)
 	}
 
 	return SPACEMESH_API_ERROR_NONE;
+}
+
+extern "C" int spacemesh_api_get_providers(
+	PostComputeProvider *providers, // out providers info buffer, if NULL - return count of available providers
+	int max_providers			    // buffer size
+)
+{
+	int i;
+	int current_providers = 0;
+
+	spacemesh_api_init();
+
+	if (NULL == providers) {
+		for (i = 0; i < s_total_devices; i++) {
+			if (NULL != s_gpus[i].drv && 0 != (s_gpus[i].drv->type & (SPACEMESH_API_CUDA | SPACEMESH_API_VULKAN))) {
+				current_providers++;
+			}
+		}
+		if (s_cpu.available) {
+			current_providers++;
+		}
+		return current_providers;
+	}
+
+	for (i = 0; current_providers < max_providers && i < s_total_devices; i++) {
+		if (NULL != s_gpus[i].drv && 0 != (s_gpus[i].drv->type & (SPACEMESH_API_CUDA | SPACEMESH_API_VULKAN))) {
+			if (0 != (s_gpus[i].drv->type & SPACEMESH_API_CUDA)) {
+				providers->compute_api = COMPUTE_API_CLASS_CUDA;
+			}
+			else {
+				providers->compute_api = COMPUTE_API_CLASS_VULKAN;
+			}
+			providers->id = i;
+			memcpy(providers->model, s_gpus[i].name, min(sizeof(providers->model), sizeof(s_gpus[i].name)));
+			providers->model[sizeof(providers->model) - 1] = 0;
+
+			providers++;
+			current_providers++;
+		}
+	}
+
+	if (s_cpu.available && current_providers < max_providers) {
+		providers->compute_api = COMPUTE_API_CLASS_CPU;
+		providers->id = i;
+		providers->model[0] = 'C';
+		providers->model[1] = 'P';
+		providers->model[2] = 'U';
+		providers->model[3] = 0;
+		current_providers++;
+	}
+
+	return current_providers;
 }
 
 extern bool opt_debug_diff;
