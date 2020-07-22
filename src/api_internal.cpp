@@ -176,9 +176,9 @@ extern "C" int spacemesh_api_get_providers(
 		providers->compute_api = COMPUTE_API_CLASS_CPU;
 		providers->id = i;
 		providers->model[0] = 'C';
-		providers->model[2] = 'P';
-		providers->model[3] = 'U';
-		providers->model[4] = 0;
+		providers->model[1] = 'P';
+		providers->model[2] = 'U';
+		providers->model[3] = 0;
 		current_providers++;
 	}
 
