@@ -425,7 +425,9 @@ static int64_t vulkan_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, u
 
 		cgpu->busy = 0;
 		if (hashes_computed) {
-			*hashes_computed = n - start_position;
+			uint64_t computed = n - start_position;
+			size_t total = end_position - start_position + 1;
+			*hashes_computed = min(computed, total);
 		}
 
 		return (n <= end_position) ? SPACEMESH_API_ERROR_CANCELED : SPACEMESH_API_ERROR_NONE;
