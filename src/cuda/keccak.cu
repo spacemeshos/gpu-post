@@ -25,7 +25,7 @@
 	cudaGetLastError(); \
 	x; \
 	cudaError_t err = cudaGetLastError(); \
-	if (err != cudaSuccess && !abort_flag) \
+	if (err != cudaSuccess && !g_spacemesh_api_abort_flag) \
 		applog(LOG_ERR, "GPU #%d: cudaError %d (%s) (%s line %d)\n", gpuId, err, cudaGetErrorString(err), __FILENAME__, __LINE__); \
 }
 

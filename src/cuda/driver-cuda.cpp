@@ -116,9 +116,13 @@ static bool cuda_init(struct cgpu_info *cgpu)
 					 | (((x) >> 8) & 0x0000ff00u) | (((x) >> 24) & 0x000000ffu))
 
 
-static int64_t cuda_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uint64_t start_position, uint64_t end_position, uint8_t hash_len_bits, uint32_t options, uint8_t *output, uint32_t N, uint32_t r, uint32_t p, struct timeval *tv_start, struct timeval *tv_end)
+static int64_t cuda_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uint64_t start_position, uint64_t end_position, uint8_t hash_len_bits, uint32_t options, uint8_t *output, uint32_t N, uint32_t r, uint32_t p, struct timeval *tv_start, struct timeval *tv_end, uint64_t *hashes_computed)
 {
 	cgpu->busy = 1;
+	if (hashes_computed) {
+		*hashes_computed = 0;
+	}
+
 	if (cuda_prepare(cgpu, N, r, p, hash_len_bits, 0 != (options & SPACEMESH_API_THROTTLED_MODE)))
 	{
 		_cudaState *cudaState = (_cudaState *)cgpu->device_data;
@@ -155,7 +159,7 @@ static int64_t cuda_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uin
 			// all on gpu
 
 			n += cgpu->thread_concurrency;
-			if (opt_debug && (iteration % 64 == 0)) {
+			if (g_spacemesh_api_opt_debug && (iteration % 64 == 0)) {
 				applog(LOG_DEBUG, "GPU #%d: n=%x", cgpu->driver_id, n);
 			}
 
@@ -187,16 +191,21 @@ static int64_t cuda_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uin
 			cur = (cur + 1) & 1;
 			nxt = (nxt + 1) & 1;
 			++iteration;
-		} while (n <= end_position && !abort_flag);
+		} while (n <= end_position && !g_spacemesh_api_abort_flag);
 
 		gettimeofday(tv_end, NULL);
 
 		cgpu->busy = 0;
-		return 0;
+		if (hashes_computed) {
+			*hashes_computed = n - start_position;
+		}
+
+		return (n <= end_position) ? SPACEMESH_API_ERROR_CANCELED : SPACEMESH_API_ERROR_NONE;
 	}
 
 	cgpu->busy = 0;
-	return -1;
+
+	return SPACEMESH_API_ERROR;
 }
 
 static void cuda_shutdown(struct cgpu_info *cgpu)

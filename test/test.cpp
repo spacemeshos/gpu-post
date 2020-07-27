@@ -42,7 +42,7 @@ int main()
 			for (i = 0; i < providersCount; i++) {
 				if (providers[i].compute_api == COMPUTE_API_CLASS_CPU) {
 					memset(out + i * LABELS_COUNT, 0, LABELS_COUNT);
-					scryptPositions(providers[i].id, id, 0, LABELS_COUNT - 1, LABEL_SIZE, salt, 0, out + i * LABELS_COUNT, 512, 1, 1);
+					scryptPositions(providers[i].id, id, 0, LABELS_COUNT - 1, LABEL_SIZE, salt, 0, out + i * LABELS_COUNT, 512, 1, 1, NULL);
 					cpu = i;
 					checkOuitput = true;
 					break;
@@ -52,7 +52,7 @@ int main()
 			for (i = 0; i < providersCount; i++) {
 				if (providers[i].compute_api != COMPUTE_API_CLASS_CPU) {
 					memset(out + i * LABELS_COUNT, 0, LABELS_COUNT);
-					scryptPositions(providers[i].id, id, 0, LABELS_COUNT - 1, LABEL_SIZE, salt, 0, out + i * LABELS_COUNT, 512, 1, 1);
+					scryptPositions(providers[i].id, id, 0, LABELS_COUNT - 1, LABEL_SIZE, salt, 0, out + i * LABELS_COUNT, 512, 1, 1, NULL);
 					if (checkOuitput) {
 						if (0 != memcmp(out + i * LABELS_COUNT, out + cpu * LABELS_COUNT, LABELS_COUNT)) {
 							printf("WRONG result from provider %d [%s]\n", i, providers[i].model);

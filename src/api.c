@@ -15,7 +15,8 @@ int scryptPositions(
     uint8_t *out, // memory buffer large enough to include hash_len_bits * number of requested hashes
     uint32_t N,
     uint32_t R,
-    uint32_t P
+    uint32_t P,
+	uint64_t *hashes_computed
 )
 {
 	uint32_t data[20]; // align 16
@@ -41,7 +42,7 @@ int scryptPositions(
 #ifdef _DEBUG
 	memset(out, 0, (end_position - start_position + 1));
 #endif
-	cgpu->drv->scrypt_positions(cgpu, (uint8_t*)data, start_position, end_position, hash_len_bits, options, out, N, R, P, &tv_start, &tv_end);
+	cgpu->drv->scrypt_positions(cgpu, (uint8_t*)data, start_position, end_position, hash_len_bits, options, out, N, R, P, &tv_start, &tv_end, hashes_computed);
 
 	t = 1e-6 * (tv_end.tv_usec - tv_start.tv_usec) + (tv_end.tv_sec - tv_start.tv_sec);
 	printf("--------------------------------\n");

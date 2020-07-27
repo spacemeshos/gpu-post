@@ -36,7 +36,7 @@ do { \
 	cudaGetLastError(); \
 	x; \
 	cudaError_t err = cudaGetLastError(); \
-	if (err != cudaSuccess && !abort_flag) { \
+	if (err != cudaSuccess && !g_spacemesh_api_abort_flag) { \
 		applog(LOG_ERR, "GPU #%d: Err %d: %s (%s:%d)", gpuId, err, cudaGetErrorString(err), __FILENAME__, __LINE__); \
 	} \
 } while (0)
@@ -308,7 +308,7 @@ bool cuda_scrypt_sync(struct cgpu_info *cgpu, _cudaState *cudaState, int stream)
 	}
 
 	if (err != cudaSuccess) {
-		if (!abort_flag) {
+		if (!g_spacemesh_api_abort_flag) {
 			applog(LOG_ERR, "GPU #%d: CUDA error `%s` while waiting the kernel.", cudaState->cuda_id, cudaGetErrorString(err));
 		}
 		return false;
