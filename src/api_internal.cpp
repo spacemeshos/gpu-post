@@ -16,18 +16,18 @@
 
 #include "scrypt-jane/scrypt-jane.h"
 
-volatile bool abort_flag = false;
-bool opt_debug = false;
+volatile bool g_spacemesh_api_abort_flag = false;
+bool g_spacemesh_api_opt_debug = false;
 #ifdef WIN32
-CRITICAL_SECTION applog_lock;
+CRITICAL_SECTION g_spacemesh_api_applog_lock;
 #else
-pthread_mutex_t applog_lock;
+pthread_mutex_t g_spacemesh_api_applog_lock;
 #endif
 
 static int s_total_devices = 0;
-bool have_cuda = false;
-bool have_opencl = false;
-bool have_vulkan = false;
+bool g_spacemesh_api_have_cuda = false;
+bool g_spacemesh_api_have_opencl = false;
+bool g_spacemesh_api_have_vulkan = false;
 
 static struct cgpu_info s_gpus[MAX_GPUDEVICES]; /* Maximum number apparently possible */
 static struct cgpu_info s_cpu;
@@ -39,24 +39,24 @@ extern "C" void spacemesh_api_init()
 	if (0 == api_inited) {
 		api_inited = 1;
 #ifdef WIN32
-		InitializeCriticalSection(&applog_lock);
+		InitializeCriticalSection(&g_spacemesh_api_applog_lock);
 #else
-		pthread_mutex_init(&applog_lock, NULL);
+		pthread_mutex_init(&g_spacemesh_api_applog_lock, NULL);
 #endif
 
 		memset(s_gpus, 0, sizeof(s_gpus));
 		memset(&s_cpu, 0, sizeof(s_cpu));
 
 #ifdef HAVE_VULKAN
-		have_vulkan = vulkan_drv.drv_detect(s_gpus, &s_total_devices) > 0;
+		g_spacemesh_api_have_vulkan = vulkan_drv.drv_detect(s_gpus, &s_total_devices) > 0;
 #endif
 
 #ifdef HAVE_CUDA
-		have_cuda = cuda_drv.drv_detect(s_gpus, &s_total_devices) > 0;
+		g_spacemesh_api_have_cuda = cuda_drv.drv_detect(s_gpus, &s_total_devices) > 0;
 #endif
 
 #ifdef HAVE_OPENCL
-		have_opencl = opencl_drv.drv_detect(s_gpus, &s_total_devices) > 0;
+		g_spacemesh_api_have_opencl = opencl_drv.drv_detect(s_gpus, &s_total_devices) > 0;
 #endif
 
 		if (cpu_drv.drv_detect(&s_cpu, NULL) > 0) {
@@ -83,7 +83,7 @@ extern "C" struct cgpu_info * spacemesh_api_get_gpu(int id)
 	if (id >= 0 && id < s_total_devices) {
 		return &s_gpus[id];
 	}
-	if (s_total_devices > 0 && id == s_total_devices) {
+	if (id == s_total_devices && s_cpu.available) {
 		return &s_cpu;
 	}
 	return NULL;
@@ -99,14 +99,14 @@ void _quit(int status)
 extern "C" int spacemesh_api_stop(uint32_t ms_timeout)
 {
 	uint32_t timeout = 0;
-	if (abort_flag) {/* already called */
+	if (g_spacemesh_api_abort_flag) {/* already called */
 		return SPACEMESH_API_ERROR_ALREADY;
 	}
 
 	if (api_inited) {
-		abort_flag = true;
+		g_spacemesh_api_abort_flag = true;
 
-		while (abort_flag) {
+		while (g_spacemesh_api_abort_flag) {
 			bool busy = false;
 			for (int i = 0; i < s_total_devices; ++i) {
 				if (s_gpus[i].busy) {
@@ -114,20 +114,21 @@ extern "C" int spacemesh_api_stop(uint32_t ms_timeout)
 					break;
 				}
 			}
+			busy |= s_cpu.busy;
 			if (busy) {
 				if (timeout >= ms_timeout) {
-					abort_flag = false;
+					g_spacemesh_api_abort_flag = false;
 					return SPACEMESH_API_ERROR_TIMEOUT;
 				}
 				usleep(100000);
 				timeout += 100;
 				continue;
 			}
-			abort_flag = false;
+			g_spacemesh_api_abort_flag = false;
 		}
 	}
 	else {
-		abort_flag = false;
+		g_spacemesh_api_abort_flag = false;
 	}
 
 	return SPACEMESH_API_ERROR_NONE;
@@ -221,10 +222,10 @@ void applog(int prio, const char *fmt, ...)
 			// no time prefix, for ccminer -n
 			sprintf(f, "%s%s\n", fmt, "");
 		}
-		pthread_mutex_lock(&applog_lock);
+		pthread_mutex_lock(&g_spacemesh_api_applog_lock);
 		vfprintf(stdout, f, ap);	/* atomic write to stdout */
 		fflush(stdout);
-		pthread_mutex_unlock(&applog_lock);
+		pthread_mutex_unlock(&g_spacemesh_api_applog_lock);
 	}
 	va_end(ap);
 }
@@ -238,7 +239,7 @@ void gpulog(int prio, int dev_id, const char *fmt, ...)
 	int len;
 	va_list ap;
 
-	if (prio == LOG_DEBUG && !opt_debug)
+	if (prio == LOG_DEBUG && !g_spacemesh_api_opt_debug)
 		return;
 
 	len = snprintf(pfmt, 128, "GPU #%d: %s", dev_id, fmt);

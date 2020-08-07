@@ -270,7 +270,7 @@ struct device_drv {
 
 	bool(*init)(struct cgpu_info *);
 
-	int64_t(*scrypt_positions)(struct cgpu_info *, uint8_t *pdata, uint64_t start_pos, uint64_t end_position, uint8_t hash_len_bits, uint32_t options, uint8_t *out, uint32_t N, uint32_t r, uint32_t p, struct timeval *tv_start, struct timeval *tv_end); // (thr, pdata, start_pos, end_position, out, N, r, p, tv_start, tv_end)
+	int64_t(*scrypt_positions)(struct cgpu_info *, uint8_t *pdata, uint64_t start_pos, uint64_t end_position, uint8_t hash_len_bits, uint32_t options, uint8_t *out, uint32_t N, uint32_t r, uint32_t p, struct timeval *tv_start, struct timeval *tv_end, uint64_t *hashes_computed);
 
 	void(*shutdown)(struct cgpu_info *);
 
@@ -319,16 +319,16 @@ struct cgpu_info {
 	bool shutdown;
 };
 
-extern volatile bool abort_flag;
-extern bool opt_debug;
+extern volatile bool g_spacemesh_api_abort_flag;
+extern bool g_spacemesh_api_opt_debug;
 #ifdef WIN32
-extern CRITICAL_SECTION applog_lock;
+extern CRITICAL_SECTION g_spacemesh_api_applog_lock;
 #else
-extern pthread_mutex_t applog_lock;
+extern pthread_mutex_t g_spacemesh_api_applog_lock;
 #endif
-extern bool have_cuda;
-extern bool have_opencl;
-extern bool have_vulkan;
+extern bool g_spacemesh_api_have_cuda;
+extern bool g_spacemesh_api_have_opencl;
+extern bool g_spacemesh_api_have_vulkan;
 
 #define EXIT_CODE_OK            0
 #define EXIT_CODE_USAGE         1

@@ -473,8 +473,12 @@ static bool cpu_init(struct cgpu_info *cgpu)
 	return true;
 }
 
-static int64_t cpu_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uint64_t start_position, uint64_t end_position, uint8_t hash_len_bits, uint32_t options, uint8_t *output, uint32_t N, uint32_t r, uint32_t p, struct timeval *tv_start, struct timeval *tv_end)
+static int64_t cpu_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uint64_t start_position, uint64_t end_position, uint8_t hash_len_bits, uint32_t options, uint8_t *output, uint32_t N, uint32_t r, uint32_t p, struct timeval *tv_start, struct timeval *tv_end, uint64_t *hashes_computed)
 {
+	if (hashes_computed) {
+		*hashes_computed = 0;
+	}
+
 	if (cpu_prepare(cgpu, N, r, p))
 	{
 		_cpuState *cpuState = (_cpuState *)cgpu->device_data;
@@ -486,6 +490,7 @@ static int64_t cpu_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uint
 		gettimeofday(tv_start, NULL);
 
 		*output = 0;
+		cgpu->busy = true;
 
 		do {
 			((uint64_t*)pdata)[4] = n;
@@ -527,12 +532,19 @@ static int64_t cpu_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uint
 				}
 			}
 			n++;
-		} while (n <= end_position && !abort_flag);
+		} while (n <= end_position && !g_spacemesh_api_abort_flag);
 
 		gettimeofday(tv_end, NULL);
+
+		cgpu->busy = false;
+		if (hashes_computed) {
+			*hashes_computed = n - start_position;
+		}
+
+		return (n <= end_position) ? SPACEMESH_API_ERROR_CANCELED : SPACEMESH_API_ERROR_NONE;
 	}
 
-	return 0;
+	return SPACEMESH_API_ERROR;
 }
 
 static void cpu_shutdown(struct cgpu_info *cgpu)
