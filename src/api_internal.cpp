@@ -124,12 +124,10 @@ extern "C" int spacemesh_api_stop(uint32_t ms_timeout)
 				timeout += 100;
 				continue;
 			}
-			g_spacemesh_api_abort_flag = false;
 		}
 	}
-	else {
-		g_spacemesh_api_abort_flag = false;
-	}
+
+	g_spacemesh_api_abort_flag = false;
 
 	return SPACEMESH_API_ERROR_NONE;
 }
