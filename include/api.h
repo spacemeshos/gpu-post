@@ -55,7 +55,7 @@ SPACEMESHAPI int scryptPositions(
 	uint64_t *hashes_per_sec	//
 	);
 
-// stop all GPU work and don�t fill the passed-in buffer with any more results.
+// stop all GPU work and don't fill the passed-in buffer with any more results.
 SPACEMESHAPI int stop(
 	uint32_t ms_timeout			// timeout in milliseconds
 );
