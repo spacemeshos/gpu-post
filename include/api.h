@@ -42,7 +42,7 @@ typedef struct _PostComputeProvider {
 SPACEMESHAPI int scryptPositions(
 	uint32_t provider_id,		// POST compute provider ID
 	const uint8_t *id,			// 32 bytes
-    uint64_t start_position,	// e.g. 0 
+    uint64_t start_position,	// e.g. 0
     uint64_t end_position,		// e.g. 49,999
     uint8_t hash_len_bits,		// (1...8) for each hash output, the number of prefix bits (not bytes) to copy into the buffer
     const uint8_t *salt,		// 32 bytes
@@ -51,10 +51,11 @@ SPACEMESHAPI int scryptPositions(
     uint32_t N,					// scrypt N
     uint32_t R,					// scrypt r
     uint32_t P,					// scrypt p
-	uint64_t *hashes_computed	// 
+	uint64_t *hashes_computed,	//
+	uint64_t *hashes_per_sec	//
 	);
 
-// stop all GPU work and don’t fill the passed-in buffer with any more results.
+// stop all GPU work and donï¿½t fill the passed-in buffer with any more results.
 SPACEMESHAPI int stop(
 	uint32_t ms_timeout			// timeout in milliseconds
 );

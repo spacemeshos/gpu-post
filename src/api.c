@@ -16,7 +16,8 @@ int scryptPositions(
     uint32_t N,
     uint32_t R,
     uint32_t P,
-	uint64_t *hashes_computed
+	uint64_t *hashes_computed,
+	uint64_t *hashes_per_sec
 )
 {
 	uint32_t data[20]; // align 16
@@ -42,17 +43,28 @@ int scryptPositions(
 #ifdef _DEBUG
 	memset(out, 0, (end_position - start_position + 1));
 #endif
+
+	if (!hashes_computed) {
+		uint64_t hashes_computed_local;
+		hashes_computed = &hashes_computed_local;
+	}
+
 	cgpu->drv->scrypt_positions(cgpu, (uint8_t*)data, start_position, end_position, hash_len_bits, options, out, N, R, P, &tv_start, &tv_end, hashes_computed);
 
 	t = 1e-6 * (tv_end.tv_usec - tv_start.tv_usec) + (tv_end.tv_sec - tv_start.tv_sec);
+
 	printf("--------------------------------\n");
-	printf("Performance: %.0f (%u positions in %.2fs)\n", (end_position - start_position + 1) / t, (unsigned)(end_position - start_position + 1), t);
+	printf("Performance: %.0f (%u positions in %.2fs)\n", *hashes_computed / t, (unsigned)*hashes_computed, t);
 	printf("--------------------------------\n");
+
+	if (hashes_per_sec) {
+		*hashes_per_sec = *hashes_computed / t;
+	}
 
 	return 0;
 }
 
-// stop all GPU work and don’t fill the passed-in buffer with any more results.
+// stop all GPU work and donï¿½t fill the passed-in buffer with any more results.
 int stop(uint32_t ms_timeout)
 {
 	return spacemesh_api_stop(ms_timeout);
