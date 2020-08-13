@@ -7,7 +7,7 @@ extern void spacemesh_api_init();
 int scryptPositions(
 	uint32_t provider_id, // POST compute provider ID
 	const uint8_t *id, // 32 bytes
-    uint64_t start_position,  // e.g. 0 
+    uint64_t start_position,  // e.g. 0
     uint64_t end_position, // e.g. 49,999
     uint8_t hash_len_bits, // (1...8) for each hash output, the number of prefix bits (not bytes) to copy into the buffer
     const uint8_t *salt,  // 32 bytes
@@ -25,6 +25,7 @@ int scryptPositions(
 	struct timeval tv_start;
 	struct timeval tv_end;
 	struct cgpu_info *cgpu = NULL;
+	uint64_t hashes_computed_local;
 
 	memcpy(data, id, 32);
 	data[8] = 0;
@@ -45,7 +46,6 @@ int scryptPositions(
 #endif
 
 	if (!hashes_computed) {
-		uint64_t hashes_computed_local;
 		hashes_computed = &hashes_computed_local;
 	}
 
