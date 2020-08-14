@@ -96,6 +96,11 @@ void _quit(int status)
 	exit(status);
 }
 
+extern "C" int spacemesh_api_stop_inprogress()
+{
+	return g_spacemesh_api_abort_flag;
+}
+
 extern "C" int spacemesh_api_stop(uint32_t ms_timeout)
 {
 	uint32_t timeout = 0;
@@ -124,6 +129,7 @@ extern "C" int spacemesh_api_stop(uint32_t ms_timeout)
 				timeout += 100;
 				continue;
 			}
+			g_spacemesh_api_abort_flag = false;
 		}
 	}
 
