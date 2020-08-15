@@ -60,6 +60,9 @@ SPACEMESHAPI int stop(
 	uint32_t ms_timeout			// timeout in milliseconds
 );
 
+// return non-zero if stop in progress
+SPACEMESHAPI int spacemesh_api_stop_inprogress();
+
 // return POST compute providers info
 SPACEMESHAPI int spacemesh_api_get_providers(
 	PostComputeProvider *providers, // out providers info buffer, if NULL - return count of available providers
