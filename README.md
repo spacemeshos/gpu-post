@@ -18,6 +18,7 @@ A c libraray implementing the POST API setup method for cpu, cuda and openCL com
 - Vulkan SDK 1.1.
 - An AMD GPU supporting OpenCL 1.2 or newer for OpenCL testing. Install the AMD Linux driver package (with the opencl option selected).
 - Cmake
+- GCC 6 or 7
 
 ### OS X
 - Cmake
