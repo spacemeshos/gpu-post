@@ -18,6 +18,7 @@ A c libraray implementing the POST API setup method for cpu, cuda and openCL com
 - Vulkan SDK 1.1.
 - An AMD GPU supporting OpenCL 1.2 or newer for OpenCL testing. Install the AMD Linux driver package (with the opencl option selected).
 - Cmake
+- GCC 6 or 7
 
 ### OS X
 - Cmake
@@ -177,3 +178,7 @@ Scrypt Benchmarks (n=512, r=1, p=1) 1 byte per leaf, batch size leaves per API c
 | 01/31/2020 	| avive   	| sm-scrypt 	| AMD Radeon Pro 560x 4GB              	| macOS 10.14.6        	| vulkan optimized prototype    	     	| 406   	|  	|                                        	|                                          	|
 | 01/31/2020 	| avive   	| sm-scrypt 	| Intel(R) UHD Graphics 630 1536MB              	| macOS 10.14.6        	| vulkan optimized prototype    	     	| 53   	|  	
 | 05/06/2020 	| avive   	| sm-scrypt 	| AMD Radeon RX 580             	| Windows 10        	| vulkan optimized prototype    	     	| 1074   	|  1.074	
+| 09/08/2020 	| avive   	| sm-scrypt 	| Nvidia Tesla V 100 (16GB)            	| Ubuntu 20.04 NVIDIA-SMI 450.51.06 CUDA Version: 11.0 | vulkan optimized prototype    	     	| 4,166   	|  4.166	
+| 09/08/2020 	| avive   	| sm-scrypt 	| Nvidia Tesla T4 (16GB)            	| Ubuntu 20.04 NVIDIA-SMI 450.51.06 CUDA Version: 11.0 | vulkan optimized prototype   	     	|   	1,252 |  1.252	
+| 09/08/2020 	| avive   	| sm-scrypt 	| Nvidia Tesla P100-PCIE (32GB)         | Ubuntu 20.04 NVIDIA-SMI 450.51.06 CUDA Version: 11.0 | vulkan optimized prototype   	     	|   	2083 | 2.083
+| 09/08/2020 	| avive   	| sm-scrypt 	| Nvidia Tesla P4 (32GB)         | Ubuntu 20.04 NVIDIA-SMI 450.51.06 CUDA Version: 11.0 | vulkan optimized prototype   	     	|   	757.57 | 0.75
