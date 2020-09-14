@@ -81,7 +81,7 @@ static void reinit_cuda_device(struct cgpu_info *gpu)
 
 static bool cuda_prepare(struct cgpu_info *cgpu, unsigned N, uint32_t r, uint32_t p, uint32_t hash_len_bits, bool throttled)
 {
-	if (N != cgpu->N || r != cgpu->r || p != cgpu->p) {
+	if (N != cgpu->N || r != cgpu->r || p != cgpu->p || hash_len_bits != cgpu->hash_len_bits) {
 		applog(LOG_INFO, "Init GPU thread for GPU %i, platform GPU %i, pci [%d:%d]", cgpu->id, cgpu->driver_id, cgpu->pci_bus_id, cgpu->pci_device_id);
 		if (cgpu->device_data) {
 			cuda_shutdown(cgpu);
@@ -89,6 +89,7 @@ static bool cuda_prepare(struct cgpu_info *cgpu, unsigned N, uint32_t r, uint32_
 		cgpu->N = N;
 		cgpu->r = r;
 		cgpu->p = p;
+		cgpu->hash_len_bits = hash_len_bits;
 		cgpu->device_data = initCuda(cgpu, N, r, p, hash_len_bits, throttled);
 		if (!cgpu->device_data) {
 			applog(LOG_ERR, "Failed to init GPU, disabling device %d", cgpu->id);
@@ -152,6 +153,7 @@ static int64_t cuda_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uin
 		uint8_t *out = output;
 		uint64_t chunkSize = (cgpu->thread_concurrency * hash_len_bits) / 8;
 		uint64_t outLength = ((end_position - start_position + 1) * hash_len_bits + 7) / 8;
+		uint64_t positions = 0;
 
 		do {
 			nonce[nxt] = n;
@@ -159,6 +161,7 @@ static int64_t cuda_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uin
 			// all on gpu
 
 			n += cgpu->thread_concurrency;
+			positions += cgpu->thread_concurrency;
 			if (g_spacemesh_api_opt_debug && (iteration % 64 == 0)) {
 				applog(LOG_DEBUG, "GPU #%d: n=%x", cgpu->driver_id, n);
 			}
@@ -196,10 +199,16 @@ static int64_t cuda_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uin
 		gettimeofday(tv_end, NULL);
 
 		cgpu->busy = 0;
+		size_t total = end_position - start_position + 1;
+		positions = min(total, positions);
+
 		if (hashes_computed) {
-			uint64_t computed = n - start_position;
-			size_t total = end_position - start_position + 1;
-			*hashes_computed = min(computed, total);
+			*hashes_computed = positions;
+		}
+
+		int usedBits = (positions * hash_len_bits % 8);
+		if (usedBits) {
+			output[(positions * hash_len_bits) / 8] &= 0xff >> (8 - usedBits);
 		}
 
 		return (n <= end_position) ? SPACEMESH_API_ERROR_CANCELED : SPACEMESH_API_ERROR_NONE;

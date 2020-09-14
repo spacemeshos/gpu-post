@@ -62,6 +62,7 @@ int initVulkanLibrary()
 	LOAD_VULKAN_FUNCTION(vkCreateCommandPool);
 	LOAD_VULKAN_FUNCTION(vkAllocateCommandBuffers);
 	LOAD_VULKAN_FUNCTION(vkCreateSemaphore);
+	LOAD_VULKAN_FUNCTION(vkCreateFence);
 	LOAD_VULKAN_FUNCTION(vkBeginCommandBuffer);
 	LOAD_VULKAN_FUNCTION(vkCmdBindPipeline);
 	LOAD_VULKAN_FUNCTION(vkCmdBindDescriptorSets);
@@ -78,6 +79,9 @@ int initVulkanLibrary()
 	LOAD_VULKAN_FUNCTION(vkDestroyDescriptorPool);
 	LOAD_VULKAN_FUNCTION(vkDestroyShaderModule);
 	LOAD_VULKAN_FUNCTION(vkDestroySemaphore);
+	LOAD_VULKAN_FUNCTION(vkDestroyFence);
+	LOAD_VULKAN_FUNCTION(vkWaitForFences);
+	LOAD_VULKAN_FUNCTION(vkResetFences);
 
 	return 0;
 }

@@ -68,6 +68,7 @@ typedef struct {
 	VkShaderModule shaderModule;
 	VkDescriptorSetLayout descriptorSetLayout;
 	VkQueue queue;
+	VkFence fence;
 
 	uint32_t alignment;
 	uint64_t bufSize;
@@ -218,6 +219,12 @@ static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameS
 	semaphoreCreateInfo.flags = 0;
 	CHECK_RESULT(gVulkan.vkCreateSemaphore(state->vkDevice, &semaphoreCreateInfo, NULL, &state->semaphore), "vkCreateSemaphore", NULL);
 
+	VkFenceCreateInfo fenceCreateInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+	fenceCreateInfo.pNext = NULL;
+	fenceCreateInfo.flags = 0;
+
+	CHECK_RESULT(gVulkan.vkCreateFence(state->vkDevice, &fenceCreateInfo, NULL, &state->fence), "vkCreateFence", NULL);
+
 	char options[256];
 	snprintf(options, sizeof(options), "#version 450\n#define LOOKUP_GAP %d\n#define CONCURRENT_THREADS %d\n#define WORKSIZE %d\n#define LABEL_SIZE %d\n",
 		cgpu->lookup_gap, (unsigned int)cgpu->thread_concurrency, (int)cgpu->work_size, hash_len_bits);
@@ -332,7 +339,7 @@ static void vulkan_shutdown(struct cgpu_info *cgpu);
 
 static bool vulkan_prepare(struct cgpu_info *cgpu, unsigned N, uint32_t r, uint32_t p, uint32_t hash_len_bits, bool throttled)
 {
-	if (N != cgpu->N || r != cgpu->r || p != cgpu->p) {
+	if (N != cgpu->N || r != cgpu->r || p != cgpu->p || hash_len_bits != cgpu->hash_len_bits) {
 		if (cgpu->device_data) {
 			vulkan_shutdown(cgpu);
 		}
@@ -340,6 +347,7 @@ static bool vulkan_prepare(struct cgpu_info *cgpu, unsigned N, uint32_t r, uint3
 		cgpu->N = N;
 		cgpu->r = r;
 		cgpu->p = p;
+		cgpu->hash_len_bits = hash_len_bits;
 
 		VkPhysicalDeviceProperties physicalDeviceProperties;
 		gVulkan.vkGetPhysicalDeviceProperties(gPhysicalDevices[cgpu->driver_id], &physicalDeviceProperties);
@@ -380,6 +388,8 @@ static int64_t vulkan_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, u
 		size_t positions = end_position - start_position + 1;
 		uint64_t chunkSize = (cgpu->thread_concurrency * hash_len_bits) / 8;
 		uint64_t outLength = ((end_position - start_position + 1) * hash_len_bits + 7) / 8;
+		uint64_t computedPositions = 0;
+		uint8_t *out = output;
 
 		// transfer input to GPU
 		char *ptr = NULL;
@@ -403,19 +413,30 @@ static int64_t vulkan_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, u
 			gVulkan.vkUnmapMemory(state->vkDevice, state->gpuSharedMemory);
 
 			n += cgpu->thread_concurrency;
-
+			computedPositions += cgpu->thread_concurrency;
+#if 0
 			VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO, 0, 0, 0, 0, 1, &state->commandBuffer, 1, &state->semaphore };
 			CHECK_RESULT(gVulkan.vkQueueSubmit(state->queue, 1, &submitInfo, VK_NULL_HANDLE), "vkQueueSubmit", 0);
-
 			CHECK_RESULT(gVulkan.vkQueueWaitIdle(state->queue), "vkQueueWaitIdle", 0);
+#else
+			CHECK_RESULT(gVulkan.vkResetFences(state->vkDevice, 1, &state->fence), "vkResetFences", 0);
+			VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO, 0, 0, 0, 0, 1, &state->commandBuffer, 0, 0 };
+			CHECK_RESULT(gVulkan.vkQueueSubmit(state->queue, 1, &submitInfo, state->fence), "vkQueueSubmit", 0);
+			VkResult res;
+			do {
+				uint64_t delay = 5ULL * 1000ULL * 1000ULL * 1000ULL;
+				res = gVulkan.vkWaitForFences(state->vkDevice, 1, &state->fence, VK_TRUE, delay);
+			} while (res == VK_TIMEOUT);
+			gVulkan.vkResetFences(state->vkDevice, 1, &state->fence);
+#endif
 
 			uint32_t length = (uint32_t)min(chunkSize, outLength);
 
 			CHECK_RESULT(gVulkan.vkMapMemory(state->vkDevice, state->gpuSharedMemory, tfxOrigin, state->memOutputSize, 0, (void **)&ptr), "vkMapMemory", 0);
-			memcpy(output, ptr, length);
+			memcpy(out, ptr, length);
 			gVulkan.vkUnmapMemory(state->vkDevice, state->gpuSharedMemory);
 
-			output += length;
+			out += length;
 			outLength -= length;
 			positions -= cgpu->thread_concurrency;
 
@@ -424,10 +445,16 @@ static int64_t vulkan_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, u
 		gettimeofday(tv_end, NULL);
 
 		cgpu->busy = 0;
+		size_t total = end_position - start_position + 1;
+		computedPositions = min(total, computedPositions);
+
 		if (hashes_computed) {
-			uint64_t computed = n - start_position;
-			size_t total = end_position - start_position + 1;
-			*hashes_computed = min(computed, total);
+			*hashes_computed = computedPositions;
+		}
+
+		int usedBits = (computedPositions * hash_len_bits % 8);
+		if (usedBits) {
+			output[(computedPositions * hash_len_bits) / 8] &= 0xff >> (8 - usedBits);
 		}
 
 		return (n <= end_position) ? SPACEMESH_API_ERROR_CANCELED : SPACEMESH_API_ERROR_NONE;
@@ -460,6 +487,7 @@ static void vulkan_shutdown(struct cgpu_info *cgpu)
 		gVulkan.vkDestroyDescriptorPool(vulkanState->vkDevice, vulkanState->descriptorPool, NULL);
 		gVulkan.vkDestroyShaderModule(vulkanState->vkDevice, vulkanState->shaderModule, NULL);
 		gVulkan.vkDestroySemaphore(vulkanState->vkDevice, vulkanState->semaphore, NULL);
+		gVulkan.vkDestroyFence(vulkanState->vkDevice, vulkanState->fence, NULL);
 
 		free(cgpu->device_data);
 		cgpu->device_data = NULL;

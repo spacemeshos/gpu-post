@@ -295,6 +295,7 @@ struct cgpu_info {
 	uint32_t gpu_core_count;
 	uint64_t gpu_max_alloc;
 
+	uint32_t hash_len_bits;
 	uint32_t N;
 	uint32_t r;
 	uint32_t p;

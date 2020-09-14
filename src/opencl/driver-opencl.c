@@ -187,7 +187,7 @@ static uint32_t *blank_res;
 
 static bool opencl_prepare(struct cgpu_info *cgpu, unsigned N, uint32_t r, uint32_t p, cl_uint hash_len_bits, bool throttled)
 {
-	if (N != cgpu->N || r != cgpu->r || p != cgpu->p) {
+	if (N != cgpu->N || r != cgpu->r || p != cgpu->p || hash_len_bits != cgpu->hash_len_bits) {
 		cgpu->name[0] = 0;
 		applog(LOG_INFO, "Init GPU thread for GPU %i, platform GPU %i, pci [%d:%d]", cgpu->id, cgpu->driver_id, cgpu->pci_bus_id, cgpu->pci_device_id);
 		if (cgpu->device_data) {
@@ -197,6 +197,7 @@ static bool opencl_prepare(struct cgpu_info *cgpu, unsigned N, uint32_t r, uint3
 		cgpu->N = N;
 		cgpu->r = r;
 		cgpu->p = p;
+		cgpu->hash_len_bits = hash_len_bits;
 
 		cgpu->device_data = initCl(cgpu, hash_len_bits, throttled);
 		if (!cgpu->device_data) {
@@ -242,6 +243,8 @@ static int64_t opencl_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, u
 		size_t positions = end_position - start_position + 1;
 		uint64_t chunkSize = (cgpu->thread_concurrency * hash_len_bits) / 8;
 		uint64_t outLength = ((end_position - start_position + 1) * hash_len_bits + 7) / 8;
+		uint64_t computedPositions = 0;
+		uint8_t *out = output;
 
 		do {
 			status = queue_scrypt_kernel(clState, pdata, n, N, (firstBuffer ? 0 : 1), hash_len_bits, r, p);
@@ -264,14 +267,15 @@ static int64_t opencl_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, u
 			}
 
 			n += cgpu->thread_concurrency;
+			computedPositions += cgpu->thread_concurrency;
 #if USE_ASYNC_BUFFER_READ
 			if (clState->outputEvent[(firstBuffer ? 0 : 1)]) {
 				clReleaseEvent(clState->outputEvent[(firstBuffer ? 0 : 1)]);
 				clState->outputEvent[(firstBuffer ? 0 : 1)] = NULL;
 			}
-			status = clEnqueueReadBuffer(clState->commandQueue, clState->outputBuffer[(firstBuffer ? 0 : 1)], CL_FALSE, 0, min(chunkSize, outLength), output, 0, NULL, &clState->outputEvent[(firstBuffer ? 0 : 1)]);
+			status = clEnqueueReadBuffer(clState->commandQueue, clState->outputBuffer[(firstBuffer ? 0 : 1)], CL_FALSE, 0, min(chunkSize, outLength), out, 0, NULL, &clState->outputEvent[(firstBuffer ? 0 : 1)]);
 #else
-			status = clEnqueueReadBuffer(clState->commandQueue, clState->outputBuffer[(firstBuffer ? 0 : 1)], CL_TRUE, 0, min(chunkSize, outLength), output, 0, NULL, NULL);
+			status = clEnqueueReadBuffer(clState->commandQueue, clState->outputBuffer[(firstBuffer ? 0 : 1)], CL_TRUE, 0, min(chunkSize, outLength), out, 0, NULL, NULL);
 #endif
 			if (unlikely(status != CL_SUCCESS)) {
 				applog(LOG_ERR, "Error: clEnqueueReadBuffer failed error %d. (clEnqueueReadBuffer)", status);
@@ -291,7 +295,7 @@ static int64_t opencl_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, u
 #else
 			clFinish(clState->commandQueue);
 #endif
-			output += chunkSize;
+			out += chunkSize;
 			outLength -= chunkSize;
 			positions -= cgpu->thread_concurrency;
 
@@ -307,10 +311,16 @@ static int64_t opencl_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, u
 		gettimeofday(tv_end, NULL);
 
 		cgpu->busy = 0;
+		size_t total = end_position - start_position + 1;
+		computedPositions = min(total, computedPositions);
+
 		if (hashes_computed) {
-			uint64_t computed = n - start_position;
-			size_t total = end_position - start_position + 1;
-			*hashes_computed = min(computed, total);
+			*hashes_computed = computedPositions;
+		}
+
+		int usedBits = (computedPositions * hash_len_bits % 8);
+		if (usedBits) {
+			output[(computedPositions * hash_len_bits) / 8] &= 0xff >> (8 - usedBits);
 		}
 
 		return (n <= end_position) ? SPACEMESH_API_ERROR_CANCELED : SPACEMESH_API_ERROR_NONE;

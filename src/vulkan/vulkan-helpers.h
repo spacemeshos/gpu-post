@@ -45,6 +45,7 @@ typedef struct _Vulkan {
 	DECLARE_VULKAN_FUNCTION(vkCreateCommandPool);
 	DECLARE_VULKAN_FUNCTION(vkAllocateCommandBuffers);
 	DECLARE_VULKAN_FUNCTION(vkCreateSemaphore);
+	DECLARE_VULKAN_FUNCTION(vkCreateFence);
 	DECLARE_VULKAN_FUNCTION(vkBeginCommandBuffer);
 	DECLARE_VULKAN_FUNCTION(vkCmdBindPipeline);
 	DECLARE_VULKAN_FUNCTION(vkCmdBindDescriptorSets);
@@ -61,6 +62,9 @@ typedef struct _Vulkan {
 	DECLARE_VULKAN_FUNCTION(vkDestroyDescriptorPool);
 	DECLARE_VULKAN_FUNCTION(vkDestroyShaderModule);
 	DECLARE_VULKAN_FUNCTION(vkDestroySemaphore);
+	DECLARE_VULKAN_FUNCTION(vkDestroyFence);
+	DECLARE_VULKAN_FUNCTION(vkWaitForFences);
+	DECLARE_VULKAN_FUNCTION(vkResetFences);
 } Vulkan;
 
 #undef	DECLARE_VULKAN_FUNCTION
