@@ -291,7 +291,94 @@ extern "C" bool loadSource(const char * file_name, std::vector<uint8_t> &buffer)
 	return true;
 }
 
-extern "C" VkPipeline compileShader(VkDevice vkDevice, VkPipelineLayout pipelineLayout, VkShaderModule *shader_module, const char *glsl_source, const char *options)
+static void stdprintf(std::string &out, const char *format, ...)
+{
+	char buffer[256];
+	va_list argList;
+	va_start(argList, format);
+	vsnprintf(buffer, sizeof(buffer), format, argList);
+	out += buffer;
+}
+
+struct GlCodeWritter
+{
+	GlCodeWritter(int aLabelSize) : _label_size(aLabelSize)
+	{
+		_label_words_size = (_label_size + 31) / 32;
+		_use_word_copy = 0 == (_label_size % 32);
+		_label_last_words_size = _label_size % 32;
+	}
+
+	void outLabel(uint32_t i, std::string &out)
+	{
+		if (_use_word_copy) {
+			for (int current_word = 0; current_word < _label_words_size; current_word++) {
+				stdprintf(out, "outputBuffer0[i++] = labels[%d];\n", i * _label_words_size + current_word);
+			}
+		}
+		else {
+			int current_word = 0;
+			if (_label_words_size > 1) {
+				if (32 == _available) {
+					while (current_word < (_label_words_size + 1)) {
+						stdprintf(out, "outputBuffer0[i++] = labels[%d];\n", i * _label_words_size + current_word);
+						current_word++;
+					}
+					_current_nonce = 0;
+				}
+				else {
+					while (current_word < (_label_words_size + 1)) {
+						stdprintf(out, "nonce.%c |= labels[%d] << %d;\n", 'x' + _current_nonce, i * _label_words_size + current_word, (32 - _available));
+						stdprintf(out, "outputBuffer0[i++] = nonce.%c;\n", 'x' + _current_nonce);
+						inc_current_nonce();
+						stdprintf(out, "nonce.%c = labels[%d] >> %d;\n", 'x' + _current_nonce, i * _label_words_size + current_word, _available);
+						current_word++;
+					}
+				}
+			}
+			if (_label_last_words_size > _available) {
+				stdprintf(out, "nonce.%c |= labels[%d] << %d;\n", 'x' + _current_nonce, i * _label_words_size + current_word, (32 - _available));
+				stdprintf(out, "outputBuffer0[i++] = nonce.%c;\n", 'x' + _current_nonce);
+				inc_current_nonce();
+				stdprintf(out, "nonce.%c = labels[%d] >> %d;\n", 'x' + _current_nonce, i * _label_words_size + current_word, _available);
+				_available = 32 - (_label_last_words_size - _available);
+			}
+			else {
+				if (_available == 32) {
+					stdprintf(out, "nonce.%c = labels[%d];\n", 'x' + _current_nonce, i * _label_words_size + current_word);
+				}
+				else {
+					stdprintf(out, "nonce.%c |= labels[%d] << %d;\n", 'x' + _current_nonce, i * _label_words_size + current_word, (32 - _available));
+				}
+				_available -= _label_last_words_size;
+				if (0 == _available) {
+					stdprintf(out, "outputBuffer0[i++] = nonce.%c;\n", 'x' + _current_nonce);
+					_available = 32;
+					inc_current_nonce();
+				}
+			}
+		}
+	}
+
+	void inc_current_nonce()
+	{
+		if (_current_nonce) {
+			_current_nonce = 0;
+		}
+		else {
+			_current_nonce = 1;
+		}
+	}
+
+	int _label_size;
+	int _label_words_size;
+	int _label_last_words_size;
+	int _current_nonce = 0;
+	int _available = 32;
+	bool _use_word_copy;
+};
+
+extern "C" VkPipeline compileShader(VkDevice vkDevice, VkPipelineLayout pipelineLayout, VkShaderModule *shader_module, const char *glsl_source, const char *options, int work_size, int hash_len_bits)
 {
 	std::vector<uint32_t> spirv;
 	std::string           info_log;
@@ -302,6 +389,105 @@ extern "C" VkPipeline compileShader(VkDevice vkDevice, VkPipelineLayout pipeline
 		source += '\n';
 	}
 	source.append(glsl_source);
+
+	GlCodeWritter writter(hash_len_bits);
+	std::string packer;
+
+	if (writter._label_words_size == 1) {
+		if (hash_len_bits == 32) {
+			source += "labels[lid] = hmac_pw.outer.state4[0].x;\n";
+		}
+		else {
+			stdprintf(source, "labels[lid] = hmac_pw.outer.state4[0].x & 0x%08x;\n", (1 << hash_len_bits) - 1);
+		}
+	}
+	else {
+		std::string last;
+		stdprintf(source, "tmp = lid * %u;\n", writter._label_words_size);
+		if (writter._label_words_size > 1) {
+			source += "labels[tmp++] = hmac_pw.outer.state4[0].x;\n";
+			last = "labels[tmp] = hmac_pw.outer.state4[0].y";
+		}
+		if (writter._label_words_size > 2) {
+			source += "labels[tmp++] = hmac_pw.outer.state4[0].y;\n";
+			last = "labels[tmp++] = hmac_pw.outer.state4[0].z";
+		}
+		if (writter._label_words_size > 3) {
+			source += "labels[tmp++] = hmac_pw.outer.state4[0].z;\n";
+			last = "labels[tmp++] = hmac_pw.outer.state4[0].w";
+		}
+		if (writter._label_words_size > 4) {
+			source += "labels[tmp++] = hmac_pw.outer.state4[0].w;\n";
+			last = "labels[tmp++] = hmac_pw.outer.state4[1].x";
+		}
+		if (writter._label_words_size > 5) {
+			source += "labels[tmp++] = hmac_pw.outer.state4[1].x;\n";
+			last = "labels[tmp++] = hmac_pw.outer.state4[1].y";
+		}
+		if (writter._label_words_size > 6) {
+			source += "labels[tmp++] = hmac_pw.outer.state4[1].y;\n";
+			last = "labels[tmp++] = hmac_pw.outer.state4[1].z";
+		}
+		if (writter._label_words_size > 7) {
+			source += "labels[tmp++] = hmac_pw.outer.state4[1].z;\n";
+			last = "labels[tmp++] = hmac_pw.outer.state4[1].w";
+		}
+		if (writter._label_words_size > 8) {
+			source += "labels[tmp++] = hmac_pw.outer.state4[1].w;\n";
+			last = "labels[tmp++] = hmac_pw.outer.state4[2].x";
+		}
+		if (writter._label_words_size > 9) {
+			source += "labels[tmp++] = hmac_pw.outer.state4[2].x;\n";
+			last = "labels[tmp++] = hmac_pw.outer.state4[2].y";
+		}
+		if (writter._label_words_size > 10) {
+			source += "labels[tmp++] = hmac_pw.outer.state4[2].y;\n";
+			last = "labels[tmp++] = hmac_pw.outer.state4[2].z";
+		}
+		if (writter._label_words_size > 11) {
+			source += "labels[tmp++] = hmac_pw.outer.state4[2].z;\n";
+			last = "labels[tmp++] = hmac_pw.outer.state4[2].w";
+		}
+		if (writter._label_words_size > 12) {
+			source += "labels[tmp++] = hmac_pw.outer.state4[2].w;\n";
+			last = "labels[tmp++] = hmac_pw.outer.state4[3].x";
+		}
+		if (writter._label_words_size > 13) {
+			source += "labels[tmp++] = hmac_pw.outer.state4[3].x;\n";
+			last = "labels[tmp++] = hmac_pw.outer.state4[3].y";
+		}
+		if (writter._label_words_size > 14) {
+			source += "labels[tmp++] = hmac_pw.outer.state4[3].y;\n";
+			last = "labels[tmp++] = hmac_pw.outer.state4[3].z";
+		}
+		if (writter._label_words_size > 15) {
+			source += "labels[tmp++] = hmac_pw.outer.state4[3].z;\n";
+			last = "labels[tmp++] = hmac_pw.outer.state4[3].w";
+		}
+		source += last;
+		if (0 == hash_len_bits % 32) {
+			source += ";\n";
+		}
+		else {
+			stdprintf(source, " & 0x%08x;\n", (1 << (hash_len_bits % 32)) - 1);
+		}
+	}
+
+	source += "barrier();\n";
+	source += "if (0 == lid) {\n";
+	if (work_size == 128) {
+		source += "i = (gid * LABEL_SIZE) >> 6;\n";
+	}
+	else {
+		source += "i = (gid * LABEL_SIZE) >> 5;\n";
+	}
+
+	for (uint32_t i = 0; i < work_size; i++) {
+		writter.outLabel(i, packer);
+	}
+
+	source.append(packer);
+	source += "}}\n";
 
 	// Compile the GLSL source
 	if (!compile_to_spirv(VK_SHADER_STAGE_COMPUTE_BIT, source, "main", spirv, info_log))
