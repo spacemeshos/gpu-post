@@ -1046,6 +1046,110 @@ void cuda_post_keccak512_1(uint32_t *g_odata, uint8_t *out, uint64_t nonce, uint
 	}
 }
 
+__device__ void labels_copy(uint8_t *hashes, uint32_t hashes_count, uint8_t *output, uint32_t hash_len_bits)
+{
+	uint32_t label_full_bytes = hash_len_bits / 8;
+	uint32_t label_total_bytes = (hash_len_bits + 7) / 8;
+	uint8_t label_last_byte_length = hash_len_bits & 7;
+	uint8_t label_last_byte_mask = (1 << label_last_byte_length) - 1;
+	uint32_t available = 8;
+	uint8_t label;
+	int use_byte_copy = 0 == (hash_len_bits % 8);
+
+	output[0] = 0;
+
+	while (hashes_count--) {
+		uint8_t *hash = hashes;
+		hashes += 32;
+		if (use_byte_copy) {
+			memcpy(output, hash, label_full_bytes);
+			output += label_full_bytes;
+		}
+		else {
+			if (label_full_bytes) {
+				if (8 == available) {
+					memcpy(output, hash, label_full_bytes);
+					output += label_full_bytes;
+					output[0] = 0;
+				}
+				else {
+					uint8_t lo_part_mask = (1 << available) - 1;
+					uint8_t lo_part_shift = 8 - available;
+					uint8_t hi_part_shift = available;
+
+					for (int i = 0; i < label_full_bytes; i++) {
+						// get 8 bits
+						label = hash[i];
+						*output++ |= (label & lo_part_mask) << lo_part_shift;
+						*output = label >> hi_part_shift;
+					}
+				}
+			}
+			uint8_t label = hash[label_full_bytes] & label_last_byte_mask;
+			if (label_last_byte_length > available) {
+				uint8_t lo_part_mask = (1 << available) - 1;
+				uint8_t lo_part_shift = 8 - available;
+				*output++ |= (label & lo_part_mask) << lo_part_shift;
+				*output = label >> available;
+				available = 8 - (label_last_byte_length - available);
+			}
+			else {
+				*output |= label << (8 - available);
+				available -= label_last_byte_length;
+				if (0 == available) {
+					available = 8;
+					output++;
+					if (hashes_count) {
+						output[0] = 0;
+					}
+				}
+			}
+		}
+	}
+}
+
+__global__ __launch_bounds__(128)
+void cuda_post_keccak512_9_256(uint32_t *g_odata, uint8_t *out, uint64_t nonce, uint32_t r, uint32_t hash_len_bits)
+{
+	__shared__ uint32_t hashes[128][8];
+
+	uint32_t data[20];
+	uint32_t label;
+
+	const uint32_t thread = blockIdx.x * blockDim.x + threadIdx.x;
+	g_odata += thread * 32 * r;
+	nonce += thread;
+
+#pragma unroll
+	for (int i = 0; i < 19; i++) {
+		data[i] = c_data[i];
+	}
+	((uint64_t*)data)[4] = nonce;
+
+	pbkdf2_hmac_state hmac_pw;
+
+	/* hmac(password, ...) */
+	pbkdf2_hmac_init72(&hmac_pw, data);
+
+	/* hmac(password, salt...) */
+	uint32_t buffered = pbkdf2_hmac_update(&hmac_pw, g_odata, 128 * r);
+
+	/* U1 = hmac(password, salt || be(i)) */
+	uint32_t be = 0x01000000U;//cuda_swab32(1);
+	buffered = pbkdf2_hmac_buffer_update4(&hmac_pw, be, buffered);
+	label = pbkdf2_hmac_finish(&hmac_pw, buffered) & 0x01;
+	
+	*(uint64_t*)&hashes[threadIdx.x][0] = hmac_pw.outer.state[0];
+	*(uint64_t*)&hashes[threadIdx.x][2] = hmac_pw.outer.state[1];
+	*(uint64_t*)&hashes[threadIdx.x][4] = hmac_pw.outer.state[2];
+	*(uint64_t*)&hashes[threadIdx.x][6] = hmac_pw.outer.state[3];
+
+	if (0 == threadIdx.x % 32) {
+		out += thread * hash_len_bits / 8;
+		labels_copy((uint8_t*)&hashes[threadIdx.x], 32, out, hash_len_bits);
+	}
+}
+
 //
 // callable host code to initialize constants and to call kernels
 //
@@ -1105,5 +1209,9 @@ extern "C" void post_keccak512(_cudaState *cudaState, int stream, uint64_t nonce
 	case 1:
 		cuda_post_keccak512_1 << <grid, block, 0, cudaState->context_streams[stream] >> > ((uint32_t *)cudaState->context_odata[stream], cudaState->context_labels[stream], nonce, r);
 		break;
+	default:
+		if (hash_len_bits <= 256) {
+			cuda_post_keccak512_9_256 << <grid, block, 0, cudaState->context_streams[stream] >> > ((uint32_t *)cudaState->context_odata[stream], cudaState->context_labels[stream], nonce, r, hash_len_bits);
+		}
 	}
 }
