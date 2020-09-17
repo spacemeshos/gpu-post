@@ -12,9 +12,11 @@
 #endif
 
 #define	DO_COMPARE_RESULTS	0
+#define	LABELS_COUNT	2500000
 //#define	LABELS_COUNT	249999
-#define	LABELS_COUNT	(3*32*1024 - 1)
-#define	LABEL_SIZE		8
+//#define	LABELS_COUNT	32768
+//#define	LABELS_COUNT	(3*32*1024 - 1)
+#define	LABEL_SIZE		16
 
 static void print(uint8_t *data)
 {
@@ -23,6 +25,7 @@ static void print(uint8_t *data)
 	}
 	printf("\n");
 }
+
 
 int main()
 {
@@ -44,16 +47,16 @@ int main()
 
 		if (spacemesh_api_get_providers(providers, providersCount) == providersCount) {
 			int i;
-			uint8_t *out = (uint8_t *)malloc(providersCount * LABELS_COUNT);
+			uint8_t *out = (uint8_t *)malloc(providersCount * LABELS_COUNT * 32);
 			bool checkOuitput = false;
 			int cpu;
 
-			for (uint8_t labelSize = 8; labelSize > 0; labelSize--) {
+			for (uint8_t labelSize = 37; labelSize > 29; labelSize--) {
 #if LABELS_COUNT <= 250000
 				for (i = 0; i < providersCount; i++) {
 					if (providers[i].compute_api == COMPUTE_API_CLASS_CPU) {
 						memset(out + i * LABELS_COUNT, 0, LABELS_COUNT);
-						scryptPositions(providers[i].id, id, 0, LABELS_COUNT - 1, labelSize, salt, 0, out + i * LABELS_COUNT, 512, 1, 1, NULL, NULL);
+						scryptPositions(providers[i].id, id, 0, LABELS_COUNT - 1, labelSize, salt, 0, out + i * 32 * LABELS_COUNT, 512, 1, 1, NULL, NULL);
 						cpu = i;
 						checkOuitput = true;
 						break;
@@ -63,15 +66,15 @@ int main()
 				for (i = 0; i < providersCount; i++) {
 					if (providers[i].compute_api != COMPUTE_API_CLASS_CPU) {
 						memset(out + i * LABELS_COUNT, 0, LABELS_COUNT);
-						scryptPositions(providers[i].id, id, 0, LABELS_COUNT - 1, labelSize, salt, 0, out + i * LABELS_COUNT, 512, 1, 1, NULL, NULL);
+						scryptPositions(providers[i].id, id, 0, LABELS_COUNT - 1, labelSize, salt, 0, out + i * 32 * LABELS_COUNT, 512, 1, 1, NULL, NULL);
 						if (checkOuitput) {
 #if 0
 							if (0 != memcmp(out + cpu * LABELS_COUNT, out + i * LABELS_COUNT, (LABELS_COUNT * labelSize + 7) / 8)) {
 								printf("WRONG result for label size %d from provider %d [%s]\n", labelSize, i, providers[i].model);
 							}
 #else
-							uint8_t *cpuSrc = out + cpu * LABELS_COUNT;
-							uint8_t *gpuSrc = out + i * LABELS_COUNT;
+							uint8_t *cpuSrc = out + cpu * 32 * LABELS_COUNT;
+							uint8_t *gpuSrc = out + i * 32 * LABELS_COUNT;
 							volatile unsigned errors = 0;
 							static volatile struct {
 								unsigned	pos;
