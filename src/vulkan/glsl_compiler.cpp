@@ -17,6 +17,7 @@
 
 #include <string>
 #include <vector>
+#include <stdarg.h>
 
 #include "api_internal.h"
 #undef max
