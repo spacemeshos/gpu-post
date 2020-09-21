@@ -111,7 +111,7 @@ int scryptPositions(
     const uint8_t *id,			// 32 bytes
     uint64_t start_position,	// e.g. 0
     uint64_t end_position,		// e.g. 49,999
-    uint8_t hash_len_bits,		// (1...256) for each hash output, the number of prefix bits (not bytes) to copy into the buffer
+    uint32_t hash_len_bits,		// (1...256) for each hash output, the number of prefix bits (not bytes) to copy into the buffer
     const uint8_t *salt,		// 32 bytes
     uint32_t options,			// throttle etc.
     uint8_t *out,				// memory buffer large enough to include hash_len_bits * number of requested hashes
@@ -133,25 +133,16 @@ int stop(
 );
 ```
 
-return count of GPUs
+return non-zero if stop in progress
 ```
-int spacemesh_api_get_gpu_count(
-	int type,					// GPU type SPACEMESH_API_CUDA or SPACEMESH_API_OPENCL
-	int only_available			// return count of available GPUs only
-);
+SPACEMESHAPI int spacemesh_api_stop_inprogress();
 ```
 
-lock GPU for persistent exclusive use. returned cookie used as options in scryptPositions call
+return POST compute providers info
 ```
-int spacemesh_api_lock_gpu(
-	int type					// GPU type SPACEMESH_API_CUDA or SPACEMESH_API_OPENCL
-);
-```
-
-unlock GPU, locked by previous spacemesh_api_lock_gpu call
-```
-void spacemesh_api_unlock_gpu(
-	int cookie					// cookie, returned by previous spacemesh_api_lock_gpu call
+SPACEMESHAPI int spacemesh_api_get_providers(
+	PostComputeProvider *providers, // out providers info buffer, if NULL - return count of available providers
+	int max_providers			    // buffer size
 );
 ```
 
