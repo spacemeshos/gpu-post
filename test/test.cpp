@@ -26,9 +26,88 @@ static void print(uint8_t *data)
 	printf("\n");
 }
 
-
-int main()
+void do_benchmark(int aLabelSize, int aLabelsCount)
 {
+	uint8_t id[32] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31 };
+	uint8_t salt[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
+	int providersCount = spacemesh_api_get_providers(NULL, 0);
+
+	srand(time(nullptr));
+	for (int i = 0; i < sizeof(id); i++) {
+		id[i] = rand();
+	}
+	for (int i = 0; i < sizeof(salt); i++) {
+		salt[i] = rand();
+	}
+
+	if (providersCount > 0) {
+		PostComputeProvider *providers = (PostComputeProvider *)malloc(providersCount * sizeof(PostComputeProvider));
+
+		if (spacemesh_api_get_providers(providers, providersCount) == providersCount) {
+			uint8_t *out = (uint8_t *)malloc((uint64_t(aLabelsCount) * uint64_t(aLabelSize) + 7ull) / 8ull);
+			if (out == NULL) {
+				printf("Buffer allocation error\n");
+				return;
+			}
+			for (int i = 0; i < providersCount; i++) {
+				if (providers[i].compute_api != COMPUTE_API_CLASS_CPU) {
+					uint64_t hashes_computed;
+					uint64_t hashes_per_sec;
+					scryptPositions(providers[i].id, id, 0, aLabelsCount - 1, aLabelSize, salt, 0, out, 512, 1, 1, &hashes_computed, &hashes_per_sec);
+					printf("%s: %u hashes, %u h/s\n", providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
+				}
+			}
+			free(out);
+		}
+		free(providers);
+	}
+}
+
+int main(int argc, char **argv)
+{
+	bool runBenchmark = false;
+	int labelSize = 8;
+	int labelsCount = 250000;
+	if (argc == 1) {
+		printf("Usage:\n");
+		return 0;
+	}
+	for (int i = 1; i < argc; i++) {
+		if (0 == strcmp(argv[i], "--benchmark") || 0 == strcmp(argv[i], "-b")) {
+			runBenchmark = true;
+		}
+		else if (0 == strcmp(argv[i], "--label-size") || 0 == strcmp(argv[i], "-s")) {
+			i++;
+			if (i < argc) {
+				labelSize = atoi(argv[i]);
+				if (labelsCount < 1) {
+					labelSize = 1;
+				}
+				else if (labelSize > 256) {
+					labelSize = 256;
+				}
+			}
+		}
+		else if (0 == strcmp(argv[i], "--labels-count") || 0 == strcmp(argv[i], "-n")) {
+			i++;
+			if (i < argc) {
+				labelsCount = atoi(argv[i]);
+				if (labelsCount < 1) {
+					labelsCount = 250000;
+				}
+				else if (labelsCount > 32 * 1024 * 1024) {
+					labelsCount = 32 * 1024 * 1024;
+				}
+			}
+		}
+	}
+	if (runBenchmark) {
+		printf("Label size: %u, count %u, buffer %.1fM\n", labelSize, labelsCount, ((uint64_t(labelsCount) * uint64_t(labelSize) + 7ull) / 8ull) / (1024.0*1024));
+		do_benchmark(labelSize, labelsCount);
+		return 0;
+	}
+#if 0
 	uint8_t id[32] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31 };
 	uint8_t salt[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 	uint8_t *out[4];
@@ -105,11 +184,10 @@ int main()
 
 		free(providers);
 	}
-
+#endif
 #ifdef WIN32
 	printf("\nPress any key to continue...\n");
 	_getch();
 #endif
-
 	return 0;
 }
