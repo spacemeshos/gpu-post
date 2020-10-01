@@ -11,13 +11,6 @@
 # define min(a, b)  ((a) < (b) ? (a) : (b))
 #endif
 
-#define	DO_COMPARE_RESULTS	0
-#define	LABELS_COUNT	2500000
-//#define	LABELS_COUNT	249999
-//#define	LABELS_COUNT	32768
-//#define	LABELS_COUNT	(3*32*1024 - 1)
-#define	LABEL_SIZE		16
-
 static void print(uint8_t *data)
 {
 	for (int i = 0; i < 32; i++) {
@@ -28,8 +21,8 @@ static void print(uint8_t *data)
 
 void do_benchmark(int aLabelSize, int aLabelsCount)
 {
-	uint8_t id[32] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31 };
-	uint8_t salt[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+	uint8_t id[32];
+	uint8_t salt[32];
 
 	int providersCount = spacemesh_api_get_providers(NULL, 0);
 
@@ -64,11 +57,104 @@ void do_benchmark(int aLabelSize, int aLabelsCount)
 	}
 }
 
+void do_test(int aLabelSize, int aLabelsCount)
+{
+	int referenceLabelsCount = aLabelsCount;
+	uint8_t id[32];
+	uint8_t salt[32];
+	int providersCount = spacemesh_api_get_providers(NULL, 0);
+
+	srand(time(nullptr));
+	for (int i = 0; i < sizeof(id); i++) {
+		id[i] = rand();
+	}
+	for (int i = 0; i < sizeof(salt); i++) {
+		salt[i] = rand();
+	}
+
+	if (referenceLabelsCount > 128 * 1024) {
+		referenceLabelsCount = 128 * 1024;
+	}
+
+	if (providersCount > 0) {
+		PostComputeProvider *providers = (PostComputeProvider *)malloc(providersCount * sizeof(PostComputeProvider));
+
+		if (spacemesh_api_get_providers(providers, providersCount) == providersCount) {
+			int i;
+			size_t labelsBufferSize = (size_t(aLabelsCount) * size_t(aLabelSize) + 7ull) / 8ull;
+			size_t labelsBufferAllignedSize = ((labelsBufferSize + 31ull) / 32ull) * 32ull;
+			uint8_t *out = (uint8_t *)malloc(providersCount * labelsBufferAllignedSize);
+			uint8_t *referenceLabels = nullptr;
+			uint64_t hashes_computed;
+			uint64_t hashes_per_sec;
+			bool checkOuitput = false;
+			int cpu;
+
+			// Find CPU provider and compute reference labels
+			for (i = 0; i < providersCount; i++) {
+				if (providers[i].compute_api == COMPUTE_API_CLASS_CPU) {
+					referenceLabels = out + i * labelsBufferAllignedSize;
+					memset(referenceLabels, 0, labelsBufferSize);
+					scryptPositions(providers[i].id, id, 0, referenceLabelsCount - 1, aLabelSize, salt, 0, referenceLabels, 512, 1, 1, &hashes_computed, &hashes_per_sec);
+					printf("%s: %u hashes, %u h/s\n", providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
+					cpu = i;
+					checkOuitput = true;
+					break;
+				}
+			}
+
+			for (i = 0; i < providersCount; i++) {
+				if (providers[i].compute_api != COMPUTE_API_CLASS_CPU) {
+					uint8_t *labels = out + i * labelsBufferAllignedSize;
+					memset(labels, 0, labelsBufferSize);
+					scryptPositions(providers[i].id, id, 0, aLabelsCount - 1, aLabelSize, salt, 0, labels, 512, 1, 1, &hashes_computed, &hashes_per_sec);
+					printf("%s: %u hashes, %u h/s\n", providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
+					if (checkOuitput) {
+#if 0
+						if (0 != memcmp(referenceLabels, labels, labelsBufferSize)) {
+							printf("WRONG result for label size %d from provider %d [%s]\n", labelSize, i, providers[i].model);
+						}
+#else
+						uint8_t *cpuSrc = referenceLabels;
+						uint8_t *gpuSrc = labels;
+						volatile unsigned errors = 0;
+						static volatile struct {
+							unsigned	pos;
+							uint8_t		cpu;
+							uint8_t		gpu;
+						} errorInfo[2048];
+						size_t referencelabelsBufferSize = (size_t(referenceLabelsCount) * size_t(aLabelSize)) / 8ull;
+						for (unsigned pos = 0; pos < referencelabelsBufferSize; pos++) {
+							if (cpuSrc[pos] != gpuSrc[pos]) {
+								if (errors < 2048) {
+									errorInfo[errors].pos = pos;
+									errorInfo[errors].cpu = cpuSrc[pos];
+									errorInfo[errors].gpu = gpuSrc[pos];
+								}
+								errors++;
+							}
+						}
+						if (errors) {
+							printf("WRONG result for label size %d (%u) from provider %d [%s]\n", aLabelSize, errors, i, providers[i].model);
+						}
+#endif
+					}
+				}
+			}
+
+			free(out);
+		}
+
+		free(providers);
+	}
+}
+
 int main(int argc, char **argv)
 {
 	bool runBenchmark = false;
+	bool runTest = false;
 	int labelSize = 8;
-	int labelsCount = 250000;
+	int labelsCount = 128 * 1024;
 	if (argc == 1) {
 		printf("Usage:\n");
 		return 0;
@@ -76,6 +162,9 @@ int main(int argc, char **argv)
 	for (int i = 1; i < argc; i++) {
 		if (0 == strcmp(argv[i], "--benchmark") || 0 == strcmp(argv[i], "-b")) {
 			runBenchmark = true;
+		}
+		else if (0 == strcmp(argv[i], "--test") || 0 == strcmp(argv[i], "-t")) {
+			runTest = true;
 		}
 		else if (0 == strcmp(argv[i], "--label-size") || 0 == strcmp(argv[i], "-s")) {
 			i++;
@@ -103,88 +192,15 @@ int main(int argc, char **argv)
 		}
 	}
 	if (runBenchmark) {
-		printf("Label size: %u, count %u, buffer %.1fM\n", labelSize, labelsCount, ((uint64_t(labelsCount) * uint64_t(labelSize) + 7ull) / 8ull) / (1024.0*1024));
+		printf("Benchmark: Label size: %u, count %u, buffer %.1fM\n", labelSize, labelsCount, ((uint64_t(labelsCount) * uint64_t(labelSize) + 7ull) / 8ull) / (1024.0*1024));
 		do_benchmark(labelSize, labelsCount);
 		return 0;
 	}
-#if 0
-	uint8_t id[32] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31 };
-	uint8_t salt[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-	uint8_t *out[4];
-	int providersCount = spacemesh_api_get_providers(NULL, 0);
-
-	srand(time(nullptr));
-	for (int i = 0; i < sizeof(id); i++) {
-		id[i] = rand();
+	if (runTest) {
+		printf("Test: Label size: %u, count %u, buffer %.1fM\n", labelSize, labelsCount, ((uint64_t(labelsCount) * uint64_t(labelSize) + 7ull) / 8ull) / (1024.0 * 1024));
+		do_test(labelSize, labelsCount);
+		return 0;
 	}
-	for (int i = 0; i < sizeof(salt); i++) {
-		salt[i] = rand();
-	}
-
-	if (providersCount > 0) {
-		PostComputeProvider *providers = (PostComputeProvider *)malloc(providersCount * sizeof(PostComputeProvider));
-
-		if (spacemesh_api_get_providers(providers, providersCount) == providersCount) {
-			int i;
-			uint8_t *out = (uint8_t *)malloc(providersCount * LABELS_COUNT * 32);
-			bool checkOuitput = false;
-			int cpu;
-
-			for (uint8_t labelSize = 37; labelSize > 29; labelSize--) {
-#if LABELS_COUNT <= 250000
-				for (i = 0; i < providersCount; i++) {
-					if (providers[i].compute_api == COMPUTE_API_CLASS_CPU) {
-						memset(out + i * LABELS_COUNT, 0, LABELS_COUNT);
-						scryptPositions(providers[i].id, id, 0, LABELS_COUNT - 1, labelSize, salt, 0, out + i * 32 * LABELS_COUNT, 512, 1, 1, NULL, NULL);
-						cpu = i;
-						checkOuitput = true;
-						break;
-					}
-				}
-#endif
-				for (i = 0; i < providersCount; i++) {
-					if (providers[i].compute_api != COMPUTE_API_CLASS_CPU) {
-						memset(out + i * LABELS_COUNT, 0, LABELS_COUNT);
-						scryptPositions(providers[i].id, id, 0, LABELS_COUNT - 1, labelSize, salt, 0, out + i * 32 * LABELS_COUNT, 512, 1, 1, NULL, NULL);
-						if (checkOuitput) {
-#if 0
-							if (0 != memcmp(out + cpu * LABELS_COUNT, out + i * LABELS_COUNT, (LABELS_COUNT * labelSize + 7) / 8)) {
-								printf("WRONG result for label size %d from provider %d [%s]\n", labelSize, i, providers[i].model);
-							}
-#else
-							uint8_t *cpuSrc = out + cpu * 32 * LABELS_COUNT;
-							uint8_t *gpuSrc = out + i * 32 * LABELS_COUNT;
-							volatile unsigned errors = 0;
-							static volatile struct {
-								unsigned	pos;
-								uint8_t		cpu;
-								uint8_t		gpu;
-							} errorInfo[2048];
-							for (unsigned pos = 0; pos < ((LABELS_COUNT * labelSize + 7) / 8); pos++) {
-								if (cpuSrc[pos] != gpuSrc[pos]) {
-									if (errors < 2048) {
-										errorInfo[errors].pos = pos;
-										errorInfo[errors].cpu = cpuSrc[pos];
-										errorInfo[errors].gpu = gpuSrc[pos];
-									}
-									errors++;
-								}
-							}
-							if (errors) {
-								printf("WRONG result for label size %d (%u) from provider %d [%s]\n", labelSize, errors, i, providers[i].model);
-							}
-#endif
-						}
-					}
-				}
-			}
-
-			free(out);
-		}
-
-		free(providers);
-	}
-#endif
 #ifdef WIN32
 	printf("\nPress any key to continue...\n");
 	_getch();
