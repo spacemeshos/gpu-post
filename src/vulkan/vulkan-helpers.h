@@ -65,6 +65,9 @@ typedef struct _Vulkan {
 	DECLARE_VULKAN_FUNCTION(vkDestroyFence);
 	DECLARE_VULKAN_FUNCTION(vkWaitForFences);
 	DECLARE_VULKAN_FUNCTION(vkResetFences);
+	DECLARE_VULKAN_FUNCTION(vkFreeDescriptorSets);
+	DECLARE_VULKAN_FUNCTION(vkFreeCommandBuffers);
+	DECLARE_VULKAN_FUNCTION(vkDestroyDevice);
 } Vulkan;
 
 #undef	DECLARE_VULKAN_FUNCTION

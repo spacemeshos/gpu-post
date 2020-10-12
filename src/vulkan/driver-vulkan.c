@@ -469,9 +469,6 @@ static void vulkan_shutdown(struct cgpu_info *cgpu)
 {
 	_vulkanState *vulkanState = (_vulkanState *)cgpu->device_data;
 	if (!vulkanState) {
-		gVulkan.vkFreeMemory(vulkanState->vkDevice, vulkanState->gpuLocalMemory, NULL);
-		gVulkan.vkFreeMemory(vulkanState->vkDevice, vulkanState->gpuSharedMemory, NULL);
-
 		gVulkan.vkDestroyPipelineLayout(vulkanState->vkDevice, vulkanState->pipelineLayout, NULL);
 		gVulkan.vkDestroyDescriptorSetLayout(vulkanState->vkDevice, vulkanState->descriptorSetLayout, NULL);
 		gVulkan.vkDestroyPipeline(vulkanState->vkDevice, vulkanState->pipeline, NULL);
@@ -483,11 +480,19 @@ static void vulkan_shutdown(struct cgpu_info *cgpu)
 		gVulkan.vkDestroyBuffer(vulkanState->vkDevice, vulkanState->CLbuffer0, NULL);
 		gVulkan.vkDestroyBuffer(vulkanState->vkDevice, vulkanState->padbuffer8, NULL);
 
+		gVulkan.vkFreeCommandBuffers(vulkanState->vkDevice, vulkanState->commandPool, 1, &vulkanState->commandBuffer);
 		gVulkan.vkDestroyCommandPool(vulkanState->vkDevice, vulkanState->commandPool, NULL);
+		gVulkan.vkFreeDescriptorSets(vulkanState->vkDevice, vulkanState->descriptorPool, 1, &vulkanState->descriptorSet);
 		gVulkan.vkDestroyDescriptorPool(vulkanState->vkDevice, vulkanState->descriptorPool, NULL);
 		gVulkan.vkDestroyShaderModule(vulkanState->vkDevice, vulkanState->shaderModule, NULL);
+
 		gVulkan.vkDestroySemaphore(vulkanState->vkDevice, vulkanState->semaphore, NULL);
 		gVulkan.vkDestroyFence(vulkanState->vkDevice, vulkanState->fence, NULL);
+
+		gVulkan.vkFreeMemory(vulkanState->vkDevice, vulkanState->gpuLocalMemory, NULL);
+		gVulkan.vkFreeMemory(vulkanState->vkDevice, vulkanState->gpuSharedMemory, NULL);
+
+		gVulkan.vkDestroyDevice(vulkanState->vkDevice, NULL);
 
 		free(cgpu->device_data);
 		cgpu->device_data = NULL;

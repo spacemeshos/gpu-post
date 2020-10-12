@@ -1080,7 +1080,8 @@ __device__ void labels_copy(uint8_t *hashes, uint32_t hashes_count, uint8_t *out
 					for (int i = 0; i < label_full_bytes; i++) {
 						// get 8 bits
 						label = hash[i];
-						*output++ |= (label & lo_part_mask) << lo_part_shift;
+//						*output++ |= (label & lo_part_mask) << lo_part_shift;
+						*output++ |= label << lo_part_shift;
 						*output = label >> hi_part_shift;
 					}
 				}

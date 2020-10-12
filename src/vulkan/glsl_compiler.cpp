@@ -321,14 +321,14 @@ struct GlCodeWritter
 			int current_word = 0;
 			if (_label_words_size > 1) {
 				if (32 == _available) {
-					while (current_word < (_label_words_size + 1)) {
+					while (current_word < (_label_words_size - 1)) {
 						stdprintf(out, "outputBuffer0[i++] = labels[%d];\n", i * _label_words_size + current_word);
 						current_word++;
 					}
 					_current_nonce = 0;
 				}
 				else {
-					while (current_word < (_label_words_size + 1)) {
+					while (current_word < (_label_words_size - 1)) {
 						stdprintf(out, "nonce.%c |= labels[%d] << %d;\n", 'x' + _current_nonce, i * _label_words_size + current_word, (32 - _available));
 						stdprintf(out, "outputBuffer0[i++] = nonce.%c;\n", 'x' + _current_nonce);
 						inc_current_nonce();
