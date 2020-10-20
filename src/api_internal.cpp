@@ -160,18 +160,6 @@ extern "C" int spacemesh_api_get_providers(
 		return current_providers;
 	}
 
-	if (s_cpu.available && current_providers < max_providers) {
-		providers->compute_api = COMPUTE_API_CLASS_CPU;
-		providers->id = i;
-		providers->model[0] = 'C';
-		providers->model[1] = 'P';
-		providers->model[2] = 'U';
-		providers->model[3] = 0;
-
-		providers++;
-		current_providers++;
-	}
-
 	for (i = 0; current_providers < max_providers && i < s_total_devices; i++) {
 		if (NULL != s_gpus[i].drv && 0 != (s_gpus[i].drv->type & (SPACEMESH_API_CUDA | SPACEMESH_API_VULKAN))) {
 			if (0 != (s_gpus[i].drv->type & SPACEMESH_API_CUDA)) {
@@ -187,6 +175,17 @@ extern "C" int spacemesh_api_get_providers(
 			providers++;
 			current_providers++;
 		}
+	}
+
+	if (s_cpu.available && current_providers < max_providers) {
+		providers->compute_api = COMPUTE_API_CLASS_CPU;
+		providers->id = i;
+		providers->model[0] = 'C';
+		providers->model[1] = 'P';
+		providers->model[2] = 'U';
+		providers->model[3] = 0;
+
+		current_providers++;
 	}
 
 	return current_providers;
