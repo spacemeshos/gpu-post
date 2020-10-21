@@ -7,6 +7,8 @@
 #include <conio.h>
 #endif
 
+#include "test-vectors.h"
+
 #ifndef min
 # define min(a, b)  ((a) < (b) ? (a) : (b))
 #endif
@@ -171,10 +173,107 @@ void do_providers_list()
 	}
 }
 
+bool do_test_vector(const TestVector *aTestVector)
+{
+	bool ok = false;
+	int providersCount = spacemesh_api_get_providers(NULL, 0);
+
+	printf("Check test vector...\n");
+
+	if (providersCount > 0) {
+		PostComputeProvider *providers = (PostComputeProvider *)malloc(providersCount * sizeof(PostComputeProvider));
+
+		if (spacemesh_api_get_providers(providers, providersCount) == providersCount) {
+			for (int i = 0; i < providersCount; i++) {
+				if (providers[i].compute_api == COMPUTE_API_CLASS_CPU) {
+					const size_t labelsBufferSize = (size_t(aTestVector->labelsCount) * size_t(aTestVector->labelSize) + 7ull) / 8ull;
+					uint8_t *out;
+					uint64_t hashes_computed;
+					uint64_t hashes_per_sec;
+
+					out = (uint8_t*)calloc(1, labelsBufferSize);
+
+					scryptPositions(providers[i].id, aTestVector->id, 0, aTestVector->labelsCount - 1, aTestVector->labelSize, aTestVector->salt, 0, out, 512, 1, 1, &hashes_computed, &hashes_per_sec);
+					printf("Test vector: %s: %u hashes, %u h/s\n", providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
+
+					if (0 != memcmp(aTestVector->result, out, labelsBufferSize)) {
+						printf("WRONG result for label size %d from provider %d [%s]\n", aTestVector->labelSize, i, providers[i].model);
+					}
+					else {
+						ok = true;
+						printf("OK result for label size %d from provider %d [%s]\n", aTestVector->labelSize, i, providers[i].model);
+					}
+
+					free(out);
+
+					break;
+				}
+			}
+		}
+
+		free(providers);
+	}
+	else {
+		printf("There are no POST computation providers available.\n");
+	}
+
+	return ok;
+}
+
+void create_test_vector()
+{
+	int providersCount = spacemesh_api_get_providers(NULL, 0);
+
+	printf("Create test vector...\n");
+
+	if (providersCount > 0) {
+		PostComputeProvider *providers = (PostComputeProvider *)malloc(providersCount * sizeof(PostComputeProvider));
+
+		if (spacemesh_api_get_providers(providers, providersCount) == providersCount) {
+			for (int i = 0; i < providersCount; i++) {
+				if (providers[i].compute_api == COMPUTE_API_CLASS_CPU) {
+					static const uint32_t testLabelsCount = 64 * 1024;
+					static const uint32_t labelSize = 1;
+					static const size_t labelsBufferSize = (size_t(testLabelsCount) * size_t(labelSize) + 7ull) / 8ull;
+					uint8_t id[32];
+					uint8_t salt[32];
+					uint8_t vector[labelsBufferSize];
+					uint64_t hashes_computed;
+					uint64_t hashes_per_sec;
+
+					memset(id, 0, sizeof(id));
+					memset(salt, 0, sizeof(salt));
+					memset(vector, 0, sizeof(vector));
+
+					scryptPositions(providers[i].id, id, 0, testLabelsCount - 1, labelSize, salt, 0, vector, 512, 1, 1, &hashes_computed, &hashes_per_sec);
+					printf("Test vector: %s: %u hashes, %u h/s\n", providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
+
+					const uint8_t *src = vector;
+					
+					for (uint32_t length = sizeof(vector); length > 0; length -= min(32, length)) {
+						for (int i = 0; i < 32; i++) {
+							printf("0x%02x, ", *src++);
+						}
+						printf("\n");
+					}
+					break;
+				}
+			}
+		}
+
+		free(providers);
+	}
+	else {
+		printf("There are no POST computation providers available.\n");
+	}
+}
+
 int main(int argc, char **argv)
 {
 	bool runBenchmark = false;
 	bool runTest = false;
+	bool createTestVector = false;
+	bool checkTestVector = false;
 	int labelSize = 8;
 	int labelsCount = MAX_CPU_LABELS_COUNT;
 	int referenceProvider = -1;
@@ -189,6 +288,12 @@ int main(int argc, char **argv)
 		}
 		else if (0 == strcmp(argv[i], "--test") || 0 == strcmp(argv[i], "-t")) {
 			runTest = true;
+		}
+		else if (0 == strcmp(argv[i], "--test-vector-create")) {
+			createTestVector = true;
+		}
+		else if (0 == strcmp(argv[i], "--test-vector-check")) {
+			checkTestVector = true;
 		}
 		else if (0 == strcmp(argv[i], "--list") || 0 == strcmp(argv[i], "-l")) {
 			do_providers_list();
@@ -224,6 +329,13 @@ int main(int argc, char **argv)
 				referenceProvider = atoi(argv[i]);
 			}
 		}
+	}
+	if (createTestVector) {
+		create_test_vector();
+		return 0;
+	}
+	if (checkTestVector) {
+		return do_test_vector(&test_vector_1_64k) ? 0 : 1;
 	}
 	if (runBenchmark) {
 		printf("Benchmark: Label size: %u, count %u, buffer %.1fM\n", labelSize, labelsCount, ((uint64_t(labelsCount) * uint64_t(labelSize) + 7ull) / 8ull) / (1024.0*1024));
