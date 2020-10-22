@@ -132,12 +132,7 @@ static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameS
 	gVulkan.vkDestroyBuffer(state->vkDevice, tmpBuf, NULL);
 	gVulkan.vkFreeMemory(state->vkDevice, tmpMem, NULL);
 
-	if (state->alignment <= 16) {
-		cgpu->work_size = 64; // AMD
-	}
-	else {
-		cgpu->work_size = 128; // NVIDIA
-	}
+	cgpu->work_size = 64;
 
 	applog(LOG_NOTICE, "GPU %d: selecting lookup gap of 4", cgpu->driver_id);
 	cgpu->lookup_gap = 4;

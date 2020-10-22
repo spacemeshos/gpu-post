@@ -23,6 +23,17 @@ static void print(uint8_t *data)
 	printf("\n");
 }
 
+static void printHex(uint8_t *data, uint32_t length)
+{
+	while (length >= 32) {
+		for (int i = 0; i < 32; i++) {
+			printf("%02x ", data[i]);
+		}
+		printf("\n");
+		length -= 32;
+	}
+}
+
 void do_benchmark(int aLabelSize, int aLabelsCount)
 {
 	uint8_t id[32];
@@ -61,7 +72,7 @@ void do_benchmark(int aLabelSize, int aLabelsCount)
 	}
 }
 
-void do_test(int aLabelSize, int aLabelsCount, int aReferenceProvider)
+void do_test(int aLabelSize, int aLabelsCount, int aReferenceProvider, bool aPrintResult)
 {
 	int referenceLabelsCount = aLabelsCount;
 	uint8_t id[32];
@@ -124,6 +135,21 @@ void do_test(int aLabelSize, int aLabelsCount, int aReferenceProvider)
 						size_t referencelabelsBufferSize = (size_t(referenceLabelsCount) * size_t(aLabelSize)) / 8ull;
 						if (0 != memcmp(referenceLabels, labels, referencelabelsBufferSize)) {
 							printf("WRONG result for label size %d from provider %d [%s]\n", aLabelSize, i, providers[i].model);
+							if (aPrintResult) {
+								const uint8_t *ref = referenceLabels;
+								const uint8_t *res = labels;
+								for (size_t i = 0; i < referencelabelsBufferSize / 32; i++) {
+									for (int j = 0; j < 32; j++, ref++, res++) {
+										if (*ref == *res) {
+											printf("%02x=%02x ", *ref, *res);
+										}
+										else {
+											printf("%02x!%02x ", *ref, *res);
+										}
+									}
+									printf("\n");
+								}
+							}
 						}
 					}
 				}
@@ -173,7 +199,7 @@ void do_providers_list()
 	}
 }
 
-bool do_test_vector(const TestVector *aTestVector)
+bool do_test_vector(const TestVector *aTestVector, bool aPrintResult)
 {
 	bool ok = false;
 	int providersCount = spacemesh_api_get_providers(NULL, 0);
@@ -198,6 +224,21 @@ bool do_test_vector(const TestVector *aTestVector)
 
 					if (0 != memcmp(aTestVector->result, out, labelsBufferSize)) {
 						printf("WRONG result for label size %d from provider %d [%s]\n", aTestVector->labelSize, i, providers[i].model);
+						if (aPrintResult) {
+							const uint8_t *ref = aTestVector->result;
+							const uint8_t *res = out;
+							for (size_t i = 0; i < labelsBufferSize / 32; i++) {
+								for (int j = 0; j < 32; j++, ref++, res++) {
+									if (*ref == *res) {
+										printf("%02x=%02x ", *ref, *res);
+									}
+									else {
+										printf("%02x!%02x ", *ref, *res);
+									}
+								}
+								printf("\n");
+							}
+						}
 					}
 					else {
 						ok = true;
@@ -277,6 +318,7 @@ int main(int argc, char **argv)
 	int labelSize = 8;
 	int labelsCount = MAX_CPU_LABELS_COUNT;
 	int referenceProvider = -1;
+	bool printDataCompare = false;
 
 	if (argc == 1) {
 		printf("Usage:\n");
@@ -329,13 +371,16 @@ int main(int argc, char **argv)
 				referenceProvider = atoi(argv[i]);
 			}
 		}
+		else if (0 == strcmp(argv[i], "--print") || 0 == strcmp(argv[i], "-p")) {
+			printDataCompare = true;
+		}
 	}
 	if (createTestVector) {
 		create_test_vector();
 		return 0;
 	}
 	if (checkTestVector) {
-		return do_test_vector(&test_vector_1_64k) ? 0 : 1;
+		return do_test_vector(&test_vector_1_64k, printDataCompare) ? 0 : 1;
 	}
 	if (runBenchmark) {
 		printf("Benchmark: Label size: %u, count %u, buffer %.1fM\n", labelSize, labelsCount, ((uint64_t(labelsCount) * uint64_t(labelSize) + 7ull) / 8ull) / (1024.0*1024));
@@ -344,7 +389,7 @@ int main(int argc, char **argv)
 	}
 	if (runTest) {
 		printf("Test: Label size: %u, count %u, buffer %.1fM\n", labelSize, labelsCount, ((uint64_t(labelsCount) * uint64_t(labelSize) + 7ull) / 8ull) / (1024.0 * 1024));
-		do_test(labelSize, labelsCount, referenceProvider);
+		do_test(labelSize, labelsCount, referenceProvider, printDataCompare);
 		return 0;
 	}
 #ifdef WIN32

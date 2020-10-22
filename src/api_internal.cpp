@@ -191,7 +191,7 @@ extern "C" int spacemesh_api_get_providers(
 	return current_providers;
 }
 
-extern int opt_logs = 0;
+extern "C" int opt_logs = 0;
 
 void applog(int prio, const char *fmt, ...)
 {
