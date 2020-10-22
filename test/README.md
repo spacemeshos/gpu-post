@@ -5,6 +5,7 @@ Benchmarking and Testing
 
 ## Options
 
+```
 --list               or -l	print available providers
 --benchmark          or -b	do benchmark
 --test               or -t	do test
@@ -15,5 +16,6 @@ Benchmarking and Testing
 --print              or -p	print detailed data comparison report for incorrect results
 
 --test-vector-check		do CPU test and compare with test-vector
+```
 
 
