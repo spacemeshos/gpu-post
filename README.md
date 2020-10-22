@@ -1,7 +1,7 @@
 # GPU Proof of Spacemesh Time Init (aka Smeshing Setup) Prototype
 
 ## Current functionality
-A c libraray implementing the POST API setup method for cpu, cuda and openCL compute platforms.
+A c libraray implementing the POST API setup method for cpu, cuda and vulkan compute platforms.
 
 ## Build System Requirements
 
@@ -9,44 +9,29 @@ A c libraray implementing the POST API setup method for cpu, cuda and openCL com
 - Windows 10 Pro.
 - Microsoft Visual Studio 2017 (any edition such as community is okay). Visual Studio 2019 is NOT supported. You may also need to install specific versions of the Windows SDK when prompted when attempting to build for the first time.
 - NVIDIA GPU Computing Toolkit 10.0 (but not later versions), and an NVIDIA GPU supporting CUDA 10.0 computation for CUDA testing.
-- Vulkan SDK 1.1, and an AMD GPU supporting Vulkan 1.1 for Vulkan testing.
-- An AMD GPU supporting OpenCL 1.2 or newer for OpenCL testing.
+- Vulkan SDK 1.2, and an AMD GPU supporting Vulkan 1.2 for Vulkan testing.
 
 ### Linux
 - Modern 64-bit Linux, such as Ubuntu, Debian.
 - NVIDIA GPU Computing Toolkit 9 or 10, and an NVIDIA GPU supporting CUDA 9 or 10 computation for CUDA testing.
-- Vulkan SDK 1.1.
-- An AMD GPU supporting OpenCL 1.2 or newer for OpenCL testing. Install the AMD Linux driver package (with the opencl option selected).
+- Vulkan SDK 1.2.
 - Cmake
 - GCC 6 or 7
 
 ### OS X
 - Cmake
-- Vulkan SDK version 1.1.130.0 (and not a newer version). Download and install from: https://vulkan.lunarg.com/sdk/home
-- Set the following env vars. For example, if `VulkanSDK 1.1.130.0` is located in `$HOME/dev/vulkansdk-macos-1.1.130.0` then set:
-
-```
-export VULKAN_ROOT_LOCATION="$HOME/dev/"
-export VULKAN_SDK_VERSION="1.1.130.0"
-export VULKAN_SDK="$VULKAN_ROOT_LOCATION/vulkansdk-macos-$VULKAN_SDK_VERSION/macOS"
-export VK_ICD_FILENAMES="$VULKAN_SDK/etc/vulkan/icd.d/MoltenVK_icd.json"
-export VK_LAYER_PATH="$VULKAN_SDK/etc/vulkan/explicit_layers.d"
-export PATH="/usr/local/opt/python/libexec/bin:$VULKAN_SDK/bin:$PATH"
-export DYLD_LIBRARY_PATH="$DYLD_LIBRARY_PATH:$VULKAN_SDK/lib/"
-```
+- Vulkan SDK 1.2.
 
 ## Building
 
 Build options:
 ### Windows and Linux
 ```
-SPACEMESHCL     "Build with OpenCL support" default: ON
 SPACEMESHCUDA   "Build with CUDA support"   default: ON
 SPACEMESHVULKAN "Build with Vulkan support" default: ON
 ```
 ### macOS
 ```
-SPACEMESHCL     "Build with OpenCL support" default: OFF
 SPACEMESHCUDA   "Build with CUDA support"   default: OFF
 SPACEMESHVULKAN "Build with Vulkan support" default: ON
 ```
