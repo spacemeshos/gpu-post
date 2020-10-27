@@ -287,6 +287,10 @@ static int vulkan_detect(struct cgpu_info *gpus, int *active)
 			VkPhysicalDeviceProperties physicalDeviceProperties;
 			gVulkan.vkGetPhysicalDeviceProperties(gPhysicalDevices[i], &physicalDeviceProperties);
 
+			if (0x10DE == physicalDeviceProperties.vendorID) {
+				continue;
+			}
+
 			memcpy(cgpu->name, physicalDeviceProperties.deviceName, min(sizeof(cgpu->name),sizeof(physicalDeviceProperties.deviceName)));
 			cgpu->name[sizeof(cgpu->name) - 1] = 0;
 
