@@ -132,12 +132,7 @@ static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameS
 	gVulkan.vkDestroyBuffer(state->vkDevice, tmpBuf, NULL);
 	gVulkan.vkFreeMemory(state->vkDevice, tmpMem, NULL);
 
-	if (state->alignment <= 16) {
-		cgpu->work_size = 64; // AMD
-	}
-	else {
-		cgpu->work_size = 128; // NVIDIA
-	}
+	cgpu->work_size = 64;
 
 	applog(LOG_NOTICE, "GPU %d: selecting lookup gap of 4", cgpu->driver_id);
 	cgpu->lookup_gap = 4;
@@ -229,7 +224,7 @@ static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameS
 	snprintf(options, sizeof(options), "#version 450\n#define LOOKUP_GAP %d\n#define CONCURRENT_THREADS %d\n#define WORKSIZE %d\n#define LABEL_SIZE %d\n",
 		cgpu->lookup_gap, (unsigned int)cgpu->thread_concurrency, (int)cgpu->work_size, hash_len_bits);
 
-	state->pipeline = compileShader(state->vkDevice, state->pipelineLayout, &state->shaderModule, scrypt_chacha_comp, options);
+	state->pipeline = compileShader(state->vkDevice, state->pipelineLayout, &state->shaderModule, scrypt_chacha_comp, options, (int)cgpu->work_size, hash_len_bits);
 	if (!state->pipeline) {
 		return NULL;
 	}
@@ -291,6 +286,10 @@ static int vulkan_detect(struct cgpu_info *gpus, int *active)
 
 			VkPhysicalDeviceProperties physicalDeviceProperties;
 			gVulkan.vkGetPhysicalDeviceProperties(gPhysicalDevices[i], &physicalDeviceProperties);
+
+			if (0x10DE == physicalDeviceProperties.vendorID) {
+				continue;
+			}
 
 			memcpy(cgpu->name, physicalDeviceProperties.deviceName, min(sizeof(cgpu->name),sizeof(physicalDeviceProperties.deviceName)));
 			cgpu->name[sizeof(cgpu->name) - 1] = 0;
@@ -370,7 +369,7 @@ static bool vulkan_init(struct cgpu_info *cgpu)
 	return true;
 }
 
-static int64_t vulkan_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uint64_t start_position, uint64_t end_position, uint8_t hash_len_bits, uint32_t options, uint8_t *output, uint32_t N, uint32_t r, uint32_t p, struct timeval *tv_start, struct timeval *tv_end, uint64_t *hashes_computed)
+static int64_t vulkan_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uint64_t start_position, uint64_t end_position, uint32_t hash_len_bits, uint32_t options, uint8_t *output, uint32_t N, uint32_t r, uint32_t p, struct timeval *tv_start, struct timeval *tv_end, uint64_t *hashes_computed)
 {
 	cgpu->busy = 1;
 	if (hashes_computed) {
@@ -469,9 +468,6 @@ static void vulkan_shutdown(struct cgpu_info *cgpu)
 {
 	_vulkanState *vulkanState = (_vulkanState *)cgpu->device_data;
 	if (!vulkanState) {
-		gVulkan.vkFreeMemory(vulkanState->vkDevice, vulkanState->gpuLocalMemory, NULL);
-		gVulkan.vkFreeMemory(vulkanState->vkDevice, vulkanState->gpuSharedMemory, NULL);
-
 		gVulkan.vkDestroyPipelineLayout(vulkanState->vkDevice, vulkanState->pipelineLayout, NULL);
 		gVulkan.vkDestroyDescriptorSetLayout(vulkanState->vkDevice, vulkanState->descriptorSetLayout, NULL);
 		gVulkan.vkDestroyPipeline(vulkanState->vkDevice, vulkanState->pipeline, NULL);
@@ -483,11 +479,19 @@ static void vulkan_shutdown(struct cgpu_info *cgpu)
 		gVulkan.vkDestroyBuffer(vulkanState->vkDevice, vulkanState->CLbuffer0, NULL);
 		gVulkan.vkDestroyBuffer(vulkanState->vkDevice, vulkanState->padbuffer8, NULL);
 
+		gVulkan.vkFreeCommandBuffers(vulkanState->vkDevice, vulkanState->commandPool, 1, &vulkanState->commandBuffer);
 		gVulkan.vkDestroyCommandPool(vulkanState->vkDevice, vulkanState->commandPool, NULL);
+		gVulkan.vkFreeDescriptorSets(vulkanState->vkDevice, vulkanState->descriptorPool, 1, &vulkanState->descriptorSet);
 		gVulkan.vkDestroyDescriptorPool(vulkanState->vkDevice, vulkanState->descriptorPool, NULL);
 		gVulkan.vkDestroyShaderModule(vulkanState->vkDevice, vulkanState->shaderModule, NULL);
+
 		gVulkan.vkDestroySemaphore(vulkanState->vkDevice, vulkanState->semaphore, NULL);
 		gVulkan.vkDestroyFence(vulkanState->vkDevice, vulkanState->fence, NULL);
+
+		gVulkan.vkFreeMemory(vulkanState->vkDevice, vulkanState->gpuLocalMemory, NULL);
+		gVulkan.vkFreeMemory(vulkanState->vkDevice, vulkanState->gpuSharedMemory, NULL);
+
+		gVulkan.vkDestroyDevice(vulkanState->vkDevice, NULL);
 
 		free(cgpu->device_data);
 		cgpu->device_data = NULL;

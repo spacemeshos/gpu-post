@@ -82,6 +82,9 @@ int initVulkanLibrary()
 	LOAD_VULKAN_FUNCTION(vkDestroyFence);
 	LOAD_VULKAN_FUNCTION(vkWaitForFences);
 	LOAD_VULKAN_FUNCTION(vkResetFences);
+	LOAD_VULKAN_FUNCTION(vkFreeDescriptorSets);
+	LOAD_VULKAN_FUNCTION(vkFreeCommandBuffers);
+	LOAD_VULKAN_FUNCTION(vkDestroyDevice);
 
 	return 0;
 }

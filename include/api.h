@@ -44,7 +44,7 @@ SPACEMESHAPI int scryptPositions(
 	const uint8_t *id,			// 32 bytes
     uint64_t start_position,	// e.g. 0
     uint64_t end_position,		// e.g. 49,999
-    uint8_t hash_len_bits,		// (1...8) for each hash output, the number of prefix bits (not bytes) to copy into the buffer
+    uint32_t hash_len_bits,		// (1...256) for each hash output, the number of prefix bits (not bytes) to copy into the buffer
     const uint8_t *salt,		// 32 bytes
     uint32_t options,			// throttle etc.
     uint8_t *out,				// memory buffer large enough to include hash_len_bits * number of requested hashes

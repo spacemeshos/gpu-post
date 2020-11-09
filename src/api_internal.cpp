@@ -184,80 +184,83 @@ extern "C" int spacemesh_api_get_providers(
 		providers->model[1] = 'P';
 		providers->model[2] = 'U';
 		providers->model[3] = 0;
+
 		current_providers++;
 	}
 
 	return current_providers;
 }
 
-extern bool opt_debug_diff;
-
-bool opt_tracegpu = false;
+extern "C" int opt_logs = 0;
 
 void applog(int prio, const char *fmt, ...)
 {
-	va_list ap;
+	if (opt_logs) {
+		va_list ap;
 
-	va_start(ap, fmt);
+		va_start(ap, fmt);
 
-	{
-		const char* color = "";
-		const time_t now = time(NULL);
-		char *f;
-		int len;
-		struct tm tm;
+		{
+			const char* color = "";
+			const time_t now = time(NULL);
+			char *f;
+			int len;
+			struct tm tm;
 
-		localtime_r(&now, &tm);
+			localtime_r(&now, &tm);
 
-		len = 40 + (int)strlen(fmt) + 2;
-		f = (char*)alloca(len);
-		sprintf(f, "[%d-%02d-%02d %02d:%02d:%02d]%s %s%s\n",
-			tm.tm_year + 1900,
-			tm.tm_mon + 1,
-			tm.tm_mday,
-			tm.tm_hour,
-			tm.tm_min,
-			tm.tm_sec,
-			color,
-			fmt,
-			""
-		);
-		if (prio == LOG_RAW) {
-			// no time prefix, for ccminer -n
-			sprintf(f, "%s%s\n", fmt, "");
+			len = 40 + (int)strlen(fmt) + 2;
+			f = (char*)alloca(len);
+			sprintf(f, "[%d-%02d-%02d %02d:%02d:%02d]%s %s%s\n",
+				tm.tm_year + 1900,
+				tm.tm_mon + 1,
+				tm.tm_mday,
+				tm.tm_hour,
+				tm.tm_min,
+				tm.tm_sec,
+				color,
+				fmt,
+				""
+			);
+			if (prio == LOG_RAW) {
+				// no time prefix, for ccminer -n
+				sprintf(f, "%s%s\n", fmt, "");
+			}
+			pthread_mutex_lock(&g_spacemesh_api_applog_lock);
+			vfprintf(stdout, f, ap);	/* atomic write to stdout */
+			fflush(stdout);
+			pthread_mutex_unlock(&g_spacemesh_api_applog_lock);
 		}
-		pthread_mutex_lock(&g_spacemesh_api_applog_lock);
-		vfprintf(stdout, f, ap);	/* atomic write to stdout */
-		fflush(stdout);
-		pthread_mutex_unlock(&g_spacemesh_api_applog_lock);
+		va_end(ap);
 	}
-	va_end(ap);
 }
 
 // Use different prefix if multiple cpu threads per gpu
 // Also, auto hide LOG_DEBUG if --debug (-D) is not used
 void gpulog(int prio, int dev_id, const char *fmt, ...)
 {
-	char _ALIGN(128) pfmt[128];
-	char _ALIGN(128) line[256];
-	int len;
-	va_list ap;
+	if (opt_logs) {
+		char _ALIGN(128) pfmt[128];
+		char _ALIGN(128) line[256];
+		int len;
+		va_list ap;
 
-	if (prio == LOG_DEBUG && !g_spacemesh_api_opt_debug)
-		return;
+		if (prio == LOG_DEBUG && !g_spacemesh_api_opt_debug)
+			return;
 
-	len = snprintf(pfmt, 128, "GPU #%d: %s", dev_id, fmt);
-	pfmt[sizeof(pfmt) - 1] = '\0';
+		len = snprintf(pfmt, 128, "GPU #%d: %s", dev_id, fmt);
+		pfmt[sizeof(pfmt) - 1] = '\0';
 
-	va_start(ap, fmt);
+		va_start(ap, fmt);
 
-	if (len && vsnprintf(line, sizeof(line), pfmt, ap)) {
-		line[sizeof(line) - 1] = '\0';
-		applog(prio, "%s", line);
+		if (len && vsnprintf(line, sizeof(line), pfmt, ap)) {
+			line[sizeof(line) - 1] = '\0';
+			applog(prio, "%s", line);
+		}
+		else {
+			fprintf(stderr, "%s OOM!\n", __func__);
+		}
+
+		va_end(ap);
 	}
-	else {
-		fprintf(stderr, "%s OOM!\n", __func__);
-	}
-
-	va_end(ap);
 }
