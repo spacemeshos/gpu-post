@@ -169,11 +169,11 @@ static int64_t cuda_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uin
 			cuda_scrypt_serialize(cgpu, cudaState, nxt);
 			if (1 == r && 1 == p) {
 				pre_keccak512_1_1(cudaState, nxt, nonce[nxt], cgpu->thread_concurrency);
-				cuda_scrypt_core(cgpu, cudaState, nxt, N, r, p);
+				cuda_scrypt_core(cudaState, nxt, N, r, p, cgpu->lookup_gap, cgpu->batchsize);
 			}
 			else {
 				pre_keccak512(cudaState, nxt, nonce[nxt], cgpu->thread_concurrency, r);
-				cuda_scrypt_core(cgpu, cudaState, nxt, N, r, p);
+				cuda_scrypt_core(cudaState, nxt, N, r, p, cgpu->lookup_gap, cgpu->batchsize);
 			}
 			if (!cuda_scrypt_sync(cgpu, cudaState, nxt)) {
 				break;
@@ -219,6 +219,102 @@ static int64_t cuda_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uin
 	return SPACEMESH_API_ERROR;
 }
 
+static int64_t cuda_hash(struct cgpu_info *cgpu, uint8_t *pdata, uint8_t *output)
+{
+	cgpu->busy = 1;
+
+	if (cuda_prepare(cgpu, 512, 1, 1, 256, false))
+	{
+		_cudaState *cudaState = (_cudaState *)cgpu->device_data;
+
+		if (cgpu->thread_concurrency == 0) {
+			cgpu->busy = 0;
+			return -1;
+		}
+
+		cgpu->thread_concurrency = 128;
+
+		uint8_t *hash = cuda_hashbuffer(cudaState, 0);
+
+		uint64_t n = 0;
+
+		/* byte swap pdata into data[0]/[1] arrays */
+		for (unsigned i = 0; i < cgpu->thread_concurrency; ++i) {
+			memcpy(&cudaState->data[0][(PREIMAGE_SIZE / 4)*i], pdata, PREIMAGE_SIZE);
+		}
+
+		prepare_keccak512(cudaState, pdata, PREIMAGE_SIZE);
+
+		uint32_t* cuda_X = cuda_transferbuffer(cudaState, 0);
+
+		int iteration = 0;
+		uint8_t *out = output;
+		uint64_t chunkSize = 32 * cgpu->thread_concurrency;
+		uint64_t outLength = chunkSize;
+
+		cuda_scrypt_serialize(cgpu, cudaState, 0);
+		pre_keccak512_1_1(cudaState, 0, 0, cgpu->thread_concurrency);
+		cuda_scrypt_core(cudaState, 0, 512, 1, 1, cgpu->lookup_gap, cgpu->batchsize);
+
+		post_keccak512(cudaState, 0, 0, cgpu->thread_concurrency, 1, 256);
+		cuda_scrypt_done(cudaState, 0);
+
+		cuda_scrypt_DtoH(cudaState, hash, 0, chunkSize);
+		cuda_scrypt_sync(cgpu, cudaState, 0);
+
+		memcpy(out, hash, min(chunkSize, outLength));
+
+		cgpu->busy = 0;
+
+		return 128;
+	}
+
+	cgpu->busy = 0;
+
+	return SPACEMESH_API_ERROR;
+}
+
+static int64_t cuda_bit_stream(struct cgpu_info *cgpu, uint8_t *hashes, uint64_t count, uint8_t *output, uint32_t hash_len_bits)
+{
+	cgpu->busy = 1;
+
+	if (cuda_prepare(cgpu, 512, 1, 1, 256, false))
+	{
+		_cudaState *cudaState = (_cudaState *)cgpu->device_data;
+
+		if (cgpu->thread_concurrency == 0) {
+			cgpu->busy = 0;
+			return -1;
+		}
+
+		cgpu->thread_concurrency = 128;
+
+		uint8_t *hash = cuda_hashbuffer(cudaState, 0);
+
+		memcpy(hash, hashes, 32 * 128);
+		cudaMemcpyAsync(cudaState->context_odata[0], hash, 32 * 128, cudaMemcpyHostToDevice, cudaState->context_streams[0]);
+
+		uint8_t *out = output;
+		uint64_t chunkSize = (cgpu->thread_concurrency * hash_len_bits) / 8;
+		uint64_t outLength = chunkSize;
+
+		post_labels_copy(cudaState, 0, cgpu->thread_concurrency, hash_len_bits);
+
+		cuda_scrypt_DtoH(cudaState, hash, 0, chunkSize);
+		cuda_scrypt_sync(cgpu, cudaState, 0);
+
+		memcpy(out, hash, min(chunkSize, outLength));
+
+		cgpu->busy = 0;
+
+		return chunkSize;
+	}
+
+	cgpu->busy = 0;
+
+	return SPACEMESH_API_ERROR;
+}
+
 static void cuda_shutdown(struct cgpu_info *cgpu)
 {
 	if (cgpu->device_data) {
@@ -244,6 +340,7 @@ struct device_drv cuda_drv = {
 	reinit_cuda_device,
 	cuda_init,
 	cuda_scrypt_positions,
+	{ cuda_hash, cuda_bit_stream },
 	cuda_shutdown
 };
 

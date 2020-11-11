@@ -1,5 +1,8 @@
 set(SOURCES
     test.cpp
+    test.hpp
+    unit-tests.cpp
+    integration-tests.cpp
 )
 
 add_executable(gpu-setup-test ${SOURCES})

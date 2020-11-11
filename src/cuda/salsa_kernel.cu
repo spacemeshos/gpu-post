@@ -272,12 +272,11 @@ void cuda_scrypt_flush(_cudaState *cudaState, int stream)
 	cudaStreamSynchronize(cudaState->context_streams[stream]);
 }
 
-void cuda_scrypt_core(struct cgpu_info *cgpu, _cudaState *cudaState, int stream, unsigned int N, unsigned int r, unsigned int p)
+void cuda_scrypt_core(_cudaState *cudaState, int stream, unsigned int N, unsigned int r, unsigned int p, unsigned int LOOKUP_GAP, unsigned int BATCHSIZE)
 {
 	unsigned int GRID_BLOCKS = cudaState->context_blocks;
 	unsigned int WARPS_PER_BLOCK = cudaState->context_wpb;
 	unsigned int THREADS_PER_WU = cudaState->context_kernel->threads_per_wu();
-	unsigned int LOOKUP_GAP = cgpu->lookup_gap;
 
 	// setup execution parameters
 	dim3 grid(GRID_BLOCKS, 1, 1);
@@ -285,7 +284,7 @@ void cuda_scrypt_core(struct cgpu_info *cgpu, _cudaState *cudaState, int stream,
 
 	cudaState->context_kernel->run_kernel(grid, threads, WARPS_PER_BLOCK, cudaState->cuda_id,
 		cudaState->context_streams[stream], cudaState->context_idata[stream], cudaState->context_odata[stream],
-		N, r, p, cgpu->batchsize, LOOKUP_GAP
+		N, r, p, BATCHSIZE, LOOKUP_GAP
 	);
 }
 

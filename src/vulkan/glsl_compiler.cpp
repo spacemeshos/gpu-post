@@ -379,7 +379,7 @@ struct GlCodeWritter
 	bool _use_word_copy;
 };
 
-extern "C" VkPipeline compileShader(VkDevice vkDevice, VkPipelineLayout pipelineLayout, VkShaderModule *shader_module, const char *glsl_source, const char *options, int work_size, int hash_len_bits)
+extern "C" VkPipeline compileShader(VkDevice vkDevice, VkPipelineLayout pipelineLayout, VkShaderModule *shader_module, const char *glsl_source, const char *options, int work_size, int hash_len_bits, bool copy_only)
 {
 	std::vector<uint32_t> spirv;
 	std::string           info_log;
@@ -394,83 +394,134 @@ extern "C" VkPipeline compileShader(VkDevice vkDevice, VkPipelineLayout pipeline
 	GlCodeWritter writter(hash_len_bits);
 	std::string packer;
 
-	if (writter._label_words_size == 1) {
-		if (hash_len_bits == 32) {
-			source += "labels[lid] = hmac_pw.outer.state4[0].x;\n";
+	if (copy_only) {
+		if (writter._label_words_size == 1) {
+			if (hash_len_bits == 32) {
+				source += "labels[lid] = outputBuffer1[gid * 8 + 0];\n";
+			}
+			else {
+				stdprintf(source, "labels[lid] = outputBuffer1[gid * 8 + 0] & 0x%08x;\n", (1 << hash_len_bits) - 1);
+			}
 		}
 		else {
-			stdprintf(source, "labels[lid] = hmac_pw.outer.state4[0].x & 0x%08x;\n", (1 << hash_len_bits) - 1);
+			std::string last;
+			stdprintf(source, "tmp = lid * %u;\n", writter._label_words_size);
+			if (writter._label_words_size > 1) {
+				source += "labels[tmp++] = outputBuffer1[gid * 8 + 0];\n";
+				last = "labels[tmp] = outputBuffer1[gid * 8 + 1]";
+			}
+			if (writter._label_words_size > 2) {
+				source += "labels[tmp++] = outputBuffer1[gid * 8 + 1];\n";
+				last = "labels[tmp++] = outputBuffer1[gid * 8 + 2]";
+			}
+			if (writter._label_words_size > 3) {
+				source += "labels[tmp++] = outputBuffer1[gid * 8 + 2];\n";
+				last = "labels[tmp++] = outputBuffer1[gid * 8 + 3]";
+			}
+			if (writter._label_words_size > 4) {
+				source += "labels[tmp++] = outputBuffer1[gid * 8 + 3];\n";
+				last = "labels[tmp++] = outputBuffer1[gid * 8 + 4]";
+			}
+			if (writter._label_words_size > 5) {
+				source += "labels[tmp++] = outputBuffer1[gid * 8 + 4];\n";
+				last = "labels[tmp++] = outputBuffer1[gid * 8 + 5]";
+			}
+			if (writter._label_words_size > 6) {
+				source += "labels[tmp++] = outputBuffer1[gid * 8 + 5];\n";
+				last = "labels[tmp++] = outputBuffer1[gid * 8 + 6]";
+			}
+			if (writter._label_words_size > 7) {
+				source += "labels[tmp++] = outputBuffer1[gid * 8 + 6];\n";
+				last = "labels[tmp++] = outputBuffer1[gid * 8 + 7]";
+			}
+			source += last;
+			if (0 == hash_len_bits % 32) {
+				source += ";\n";
+			}
+			else {
+				stdprintf(source, " & 0x%08x;\n", (1 << (hash_len_bits % 32)) - 1);
+			}
 		}
 	}
 	else {
-		std::string last;
-		stdprintf(source, "tmp = lid * %u;\n", writter._label_words_size);
-		if (writter._label_words_size > 1) {
-			source += "labels[tmp++] = hmac_pw.outer.state4[0].x;\n";
-			last = "labels[tmp] = hmac_pw.outer.state4[0].y";
-		}
-		if (writter._label_words_size > 2) {
-			source += "labels[tmp++] = hmac_pw.outer.state4[0].y;\n";
-			last = "labels[tmp++] = hmac_pw.outer.state4[0].z";
-		}
-		if (writter._label_words_size > 3) {
-			source += "labels[tmp++] = hmac_pw.outer.state4[0].z;\n";
-			last = "labels[tmp++] = hmac_pw.outer.state4[0].w";
-		}
-		if (writter._label_words_size > 4) {
-			source += "labels[tmp++] = hmac_pw.outer.state4[0].w;\n";
-			last = "labels[tmp++] = hmac_pw.outer.state4[1].x";
-		}
-		if (writter._label_words_size > 5) {
-			source += "labels[tmp++] = hmac_pw.outer.state4[1].x;\n";
-			last = "labels[tmp++] = hmac_pw.outer.state4[1].y";
-		}
-		if (writter._label_words_size > 6) {
-			source += "labels[tmp++] = hmac_pw.outer.state4[1].y;\n";
-			last = "labels[tmp++] = hmac_pw.outer.state4[1].z";
-		}
-		if (writter._label_words_size > 7) {
-			source += "labels[tmp++] = hmac_pw.outer.state4[1].z;\n";
-			last = "labels[tmp++] = hmac_pw.outer.state4[1].w";
-		}
-		if (writter._label_words_size > 8) {
-			source += "labels[tmp++] = hmac_pw.outer.state4[1].w;\n";
-			last = "labels[tmp++] = hmac_pw.outer.state4[2].x";
-		}
-		if (writter._label_words_size > 9) {
-			source += "labels[tmp++] = hmac_pw.outer.state4[2].x;\n";
-			last = "labels[tmp++] = hmac_pw.outer.state4[2].y";
-		}
-		if (writter._label_words_size > 10) {
-			source += "labels[tmp++] = hmac_pw.outer.state4[2].y;\n";
-			last = "labels[tmp++] = hmac_pw.outer.state4[2].z";
-		}
-		if (writter._label_words_size > 11) {
-			source += "labels[tmp++] = hmac_pw.outer.state4[2].z;\n";
-			last = "labels[tmp++] = hmac_pw.outer.state4[2].w";
-		}
-		if (writter._label_words_size > 12) {
-			source += "labels[tmp++] = hmac_pw.outer.state4[2].w;\n";
-			last = "labels[tmp++] = hmac_pw.outer.state4[3].x";
-		}
-		if (writter._label_words_size > 13) {
-			source += "labels[tmp++] = hmac_pw.outer.state4[3].x;\n";
-			last = "labels[tmp++] = hmac_pw.outer.state4[3].y";
-		}
-		if (writter._label_words_size > 14) {
-			source += "labels[tmp++] = hmac_pw.outer.state4[3].y;\n";
-			last = "labels[tmp++] = hmac_pw.outer.state4[3].z";
-		}
-		if (writter._label_words_size > 15) {
-			source += "labels[tmp++] = hmac_pw.outer.state4[3].z;\n";
-			last = "labels[tmp++] = hmac_pw.outer.state4[3].w";
-		}
-		source += last;
-		if (0 == hash_len_bits % 32) {
-			source += ";\n";
+		if (writter._label_words_size == 1) {
+			if (hash_len_bits == 32) {
+				source += "labels[lid] = hmac_pw.outer.state4[0].x;\n";
+			}
+			else {
+				stdprintf(source, "labels[lid] = hmac_pw.outer.state4[0].x & 0x%08x;\n", (1 << hash_len_bits) - 1);
+			}
 		}
 		else {
-			stdprintf(source, " & 0x%08x;\n", (1 << (hash_len_bits % 32)) - 1);
+			std::string last;
+			stdprintf(source, "tmp = lid * %u;\n", writter._label_words_size);
+			if (writter._label_words_size > 1) {
+				source += "labels[tmp++] = hmac_pw.outer.state4[0].x;\n";
+				last = "labels[tmp] = hmac_pw.outer.state4[0].y";
+			}
+			if (writter._label_words_size > 2) {
+				source += "labels[tmp++] = hmac_pw.outer.state4[0].y;\n";
+				last = "labels[tmp++] = hmac_pw.outer.state4[0].z";
+			}
+			if (writter._label_words_size > 3) {
+				source += "labels[tmp++] = hmac_pw.outer.state4[0].z;\n";
+				last = "labels[tmp++] = hmac_pw.outer.state4[0].w";
+			}
+			if (writter._label_words_size > 4) {
+				source += "labels[tmp++] = hmac_pw.outer.state4[0].w;\n";
+				last = "labels[tmp++] = hmac_pw.outer.state4[1].x";
+			}
+			if (writter._label_words_size > 5) {
+				source += "labels[tmp++] = hmac_pw.outer.state4[1].x;\n";
+				last = "labels[tmp++] = hmac_pw.outer.state4[1].y";
+			}
+			if (writter._label_words_size > 6) {
+				source += "labels[tmp++] = hmac_pw.outer.state4[1].y;\n";
+				last = "labels[tmp++] = hmac_pw.outer.state4[1].z";
+			}
+			if (writter._label_words_size > 7) {
+				source += "labels[tmp++] = hmac_pw.outer.state4[1].z;\n";
+				last = "labels[tmp++] = hmac_pw.outer.state4[1].w";
+			}
+			if (writter._label_words_size > 8) {
+				source += "labels[tmp++] = hmac_pw.outer.state4[1].w;\n";
+				last = "labels[tmp++] = hmac_pw.outer.state4[2].x";
+			}
+			if (writter._label_words_size > 9) {
+				source += "labels[tmp++] = hmac_pw.outer.state4[2].x;\n";
+				last = "labels[tmp++] = hmac_pw.outer.state4[2].y";
+			}
+			if (writter._label_words_size > 10) {
+				source += "labels[tmp++] = hmac_pw.outer.state4[2].y;\n";
+				last = "labels[tmp++] = hmac_pw.outer.state4[2].z";
+			}
+			if (writter._label_words_size > 11) {
+				source += "labels[tmp++] = hmac_pw.outer.state4[2].z;\n";
+				last = "labels[tmp++] = hmac_pw.outer.state4[2].w";
+			}
+			if (writter._label_words_size > 12) {
+				source += "labels[tmp++] = hmac_pw.outer.state4[2].w;\n";
+				last = "labels[tmp++] = hmac_pw.outer.state4[3].x";
+			}
+			if (writter._label_words_size > 13) {
+				source += "labels[tmp++] = hmac_pw.outer.state4[3].x;\n";
+				last = "labels[tmp++] = hmac_pw.outer.state4[3].y";
+			}
+			if (writter._label_words_size > 14) {
+				source += "labels[tmp++] = hmac_pw.outer.state4[3].y;\n";
+				last = "labels[tmp++] = hmac_pw.outer.state4[3].z";
+			}
+			if (writter._label_words_size > 15) {
+				source += "labels[tmp++] = hmac_pw.outer.state4[3].z;\n";
+				last = "labels[tmp++] = hmac_pw.outer.state4[3].w";
+			}
+			source += last;
+			if (0 == hash_len_bits % 32) {
+				source += ";\n";
+			}
+			else {
+				stdprintf(source, " & 0x%08x;\n", (1 << (hash_len_bits % 32)) - 1);
+			}
 		}
 	}
 

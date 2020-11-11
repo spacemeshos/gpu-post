@@ -64,6 +64,36 @@ int scryptPositions(
 	return 0;
 }
 
+int64_t unit_test_hash(uint32_t provider_id, uint8_t *input, uint8_t *hashes)
+{
+	struct cgpu_info *cgpu = NULL;
+
+	spacemesh_api_init();
+
+	cgpu = spacemesh_api_get_gpu(provider_id);
+
+	if (NULL == cgpu || NULL == cgpu->drv->unit_tests.hash) {
+		return -1;
+	}
+
+	return cgpu->drv->unit_tests.hash(cgpu, input, hashes);
+}
+
+int64_t unit_test_bit_stream(uint32_t provider_id, uint8_t *hashes, uint64_t count, uint8_t *output, uint32_t hash_len_bits)
+{
+	struct cgpu_info *cgpu = NULL;
+
+	spacemesh_api_init();
+
+	cgpu = spacemesh_api_get_gpu(provider_id);
+
+	if (NULL == cgpu || NULL == cgpu->drv->unit_tests.bit_stream) {
+		return -1;
+	}
+
+	return cgpu->drv->unit_tests.bit_stream(cgpu, hashes, count, output, hash_len_bits);
+}
+
 // stop all GPU work and don�t fill the passed-in buffer with any more results.
 int stop(uint32_t ms_timeout)
 {
