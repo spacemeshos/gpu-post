@@ -107,7 +107,7 @@ static uint64_t alignBuffer(uint64_t size, uint64_t align)
 	}
 }
 
-static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameSize, uint32_t hash_len_bits, bool throttled)
+static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameSize, uint32_t hash_len_bits, bool throttled, bool copy_only)
 {
 	_vulkanState *state = calloc(1, sizeof(_vulkanState));
 
@@ -154,7 +154,7 @@ static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameS
 	}
 
 	cgpu->thread_concurrency = min(cgpu->thread_concurrency, /*cgpu->work_size*/ 32 * 1024);
-	uint32_t chunkSize = (cgpu->thread_concurrency * hash_len_bits + 7) / 8;
+	uint32_t chunkSize = copy_only ? (cgpu->thread_concurrency * 32) : ((cgpu->thread_concurrency * hash_len_bits + 7) / 8);
 
 	applog(LOG_DEBUG, "GPU %d: setting thread_concurrency to %d based on buffer size %d and lookup gap %d", cgpu->driver_id, (int)(cgpu->thread_concurrency), (int)(cgpu->buffer_size), (int)(cgpu->lookup_gap));
 
@@ -224,7 +224,7 @@ static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameS
 	snprintf(options, sizeof(options), "#version 450\n#define LOOKUP_GAP %d\n#define CONCURRENT_THREADS %d\n#define WORKSIZE %d\n#define LABEL_SIZE %d\n",
 		cgpu->lookup_gap, (unsigned int)cgpu->thread_concurrency, (int)cgpu->work_size, hash_len_bits);
 
-	state->pipeline = compileShader(state->vkDevice, state->pipelineLayout, &state->shaderModule, scrypt_chacha_comp, options, (int)cgpu->work_size, hash_len_bits);
+	state->pipeline = compileShader(state->vkDevice, state->pipelineLayout, &state->shaderModule, scrypt_chacha_comp, options, (int)cgpu->work_size, hash_len_bits, copy_only);
 	if (!state->pipeline) {
 		return NULL;
 	}
@@ -336,7 +336,7 @@ static void reinit_vulkan_device(struct cgpu_info *gpu)
 
 static void vulkan_shutdown(struct cgpu_info *cgpu);
 
-static bool vulkan_prepare(struct cgpu_info *cgpu, unsigned N, uint32_t r, uint32_t p, uint32_t hash_len_bits, bool throttled)
+static bool vulkan_prepare(struct cgpu_info *cgpu, unsigned N, uint32_t r, uint32_t p, uint32_t hash_len_bits, bool throttled, bool copy_only)
 {
 	if (N != cgpu->N || r != cgpu->r || p != cgpu->p || hash_len_bits != cgpu->hash_len_bits) {
 		if (cgpu->device_data) {
@@ -350,7 +350,7 @@ static bool vulkan_prepare(struct cgpu_info *cgpu, unsigned N, uint32_t r, uint3
 
 		VkPhysicalDeviceProperties physicalDeviceProperties;
 		gVulkan.vkGetPhysicalDeviceProperties(gPhysicalDevices[cgpu->driver_id], &physicalDeviceProperties);
-		cgpu->device_data = initVulkan(cgpu, physicalDeviceProperties.deviceName, strlen(physicalDeviceProperties.deviceName), hash_len_bits, throttled);
+		cgpu->device_data = initVulkan(cgpu, physicalDeviceProperties.deviceName, strlen(physicalDeviceProperties.deviceName), hash_len_bits, throttled, copy_only);
 		if (!cgpu->device_data) {
 			applog(LOG_ERR, "Failed to init GPU, disabling device %d", cgpu->id);
 			cgpu->deven = DEV_DISABLED;
@@ -376,7 +376,7 @@ static int64_t vulkan_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, u
 		*hashes_computed = 0;
 	}
 
-	if (vulkan_prepare(cgpu, N, r, p, hash_len_bits, 0 != (options & SPACEMESH_API_THROTTLED_MODE)))
+	if (vulkan_prepare(cgpu, N, r, p, hash_len_bits, 0 != (options & SPACEMESH_API_THROTTLED_MODE), false))
 	{
 		_vulkanState *state = (_vulkanState *)cgpu->device_data;
 		AlgorithmParams params;
@@ -464,6 +464,138 @@ static int64_t vulkan_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, u
 	return SPACEMESH_API_ERROR;
 }
 
+static int64_t vulkan_hash(struct cgpu_info *cgpu, uint8_t *pdata, uint8_t *output)
+{
+	cgpu->busy = 1;
+
+	if (vulkan_prepare(cgpu, 512, 1, 1, 256, false, false))
+	{
+		_vulkanState *state = (_vulkanState *)cgpu->device_data;
+		AlgorithmParams params;
+
+		cgpu->thread_concurrency = 128;
+
+		uint64_t chunkSize = 32 * cgpu->thread_concurrency;
+		uint64_t outLength = chunkSize;
+		uint8_t *out = output;
+
+		// transfer input to GPU
+		char *ptr = NULL;
+		uint64_t tfxOrigin = state->memParamsSize + state->memConstantSize;
+		CHECK_RESULT(gVulkan.vkMapMemory(state->vkDevice, state->gpuSharedMemory, tfxOrigin, state->memInputSize, 0, (void **)&ptr), "vkMapMemory", 0);
+		memcpy(ptr, (const void*)pdata, 72);
+		gVulkan.vkUnmapMemory(state->vkDevice, state->gpuSharedMemory);
+
+		params.N = 512;
+		params.hash_len_bits = 256;
+		params.global_work_offset = 0;
+
+		const uint64_t delay = 5ULL * 1000ULL * 1000ULL * 1000ULL;
+
+		tfxOrigin = state->memParamsSize + state->memConstantSize + state->memInputSize;
+
+		CHECK_RESULT(gVulkan.vkMapMemory(state->vkDevice, state->gpuSharedMemory, state->memConstantSize, state->memParamsSize, 0, (void **)&ptr), "vkMapMemory", 0);
+		memcpy(ptr, (const void*)&params, sizeof(params));
+		gVulkan.vkUnmapMemory(state->vkDevice, state->gpuSharedMemory);
+
+#if 0
+		VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO, 0, 0, 0, 0, 1, &state->commandBuffer, 1, &state->semaphore };
+		CHECK_RESULT(gVulkan.vkQueueSubmit(state->queue, 1, &submitInfo, VK_NULL_HANDLE), "vkQueueSubmit", 0);
+		CHECK_RESULT(gVulkan.vkQueueWaitIdle(state->queue), "vkQueueWaitIdle", 0);
+#else
+		CHECK_RESULT(gVulkan.vkResetFences(state->vkDevice, 1, &state->fence), "vkResetFences", 0);
+		VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO, 0, 0, 0, 0, 1, &state->commandBuffer, 0, 0 };
+		CHECK_RESULT(gVulkan.vkQueueSubmit(state->queue, 1, &submitInfo, state->fence), "vkQueueSubmit", 0);
+		VkResult res;
+		do {
+			uint64_t delay = 5ULL * 1000ULL * 1000ULL * 1000ULL;
+			res = gVulkan.vkWaitForFences(state->vkDevice, 1, &state->fence, VK_TRUE, delay);
+		} while (res == VK_TIMEOUT);
+		gVulkan.vkResetFences(state->vkDevice, 1, &state->fence);
+#endif
+
+		uint32_t length = (uint32_t)min(chunkSize, outLength);
+
+		CHECK_RESULT(gVulkan.vkMapMemory(state->vkDevice, state->gpuSharedMemory, tfxOrigin, state->memOutputSize, 0, (void **)&ptr), "vkMapMemory", 0);
+		memcpy(out, ptr, length);
+		gVulkan.vkUnmapMemory(state->vkDevice, state->gpuSharedMemory);
+
+		cgpu->busy = 0;
+
+		return 128;
+	}
+
+	cgpu->busy = 0;
+
+	return SPACEMESH_API_ERROR;
+}
+
+static int64_t vulkan_bit_stream(struct cgpu_info *cgpu, uint8_t *hashes, uint64_t count, uint8_t *output, uint32_t hash_len_bits)
+{
+	cgpu->busy = 1;
+
+	if (vulkan_prepare(cgpu, 512, 1, 1, hash_len_bits, false, true))
+	{
+		_vulkanState *state = (_vulkanState *)cgpu->device_data;
+		AlgorithmParams params;
+
+		cgpu->thread_concurrency = 128;
+
+		uint64_t chunkSize = (cgpu->thread_concurrency * hash_len_bits) / 8;
+		uint64_t outLength = chunkSize;
+		uint8_t *out = output;
+
+		// transfer input to GPU
+		char *ptr = NULL;
+		uint64_t tfxOrigin = state->memConstantSize + state->memParamsSize + state->memInputSize + state->memOutputSize;
+		CHECK_RESULT(gVulkan.vkMapMemory(state->vkDevice, state->gpuSharedMemory, tfxOrigin, state->memOutputSize, 0, (void **)&ptr), "vkMapMemory", 0);
+		memcpy(ptr, (const void*)hashes, 32 * 128);
+		gVulkan.vkUnmapMemory(state->vkDevice, state->gpuSharedMemory);
+
+		params.N = 512;
+		params.hash_len_bits = hash_len_bits;
+		params.global_work_offset = 0;
+
+		const uint64_t delay = 5ULL * 1000ULL * 1000ULL * 1000ULL;
+
+		tfxOrigin = state->memParamsSize + state->memConstantSize + state->memInputSize;
+
+		CHECK_RESULT(gVulkan.vkMapMemory(state->vkDevice, state->gpuSharedMemory, state->memConstantSize, state->memParamsSize, 0, (void **)&ptr), "vkMapMemory", 0);
+		memcpy(ptr, (const void*)&params, sizeof(params));
+		gVulkan.vkUnmapMemory(state->vkDevice, state->gpuSharedMemory);
+
+#if 0
+		VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO, 0, 0, 0, 0, 1, &state->commandBuffer, 1, &state->semaphore };
+		CHECK_RESULT(gVulkan.vkQueueSubmit(state->queue, 1, &submitInfo, VK_NULL_HANDLE), "vkQueueSubmit", 0);
+		CHECK_RESULT(gVulkan.vkQueueWaitIdle(state->queue), "vkQueueWaitIdle", 0);
+#else
+		CHECK_RESULT(gVulkan.vkResetFences(state->vkDevice, 1, &state->fence), "vkResetFences", 0);
+		VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO, 0, 0, 0, 0, 1, &state->commandBuffer, 0, 0 };
+		CHECK_RESULT(gVulkan.vkQueueSubmit(state->queue, 1, &submitInfo, state->fence), "vkQueueSubmit", 0);
+		VkResult res;
+		do {
+			uint64_t delay = 5ULL * 1000ULL * 1000ULL * 1000ULL;
+			res = gVulkan.vkWaitForFences(state->vkDevice, 1, &state->fence, VK_TRUE, delay);
+		} while (res == VK_TIMEOUT);
+		gVulkan.vkResetFences(state->vkDevice, 1, &state->fence);
+#endif
+
+		uint32_t length = (uint32_t)min(chunkSize, outLength);
+
+		CHECK_RESULT(gVulkan.vkMapMemory(state->vkDevice, state->gpuSharedMemory, tfxOrigin, state->memOutputSize, 0, (void **)&ptr), "vkMapMemory", 0);
+		memcpy(out, ptr, length);
+		gVulkan.vkUnmapMemory(state->vkDevice, state->gpuSharedMemory);
+
+		cgpu->busy = 0;
+
+		return chunkSize;
+	}
+
+	cgpu->busy = 0;
+
+	return SPACEMESH_API_ERROR;
+}
+
 static void vulkan_shutdown(struct cgpu_info *cgpu)
 {
 	_vulkanState *vulkanState = (_vulkanState *)cgpu->device_data;
@@ -506,6 +638,7 @@ struct device_drv vulkan_drv = {
 	reinit_vulkan_device,
 	vulkan_init,
 	vulkan_scrypt_positions,
+	{ vulkan_hash, vulkan_bit_stream },
 	vulkan_shutdown
 };
 #endif

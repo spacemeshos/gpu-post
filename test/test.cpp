@@ -1,17 +1,15 @@
-#include "../include/api.h"
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
-#include <time.h>
+#include "test.hpp"
 #ifdef WIN32
 #include <conio.h>
 #endif
-
 #include "test-vectors.h"
 
-#ifndef min
-# define min(a, b)  ((a) < (b) ? (a) : (b))
-#endif
+void do_unit_tests();
+void do_integration_tests();
+int test_variable_label_length();
+int test_variable_labels_count();
+int test_of_concurrency();
+int test_of_cancelation();
 
 #define	MAX_CPU_LABELS_COUNT	(9 * 128 * 1024)
 
@@ -21,17 +19,6 @@ static void print(uint8_t *data)
 		printf("%02x ", data[i]);
 	}
 	printf("\n");
-}
-
-static void printHex(uint8_t *data, uint32_t length)
-{
-	while (length >= 32) {
-		for (int i = 0; i < 32; i++) {
-			printf("%02x ", data[i]);
-		}
-		printf("\n");
-		length -= 32;
-	}
 }
 
 void do_benchmark(int aLabelSize, int aLabelsCount)
@@ -340,6 +327,26 @@ int main(int argc, char **argv)
 		else if (0 == strcmp(argv[i], "--list") || 0 == strcmp(argv[i], "-l")) {
 			do_providers_list();
 			return 0;
+		}
+		else if (0 == strcmp(argv[i], "--unit-tests") || 0 == strcmp(argv[i], "-u")) {
+			do_unit_tests();
+			return 0;
+		}
+		else if (0 == strcmp(argv[i], "--integration-tests") || 0 == strcmp(argv[i], "-i")) {
+			do_integration_tests();
+			return 0;
+		}
+		else if (0 == strcmp(argv[i], "--integration-test-length") || 0 == strcmp(argv[i], "-il")) {
+			return test_variable_label_length();
+		}
+		else if (0 == strcmp(argv[i], "--integration-test-labels") || 0 == strcmp(argv[i], "-in")) {
+			return test_variable_labels_count();
+		}
+		else if (0 == strcmp(argv[i], "--integration-test-concurrency") || 0 == strcmp(argv[i], "-ip")) {
+			return test_of_concurrency();
+		}
+		else if (0 == strcmp(argv[i], "--integration-test-cancelation") || 0 == strcmp(argv[i], "-ic")) {
+			return test_of_cancelation();
 		}
 		else if (0 == strcmp(argv[i], "--label-size") || 0 == strcmp(argv[i], "-s")) {
 			i++;

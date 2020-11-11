@@ -84,7 +84,7 @@ extern uint32_t *cuda_transferbuffer(_cudaState *cudaState, int stream);
 extern uint8_t *cuda_hashbuffer(_cudaState *cudaState, int stream);
 
 extern void cuda_scrypt_serialize(struct cgpu_info *cgpu, _cudaState *cudaState, int stream);
-extern void cuda_scrypt_core(struct cgpu_info *cgpu, _cudaState *cudaState, int stream, unsigned int N, unsigned int r, unsigned int p);
+extern void cuda_scrypt_core(_cudaState *cudaState, int stream, unsigned int N, unsigned int r, unsigned int p, unsigned int LOOKUP_GAP, unsigned int BATCHSIZE);
 extern void cuda_scrypt_done(_cudaState *cudaState, int stream);
 extern void cuda_scrypt_DtoH(_cudaState *cudaState, uint8_t *X, int stream, uint32_t size);
 extern bool cuda_scrypt_sync(struct cgpu_info *cgpu, _cudaState *cudaState, int stream);
