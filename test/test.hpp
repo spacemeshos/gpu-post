@@ -7,9 +7,6 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <time.h>
-
-#ifndef min
-# define min(a, b)  ((a) < (b) ? (a) : (b))
-#endif
+#include <algorithm>
 
 #endif	/* __SPACEMESH_API_TEST_TEST_HPP__ */

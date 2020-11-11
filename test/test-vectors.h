@@ -1,3 +1,5 @@
+#include <stdint.h>
+
 struct TestVector {
 	uint8_t			id[32];
 	uint8_t			salt[32];

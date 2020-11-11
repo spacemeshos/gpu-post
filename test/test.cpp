@@ -13,14 +13,6 @@ int test_of_cancelation();
 
 #define	MAX_CPU_LABELS_COUNT	(9 * 128 * 1024)
 
-static void print(uint8_t *data)
-{
-	for (int i = 0; i < 32; i++) {
-		printf("%02x ", data[i]);
-	}
-	printf("\n");
-}
-
 void do_benchmark(int aLabelSize, int aLabelsCount)
 {
 	uint8_t id[32];
@@ -278,7 +270,7 @@ void create_test_vector()
 
 					const uint8_t *src = vector;
 					
-					for (uint32_t length = sizeof(vector); length > 0; length -= min(32, length)) {
+					for (uint32_t length = sizeof(vector); length > 0; length -= std::min<uint32_t>(32, length)) {
 						for (int i = 0; i < 32; i++) {
 							printf("0x%02x, ", *src++);
 						}
