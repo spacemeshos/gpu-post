@@ -375,6 +375,7 @@ struct device_drv opencl_drv = {
 	reinit_opencl_device,
 	opencl_init,
 	opencl_scrypt_positions,
+	{ NULL, NULL },
 	opencl_shutdown
 };
 #endif

@@ -272,6 +272,11 @@ struct device_drv {
 
 	int64_t(*scrypt_positions)(struct cgpu_info *, uint8_t *pdata, uint64_t start_pos, uint64_t end_position, uint32_t hash_len_bits, uint32_t options, uint8_t *out, uint32_t N, uint32_t r, uint32_t p, struct timeval *tv_start, struct timeval *tv_end, uint64_t *hashes_computed);
 
+	struct {
+		int64_t(*hash)(struct cgpu_info *, uint8_t *input, uint8_t *hashes);
+		int64_t(*bit_stream)(struct cgpu_info *, uint8_t *hashes, uint64_t count, uint8_t *stream, uint32_t hash_len_bits);
+	} unit_tests;
+
 	void(*shutdown)(struct cgpu_info *);
 
 	// Does it need to be free()d?

@@ -598,6 +598,99 @@ static int64_t cpu_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uint
 	return SPACEMESH_API_ERROR;
 }
 
+static int64_t cpu_hash(struct cgpu_info *cgpu, uint8_t *input, uint8_t *hashes)
+{
+	if (cpu_prepare(cgpu, 512, 1, 1))
+	{
+		_cpuState *cpuState = (_cpuState *)cgpu->device_data;
+		
+		cgpu->busy = true;
+
+		for (uint64_t n = 0; n < 128; n++) {
+			((uint64_t*)input)[4] = n;
+
+			scrypt_jane_hash_1_1((uchar*)input, 72, NULL, 0, 512, cpuState->X, cpuState->Y, cpuState->V.ptr, hashes, 32);
+
+			hashes += 32;
+		}
+
+		cgpu->busy = false;
+
+		return 128;
+	}
+
+	return SPACEMESH_API_ERROR;
+}
+
+static int64_t cpu_bit_stream(struct cgpu_info *cgpu, uint8_t *hashes, uint64_t count, uint8_t *output, uint32_t hash_len_bits)
+{
+	int64_t output_length = 0;
+	uint32_t label_full_bytes = hash_len_bits / 8;
+	uint32_t label_total_bytes = (hash_len_bits + 7) / 8;
+	uint8_t label_last_byte_length = hash_len_bits & 7;
+	uint8_t label_last_byte_mask = (1 << label_last_byte_length) - 1;
+	uint32_t available = 8;
+	uint8_t label;
+	int use_byte_copy = 0 == (hash_len_bits % 8);
+
+	*output = 0;
+
+	while (count--) {
+		if (use_byte_copy) {
+			memcpy(output, hashes, label_full_bytes);
+			output += label_full_bytes;
+			output_length += label_full_bytes;
+		}
+		else {
+			if (label_full_bytes) {
+				if (8 == available) {
+					memcpy(output, hashes, label_full_bytes);
+					output += label_full_bytes;
+					output_length += label_full_bytes;
+					output[0] = 0;
+				}
+				else {
+					uint8_t lo_part_mask = (1 << available) - 1;
+					uint8_t lo_part_shift = 8 - available;
+					uint8_t hi_part_shift = available;
+
+					for (int i = 0; i < label_full_bytes; i++) {
+						// get 8 bits
+						label = hashes[i];
+						*output++ |= (label & lo_part_mask) << lo_part_shift;
+						output_length++;
+						*output = label >> hi_part_shift;
+					}
+				}
+			}
+			uint8_t label = hashes[label_full_bytes] & label_last_byte_mask;
+			if (label_last_byte_length > available) {
+				uint8_t lo_part_mask = (1 << available) - 1;
+				uint8_t lo_part_shift = 8 - available;
+				*output++ |= (label & lo_part_mask) << lo_part_shift;
+				output_length++;
+				*output = label >> available;
+				available = 8 - (label_last_byte_length - available);
+			}
+			else {
+				*output |= label << (8 - available);
+				available -= label_last_byte_length;
+				if (0 == available) {
+					available = 8;
+					output++;
+					output_length++;
+					if (count) {
+						output[0] = 0;
+					}
+				}
+			}
+		}
+		hashes += 32;
+	}
+
+	return output_length;
+}
+
 static void cpu_shutdown(struct cgpu_info *cgpu)
 {
 	if (cgpu->device_data) {
@@ -624,6 +717,7 @@ struct device_drv cpu_drv = {
 	reinit_cpu_device,
 	cpu_init,
 	cpu_scrypt_positions,
+	{ cpu_hash, cpu_bit_stream },
 	cpu_shutdown
 };
 
