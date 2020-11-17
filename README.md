@@ -1,7 +1,7 @@
 # GPU Proof of Spacemesh Time Init (aka Smeshing Setup) Prototype
 
 ## Current functionality
-A c libraray implementing the POST API setup method for cpu, cuda and vulkan compute platforms.
+A C library implementing the POST API setup method for cpu, cuda and vulkan compute platforms.
 
 ## Build System Requirements
 
@@ -21,6 +21,24 @@ A c libraray implementing the POST API setup method for cpu, cuda and vulkan com
 ### OS X
 - Cmake
 - Vulkan SDK 1.2.
+
+
+### OS X Dev Env Setup
+1. Install latest version of Xcode with the command line dev tools.
+1. Download the Vulkan 1.2 sdk installer for OS X from https://vulkan.lunarg.com/sdk/home#mac
+1. Copy Vulkan SDK from the Vulkan installer volume to a directory in your hard-drive.
+1. Install the SDK from your hard-drive directory and not from the installer volume by running $ sudo ./install_vulkan.py.
+1. Add the Vulkan env vars to your .bash_profile file with the root location set to the sdk directory on your hard-drive. For example, if Vulkan sdk 1.2.154 is installed then the env vars should be set like this:
+
+```
+export VULKAN_SDK_VERSION="1.2.154.0"
+export VULKAN_ROOT_LOCATION="$HOME/dev/vulkan-sdk-1.2.154"
+export VULKAN_SDK="$VULKAN_ROOT_LOCATION/macOS"
+export VK_ICD_FILENAMES="$VULKAN_SDK/share/vulkan/icd.d/MoltenVK_icd.json"
+export VK_LAYER_PATH="$VULKAN_SDK/share/vulkan/explicit_layers.d"
+export PATH="/usr/local/opt/python/libexec/bin:$VULKAN_SDK/bin:$PATH"
+export DYLD_LIBRARY_PATH="$DYLD_LIBRARY_PATH:$VULKAN_SDK/lib/"
+```
 
 ## Building
 
@@ -153,8 +171,8 @@ Scrypt Benchmarks (n=512, r=1, p=1) 1 byte per leaf, batch size leaves per API c
 | 01/29/2020 	| seagiv   	| sm-scrypt 	| AMD Radeon Pro 555x 4GB              	| macOS 10.14.6        	| vulkan optimized prototype    	     	| 266   	|  	|                                        	|                                          	|
 | 01/31/2020 	| avive   	| sm-scrypt 	| AMD Radeon Pro 560x 4GB              	| macOS 10.14.6        	| vulkan optimized prototype    	     	| 406   	|  	|                                        	|                                          	|
 | 01/31/2020 	| avive   	| sm-scrypt 	| Intel(R) UHD Graphics 630 1536MB              	| macOS 10.14.6        	| vulkan optimized prototype    	     	| 53   	|  	
-| 05/06/2020 	| avive   	| sm-scrypt 	| AMD Radeon RX 580             	| Windows 10        	| vulkan optimized prototype    	     	| 1074   	|  1.074	
-| 09/08/2020 	| avive   	| sm-scrypt 	| Nvidia Tesla V 100 (16GB)            	| Ubuntu 20.04 NVIDIA-SMI 450.51.06 CUDA Version: 11.0 | vulkan optimized prototype    	     	| 4,166   	|  4.166	
-| 09/08/2020 	| avive   	| sm-scrypt 	| Nvidia Tesla T4 (16GB)            	| Ubuntu 20.04 NVIDIA-SMI 450.51.06 CUDA Version: 11.0 | vulkan optimized prototype   	     	|   	1,252 |  1.252	
+| 05/06/2020 	| avive   	| sm-scrypt 	| AMD Radeon RX 580             	| Windows 10        	| vulkan optimized prototype    	     	| 1074   	|  1.074
+| 09/08/2020 	| avive   	| sm-scrypt 	| Nvidia Tesla V 100 (16GB)            	| Ubuntu 20.04 NVIDIA-SMI 450.51.06 CUDA Version: 11.0 | vulkan optimized prototype    	     	| 4,166   	|  4.166
+| 09/08/2020 	| avive   	| sm-scrypt 	| Nvidia Tesla T4 (16GB)            	| Ubuntu 20.04 NVIDIA-SMI 450.51.06 CUDA Version: 11.0 | vulkan optimized prototype   	     	|   	1,252 |  1.252
 | 09/08/2020 	| avive   	| sm-scrypt 	| Nvidia Tesla P100-PCIE (32GB)         | Ubuntu 20.04 NVIDIA-SMI 450.51.06 CUDA Version: 11.0 | vulkan optimized prototype   	     	|   	2083 | 2.083
 | 09/08/2020 	| avive   	| sm-scrypt 	| Nvidia Tesla P4 (32GB)         | Ubuntu 20.04 NVIDIA-SMI 450.51.06 CUDA Version: 11.0 | vulkan optimized prototype   	     	|   	757.57 | 0.75
