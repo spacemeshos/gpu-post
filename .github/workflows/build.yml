@@ -23,8 +23,8 @@ jobs:
       run: .github/tools/linux-install-cuda.sh
 
     - name: Install Vulkan
-       env:
-         ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true'
+      env:
+        ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true'
       run: .github/tools/linux-install-vulkan.sh
 
     - run: cmake .
