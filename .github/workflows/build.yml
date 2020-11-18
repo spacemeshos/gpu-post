@@ -23,6 +23,8 @@ jobs:
       run: .github/tools/linux-install-cuda.sh
 
     - name: Install Vulkan
+       env:
+         ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true'
       run: .github/tools/linux-install-vulkan.sh
 
     - run: cmake .
@@ -112,6 +114,8 @@ jobs:
     - uses: actions/checkout@v2
 
     - name: Install Vulkan
+      env:
+        ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true'
       run: .github/tools/macos-install-vulkan.sh
 
     - run: cmake -DSPACEMESHCL=OFF -DSPACEMESHCUDA=OFF .
