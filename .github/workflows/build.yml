@@ -23,8 +23,6 @@ jobs:
       run: .github/tools/linux-install-cuda.sh
 
     - name: Install Vulkan
-      env:
-        ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true'
       run: .github/tools/linux-install-vulkan.sh
 
     - run: cmake .
@@ -57,7 +55,7 @@ jobs:
         - os: windows-2016
           cuda: "10.2.89"
           cuda_hash: b538271c4d9ffce1a8520bf992d9bd23854f0f29cee67f48c6139e4cf301e253
-          vulkan: "1.2.141.0"
+          vulkan: "1.2.154.1"
           vs_path: c:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise
 
     steps:
@@ -114,8 +112,6 @@ jobs:
     - uses: actions/checkout@v2
 
     - name: Install Vulkan
-      env:
-        ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true'
       run: .github/tools/macos-install-vulkan.sh
 
     - run: cmake -DSPACEMESHCL=OFF -DSPACEMESHCUDA=OFF .
@@ -156,7 +152,7 @@ jobs:
 
       - run: |
           VER="${{ github.ref }}"
-          echo "::set-env name=VERSION::${VER#refs/tags/v}"
+          echo "VERSION=${VER#refs/tags/v}" >> $GITHUB_ENV
 
       - name: Archive Linux Library
         run: zip --junk-paths libgpu-setup-linux-${{ env.VERSION }}.zip linux/*
