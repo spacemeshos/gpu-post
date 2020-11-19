@@ -14,10 +14,10 @@ python install_vulkan.py
 
 VULKAN_ROOT_LOCATION=$PWD
 VULKAN_SDK=${VULKAN_ROOT_LOCATION}/macOS
-echo "::set-env name=VULKAN_ROOT_LOCATION::$VULKAN_ROOT_LOCATION"
-echo "::set-env name=VULKAN_SDK_VERSION::$VERSION"
-echo "::set-env name=VULKAN_SDK::$VULKAN_SDK"
-echo "::set-env name=VK_ICD_FILENAMES::${VULKAN_SDK}/etc/vulkan/icd.d/MoltenVK_icd.json"
-echo "::set-env name=VK_LAYER_PATH::${VULKAN_SDK}/etc/vulkan/explicit_layers.d"
-echo "::set-env name=PATH::${VULKAN_SDK}/bin:$PATH"
-echo "::set-env name=DYLD_LIBRARY_PATH::$DYLD_LIBRARY_PATH:${VULKAN_SDK}/lib"
+echo "VULKAN_ROOT_LOCATION=$VULKAN_ROOT_LOCATION" >> $GITHUB_ENV
+echo "VULKAN_SDK_VERSION=$VERSION" >> $GITHUB_ENV
+echo "VULKAN_SDK=$VULKAN_SDK" >> $GITHUB_ENV
+echo "VK_ICD_FILENAMES=${VULKAN_SDK}/etc/vulkan/icd.d/MoltenVK_icd.json" >> $GITHUB_ENV
+echo "VK_LAYER_PATH=${VULKAN_SDK}/etc/vulkan/explicit_layers.d" >> $GITHUB_ENV
+echo "PATH=${VULKAN_SDK}/bin:$PATH" >> $GITHUB_ENV
+echo "DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:${VULKAN_SDK}/lib" >> $GITHUB_ENV

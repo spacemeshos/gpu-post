@@ -156,7 +156,7 @@ jobs:
 
       - run: |
           VER="${{ github.ref }}"
-          echo "::set-env name=VERSION::${VER#refs/tags/v}"
+          echo "VERSION=${VER#refs/tags/v}" >> $GITHUB_ENV
 
       - name: Archive Linux Library
         run: zip --junk-paths libgpu-setup-linux-${{ env.VERSION }}.zip linux/*
