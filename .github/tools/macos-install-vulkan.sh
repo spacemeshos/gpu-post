@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -ex
+set -e
 
 VERSION=1.2.154.0
 url=https://sdk.lunarg.com/sdk/download/$VERSION/mac/vulkansdk-macos-$VERSION.dmg
