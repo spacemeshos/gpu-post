@@ -2,11 +2,11 @@
 
 set -ex
 
-VERSION=1.2.141.0
+VERSION=1.2.154.0
 url=https://sdk.lunarg.com/sdk/download/$VERSION/mac/vulkansdk-macos-$VERSION.dmg
 
 filename=${url##*/}
-wget -q -O $filename $url
+wget -q -O $filename "${url}?u="
 shasum -c .github/tools/vulkan.sha256
 sudo hdiutil attach $filename
 cd /Volumes/vulkansdk-macos-$VERSION

@@ -2,7 +2,7 @@
 
 set -e
 
-VER=1.2.148
+VER=1.2.154
 OS=$(lsb_release -c | cut -f 2)
 wget -qO - http://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -
 sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-${OS}.list http://packages.lunarg.com/vulkan/${VER}/lunarg-vulkan-${VER}-${OS}.list
