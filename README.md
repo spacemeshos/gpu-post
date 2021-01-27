@@ -4,8 +4,9 @@
 A c libraray implementing the POST API setup method for cpu, cuda and vulkan compute platforms.
 
 ## Runtime Requirements
-One of the following:
-- A GPU and drivers supporting CUDA 10.0 (or later) runtime. such as a modern Nvidia GPU.
+OS: Windows 10, macOS or Linux.
+GPI: One of the following:
+- A GPU and drivers supporting CUDA 10.0 (or later) runtime such as a modern Nvidia GPU.
 - A GPU and drivers supporting Vulkan 1.2 (or later) runtime such as a modern AMD and Intel GPUs.
 
 Both discrete and on-board GPUs are supported as long as they support the minimum CUDA or Vulkan runtimes. 
