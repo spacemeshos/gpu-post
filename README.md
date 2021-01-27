@@ -4,7 +4,11 @@
 A c libraray implementing the POST API setup method for cpu, cuda and vulkan compute platforms.
 
 ## Runtime Requirements
-- A GPU supporting CUDA 10.0 (or later) such as a modern Nvidia GPU, or a GPU supporting Vulkan 1.1 (or later) such as modern AMD and Intel GPUs.
+One of the following:
+- A GPU and drivers supporting CUDA 10.0 (or later) runtime. such as a modern Nvidia GPU.
+- A GPU and drivers supporting Vulkan 1.2 (or later) runtime such as a modern AMD and Intel GPUs.
+
+Both discrete and on-board GPUs are supported as long as they support the minimum CUDA or Vulkan runtimes. 
 
 ## Build System Requirements
 
