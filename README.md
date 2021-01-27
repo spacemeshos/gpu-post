@@ -1,4 +1,4 @@
-# GPU Proof of Spacemesh Time Init (aka Smeshing Setup) Prototype
+# GPU Proof of Spacemesh Time Init (aka Smeshing Setup) Library
 
 ## Current functionality
 A c libraray implementing the POST API setup method for cpu, cuda and vulkan compute platforms.
