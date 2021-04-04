@@ -183,3 +183,4 @@ Scrypt Benchmarks (n=512, r=1, p=1) 1 byte per leaf, batch size leaves per API c
 | 09/08/2020 	| avive   	| sm-scrypt 	| Nvidia Tesla T4 (16GB)            	| Ubuntu 20.04 NVIDIA-SMI 450.51.06 CUDA Version: 11.0 | vulkan optimized prototype   	     	|   	1,252 |  1.252
 | 09/08/2020 	| avive   	| sm-scrypt 	| Nvidia Tesla P100-PCIE (32GB)         | Ubuntu 20.04 NVIDIA-SMI 450.51.06 CUDA Version: 11.0 | vulkan optimized prototype   	     	|   	2083 | 2.083
 | 09/08/2020 	| avive   	| sm-scrypt 	| Nvidia Tesla P4 (32GB)         | Ubuntu 20.04 NVIDIA-SMI 450.51.06 CUDA Version: 11.0 | vulkan optimized prototype   	     	|   	757.57 | 0.75
+| 04/04/2020 	| avive   	| sm-scrypt 	| Apple M1         | MacOS 11.2 | vulkan optimized prototype   	     	|   	214 | 0.214
