@@ -15,11 +15,11 @@ int test_of_cancelation();
 
 void do_benchmark(int aLabelSize, int aLabelsCount)
 {
-	uint8_t id[32];
-	uint8_t salt[32];
+	uint8_t id[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+	uint8_t salt[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
 	int providersCount = spacemesh_api_get_providers(NULL, 0);
-
+/*
 	srand(time(nullptr));
 	for (int i = 0; i < sizeof(id); i++) {
 		id[i] = rand();
@@ -27,7 +27,7 @@ void do_benchmark(int aLabelSize, int aLabelsCount)
 	for (int i = 0; i < sizeof(salt); i++) {
 		salt[i] = rand();
 	}
-
+*/
 	if (providersCount > 0) {
 		PostComputeProvider *providers = (PostComputeProvider *)malloc(providersCount * sizeof(PostComputeProvider));
 
@@ -37,12 +37,15 @@ void do_benchmark(int aLabelSize, int aLabelsCount)
 				printf("Buffer allocation error\n");
 				return;
 			}
+			uint64_t idx_solution = -1;
+			uint8_t D[32] = { 0x0, 0x0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 			for (int i = 0; i < providersCount; i++) {
-				if (providers[i].compute_api != COMPUTE_API_CLASS_CPU) {
+//				if (providers[i].compute_api != COMPUTE_API_CLASS_CPU)
+				{
 					uint64_t hashes_computed;
 					uint64_t hashes_per_sec;
-					scryptPositions(providers[i].id, id, 0, aLabelsCount - 1, aLabelSize, salt, 0, out, 512, 1, 1, &hashes_computed, &hashes_per_sec);
-					printf("%s: %u hashes, %u h/s\n", providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
+					int status = scryptPositions(providers[i].id, id, 0, aLabelsCount - 1, aLabelSize, salt, SPACEMESH_API_COMPUTE_POW, out, 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
+					printf("%s: status %d, %u hashes, %u h/s, solution at %u\n", providers[i].model, status, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec, (uint32_t)idx_solution);
 				}
 			}
 			free(out);
@@ -86,9 +89,11 @@ void do_test(int aLabelSize, int aLabelsCount, int aReferenceProvider, bool aPri
 				// Find CPU provider and compute reference labels
 				for (i = 0; i < providersCount; i++) {
 					if (providers[i].compute_api == COMPUTE_API_CLASS_CPU) {
+						uint64_t idx_solution = -1;
+						uint8_t D[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 						referenceLabels = out + i * labelsBufferAllignedSize;
 						memset(referenceLabels, 0, labelsBufferSize);
-						scryptPositions(providers[i].id, id, 0, referenceLabelsCount - 1, aLabelSize, salt, 0, referenceLabels, 512, 1, 1, &hashes_computed, &hashes_per_sec);
+						scryptPositions(providers[i].id, id, 0, referenceLabelsCount - 1, aLabelSize, salt, SPACEMESH_API_COMPUTE_LEAFS, referenceLabels, 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
 						printf("%s: %u hashes, %u h/s\n", providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
 						aReferenceProvider = i;
 						checkOuitput = true;
@@ -97,18 +102,22 @@ void do_test(int aLabelSize, int aLabelsCount, int aReferenceProvider, bool aPri
 				}
 			}
 			else {
+				uint64_t idx_solution = -1;
+				uint8_t D[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 				referenceLabels = out + aReferenceProvider * labelsBufferAllignedSize;
 				memset(referenceLabels, 0, labelsBufferSize);
-				scryptPositions(providers[aReferenceProvider].id, id, 0, referenceLabelsCount - 1, aLabelSize, salt, 0, referenceLabels, 512, 1, 1, &hashes_computed, &hashes_per_sec);
+				scryptPositions(providers[aReferenceProvider].id, id, 0, referenceLabelsCount - 1, aLabelSize, salt, SPACEMESH_API_COMPUTE_LEAFS, referenceLabels, 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
 				printf("%s: %u hashes, %u h/s\n", providers[aReferenceProvider].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
 				checkOuitput = true;
 			}
 
 			for (i = 0; i < providersCount; i++) {
 				if (i != aReferenceProvider && providers[i].compute_api != COMPUTE_API_CLASS_CPU) {
+					uint64_t idx_solution = -1;
+					uint8_t D[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 					uint8_t *labels = out + i * labelsBufferAllignedSize;
 					memset(labels, 0, labelsBufferSize);
-					scryptPositions(providers[i].id, id, 0, aLabelsCount - 1, aLabelSize, salt, 0, labels, 512, 1, 1, &hashes_computed, &hashes_per_sec);
+					scryptPositions(providers[i].id, id, 0, aLabelsCount - 1, aLabelSize, salt, SPACEMESH_API_COMPUTE_LEAFS, labels, 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
 					printf("%s: %u hashes, %u h/s\n", providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
 					if (checkOuitput) {
 						size_t referencelabelsBufferSize = (size_t(referenceLabelsCount) * size_t(aLabelSize)) / 8ull;
@@ -195,10 +204,12 @@ bool do_test_vector(const TestVector *aTestVector, bool aPrintResult)
 					uint8_t *out;
 					uint64_t hashes_computed;
 					uint64_t hashes_per_sec;
+					uint64_t idx_solution = -1;
+					uint8_t D[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
 					out = (uint8_t*)calloc(1, labelsBufferSize);
 
-					scryptPositions(providers[i].id, aTestVector->id, 0, aTestVector->labelsCount - 1, aTestVector->labelSize, aTestVector->salt, 0, out, 512, 1, 1, &hashes_computed, &hashes_per_sec);
+					scryptPositions(providers[i].id, aTestVector->id, 0, aTestVector->labelsCount - 1, aTestVector->labelSize, aTestVector->salt, SPACEMESH_API_COMPUTE_LEAFS, out, 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
 					printf("Test vector: %s: %u hashes, %u h/s\n", providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
 
 					if (0 != memcmp(aTestVector->result, out, labelsBufferSize)) {
@@ -260,12 +271,14 @@ void create_test_vector()
 					uint8_t vector[labelsBufferSize];
 					uint64_t hashes_computed;
 					uint64_t hashes_per_sec;
+					uint64_t idx_solution = -1;
+					uint8_t D[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
 					memset(id, 0, sizeof(id));
 					memset(salt, 0, sizeof(salt));
 					memset(vector, 0, sizeof(vector));
 
-					scryptPositions(providers[i].id, id, 0, testLabelsCount - 1, labelSize, salt, 0, vector, 512, 1, 1, &hashes_computed, &hashes_per_sec);
+					scryptPositions(providers[i].id, id, 0, testLabelsCount - 1, labelSize, salt, SPACEMESH_API_COMPUTE_LEAFS, vector, 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
 					printf("Test vector: %s: %u hashes, %u h/s\n", providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
 
 					const uint8_t *src = vector;

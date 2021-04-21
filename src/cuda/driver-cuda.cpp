@@ -18,7 +18,7 @@
 
 #include "salsa_kernel.h"
 
-#define	PREIMAGE_SIZE	72
+#define	PREIMAGE_SIZE	128
 
 extern struct device_drv cuda_drv;
 
@@ -117,20 +117,36 @@ static bool cuda_init(struct cgpu_info *cgpu)
 					 | (((x) >> 8) & 0x0000ff00u) | (((x) >> 24) & 0x000000ffu))
 
 
-static int64_t cuda_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uint64_t start_position, uint64_t end_position, uint32_t hash_len_bits, uint32_t options, uint8_t *output, uint32_t N, uint32_t r, uint32_t p, struct timeval *tv_start, struct timeval *tv_end, uint64_t *hashes_computed)
+static int cuda_scrypt_positions(
+	struct cgpu_info *cgpu,
+	uint8_t *preimage,
+	uint64_t start_position,
+	uint64_t end_position,
+	uint32_t hash_len_bits,
+	uint32_t options,
+	uint8_t *output,
+	uint32_t N,
+	uint32_t,
+	uint32_t,
+	uint64_t *idx_solution,
+	struct timeval *tv_start,
+	struct timeval *tv_end,
+	uint64_t *hashes_computed
+)
 {
 	cgpu->busy = 1;
 	if (hashes_computed) {
 		*hashes_computed = 0;
 	}
 
-	if (cuda_prepare(cgpu, N, r, p, hash_len_bits, 0 != (options & SPACEMESH_API_THROTTLED_MODE)))
+	if (cuda_prepare(cgpu, N, 1, 1, hash_len_bits, 0 != (options & SPACEMESH_API_THROTTLED_MODE)))
 	{
 		_cudaState *cudaState = (_cudaState *)cgpu->device_data;
+		int status = SPACEMESH_API_ERROR_NONE;
 
 		if (cgpu->thread_concurrency == 0) {
 			cgpu->busy = 0;
-			return -1;
+			return SPACEMESH_API_ERROR;
 		}
 
 		gettimeofday(tv_start, NULL);
@@ -138,15 +154,23 @@ static int64_t cuda_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uin
 		uint8_t *hash[2] = { cuda_hashbuffer(cudaState, 0), cuda_hashbuffer(cudaState, 1) };
 
 		uint64_t n = start_position;
+		bool computeLeafs = 0 != (options & SPACEMESH_API_COMPUTE_LEAFS);
+		bool computePow = 0 != (options & SPACEMESH_API_COMPUTE_POW);
+
+		uint32_t pdata[32];
+		memcpy(pdata, preimage, PREIMAGE_SIZE);
+		for (int i = 20; i < 28; i++) {
+			pdata[i] = bswap_32(pdata[i]);
+		}
 
 		/* byte swap pdata into data[0]/[1] arrays */
 		for (int k = 0; k < 2; ++k) {
 			for (unsigned i = 0; i < cgpu->thread_concurrency; ++i) memcpy(&cudaState->data[k][(PREIMAGE_SIZE / 4)*i], pdata, PREIMAGE_SIZE);
 		}
-		prepare_keccak512(cudaState, pdata, PREIMAGE_SIZE);
+		prepare_keccak512(cudaState, (uint8_t*)pdata, PREIMAGE_SIZE);
 
 		uint64_t nonce[2];
-		uint32_t* cuda_X[2] = { cuda_transferbuffer(cudaState, 0), cuda_transferbuffer(cudaState, 1) };
+		uint64_t* cuda_X[2] = { cuda_transferbuffer(cudaState, 0), cuda_transferbuffer(cudaState, 1) };
 
 		int cur = 0, nxt = 1; // streams
 		int iteration = 0;
@@ -157,6 +181,7 @@ static int64_t cuda_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uin
 
 		do {
 			nonce[nxt] = n;
+			cuda_X[nxt][0] = 0xffffffffffffffff;
 
 			// all on gpu
 
@@ -166,30 +191,44 @@ static int64_t cuda_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uin
 				applog(LOG_DEBUG, "GPU #%d: n=%x", cgpu->driver_id, n);
 			}
 
+			cuda_solutions_HtoD(cudaState, nxt);
 			cuda_scrypt_serialize(cgpu, cudaState, nxt);
-			if (1 == r && 1 == p) {
-				pre_keccak512_1_1(cudaState, nxt, nonce[nxt], cgpu->thread_concurrency);
-				cuda_scrypt_core(cudaState, nxt, N, r, p, cgpu->lookup_gap, cgpu->batchsize);
-			}
-			else {
-				pre_keccak512(cudaState, nxt, nonce[nxt], cgpu->thread_concurrency, r);
-				cuda_scrypt_core(cudaState, nxt, N, r, p, cgpu->lookup_gap, cgpu->batchsize);
-			}
+
+			pre_keccak512_1_1(cudaState, nxt, nonce[nxt], cgpu->thread_concurrency);
+			cuda_scrypt_core(cudaState, nxt, N, 1, 1, cgpu->lookup_gap, cgpu->batchsize);
+
 			if (!cuda_scrypt_sync(cgpu, cudaState, nxt)) {
+				status = SPACEMESH_API_ERROR;
 				break;
 			}
 
-			post_keccak512(cudaState, nxt, nonce[nxt], cgpu->thread_concurrency, r, hash_len_bits);
+			post_keccak512(cudaState, nxt, nonce[nxt], cgpu->thread_concurrency, hash_len_bits);
 			cuda_scrypt_done(cudaState, nxt);
 
-			cuda_scrypt_DtoH(cudaState, hash[nxt], nxt, chunkSize);
+			if (computeLeafs) {
+				cuda_scrypt_DtoH(cudaState, hash[nxt], nxt, chunkSize);
+			}
+			cuda_solutions_DtoH(cudaState, nxt);
 			if (!cuda_scrypt_sync(cgpu, cudaState, nxt)) {
+				status = SPACEMESH_API_ERROR;
 				break;
 			}
 
-			memcpy(out, hash[nxt], min(chunkSize, outLength));
-			out += chunkSize;
-			outLength -= chunkSize;
+			if (computePow && (cuda_X[nxt][0] != 0xffffffffffffffff)) {
+				if (idx_solution) {
+					*idx_solution = cuda_X[nxt][0];
+				}
+				if (!computeLeafs) {
+					status = SPACEMESH_API_POW_SOLUTION_FOUND;
+					break;
+				}
+			}
+
+			if (computeLeafs) {
+				memcpy(out, hash[nxt], min(chunkSize, outLength));
+				out += chunkSize;
+				outLength -= chunkSize;
+			}
 
 			cur = (cur + 1) & 1;
 			nxt = (nxt + 1) & 1;
@@ -209,6 +248,10 @@ static int64_t cuda_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uin
 		int usedBits = (positions * hash_len_bits % 8);
 		if (usedBits) {
 			output[(positions * hash_len_bits) / 8] &= 0xff >> (8 - usedBits);
+		}
+
+		if (status) {
+			return status;
 		}
 
 		return (n <= end_position) ? SPACEMESH_API_ERROR_CANCELED : SPACEMESH_API_ERROR_NONE;
@@ -245,8 +288,6 @@ static int64_t cuda_hash(struct cgpu_info *cgpu, uint8_t *pdata, uint8_t *output
 
 		prepare_keccak512(cudaState, pdata, PREIMAGE_SIZE);
 
-		uint32_t* cuda_X = cuda_transferbuffer(cudaState, 0);
-
 		int iteration = 0;
 		uint8_t *out = output;
 		uint64_t chunkSize = 32 * cgpu->thread_concurrency;
@@ -256,7 +297,7 @@ static int64_t cuda_hash(struct cgpu_info *cgpu, uint8_t *pdata, uint8_t *output
 		pre_keccak512_1_1(cudaState, 0, 0, cgpu->thread_concurrency);
 		cuda_scrypt_core(cudaState, 0, 512, 1, 1, cgpu->lookup_gap, cgpu->batchsize);
 
-		post_keccak512(cudaState, 0, 0, cgpu->thread_concurrency, 1, 256);
+		post_keccak512(cudaState, 0, 0, cgpu->thread_concurrency, 256);
 		cuda_scrypt_done(cudaState, 0);
 
 		cuda_scrypt_DtoH(cudaState, hash, 0, chunkSize);

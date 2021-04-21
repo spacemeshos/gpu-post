@@ -473,7 +473,27 @@ static bool cpu_init(struct cgpu_info *cgpu)
 	return true;
 }
 
-static int64_t cpu_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uint64_t start_position, uint64_t end_position, uint32_t hash_len_bits, uint32_t options, uint8_t *output, uint32_t N, uint32_t r, uint32_t p, struct timeval *tv_start, struct timeval *tv_end, uint64_t *hashes_computed)
+static int cmp_uint256(const uint64_t *left, const uint64_t *right)
+{
+	return memcmp(left, right, 32);
+}
+
+static int cpu_scrypt_positions(
+	struct cgpu_info *cgpu,
+	uint8_t *pdata,
+	uint64_t start_position,
+	uint64_t end_position,
+	uint32_t hash_len_bits,
+	uint32_t options,
+	uint8_t *output,
+	uint32_t N,
+	uint32_t r,
+	uint32_t p,
+	uint64_t *idx_solution,
+	struct timeval *tv_start,
+	struct timeval *tv_end,
+	uint64_t *hashes_computed
+)
 {
 	if (hashes_computed) {
 		*hashes_computed = 0;
@@ -490,7 +510,14 @@ static int64_t cpu_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uint
 		uint32_t available = 8;
 		uint8_t hash[32];
 		uint8_t label;
-		int use_byte_copy = 0 == (hash_len_bits % 8);
+		bool use_byte_copy = 0 == (hash_len_bits % 8);
+		bool compute_pow = 0 != (options & SPACEMESH_API_COMPUTE_POW);
+		uint64_t *D = (uint64_t*)(pdata + 80);
+		int status = SPACEMESH_API_ERROR_NONE;
+
+		if (compute_pow) {
+			label_total_bytes = 32;
+		}
 
 		gettimeofday(tv_start, NULL);
 
@@ -500,7 +527,18 @@ static int64_t cpu_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uint
 		do {
 			((uint64_t*)pdata)[4] = n;
 			if (1 == r && 1 == p) {
-				scrypt_jane_hash_1_1((uchar*)pdata, 72, NULL, 0, (uint32_t)N, cpuState->X, cpuState->Y, cpuState->V.ptr, hash, label_total_bytes);
+				scrypt_jane_hash_1_1((uchar*)pdata, 72, NULL, 0, (uint32_t)N, cpuState->X, cpuState->Y, cpuState->V.ptr, hash, 32/*label_total_bytes*/);
+				if (compute_pow) {
+					if (cmp_uint256((uint64_t*)hash, D) < 0) {
+						if (0 == (options & SPACEMESH_API_COMPUTE_LEAFS)) {
+							if (idx_solution) {
+								*idx_solution = n;
+							}
+							status = SPACEMESH_API_POW_SOLUTION_FOUND;
+							break;
+						}
+					}
+				}
 			}
 			else {
 				uint32_t i;
@@ -590,6 +628,10 @@ static int64_t cpu_scrypt_positions(struct cgpu_info *cgpu, uint8_t *pdata, uint
 		cgpu->busy = false;
 		if (hashes_computed) {
 			*hashes_computed = n - start_position;
+		}
+
+		if (status) {
+			return status;
 		}
 
 		return (n <= end_position) ? SPACEMESH_API_ERROR_CANCELED : SPACEMESH_API_ERROR_NONE;

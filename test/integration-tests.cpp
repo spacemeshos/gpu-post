@@ -31,10 +31,12 @@ struct Provider
 	}
 
 	int compute(uint64_t start_pos, uint64_t end_pos, uint32_t label_length) {
+		uint64_t idx_solution = -1;
+		uint8_t D[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 		size_t labels_count = end_pos - start_pos + 1;
 		size_t output_length = (labels_count * label_length + 7) / 8;
 		labels.resize(output_length);
-		return scryptPositions(provider_id, id, start_pos, end_pos, label_length, salt, 0, labels.data(), 512, 1, 1, &hashes_computed, NULL);
+		return scryptPositions(provider_id, id, start_pos, end_pos, label_length, salt, SPACEMESH_API_COMPUTE_LEAFS, labels.data(), 512, 1, 1, D, &idx_solution, &hashes_computed, NULL);
 	}
 
 	void post(uint64_t start_pos, uint64_t end_pos, uint32_t label_length, std::atomic_uint32_t *counter) {

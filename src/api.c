@@ -16,30 +16,40 @@ int scryptPositions(
     uint32_t N,
     uint32_t R,
     uint32_t P,
+	uint8_t *D,					// Target D for the POW computation. 256 bits.
+	uint64_t *idx_solution,		// index of output where output < D if POW compute was on. MAX_UINT64 otherwise.
 	uint64_t *hashes_computed,
 	uint64_t *hashes_per_sec
 )
 {
-	uint32_t data[20]; // align 16
+	uint64_t data[16]; // align 16
 	double t = 0.0;
 	struct timeval tv_start;
 	struct timeval tv_end;
 	struct cgpu_info *cgpu = NULL;
 	uint64_t hashes_computed_local;
+	int status;
 
 	memcpy(data, id, 32);
-	data[8] = 0;
+	data[4] = 0;
+	memcpy(data + 5, salt, 32);
 	data[9] = 0;
-	memcpy(data + 10, salt, 32);
-	data[18] = 0;
-	data[19] = 0;
+	memcpy(data + 10, D, 32);
 
 	spacemesh_api_init();
+
+	if (R != 1 || P != 1) {
+		return SPACEMESH_API_ERROR_INVALID_PARAMETER;
+	}
+
+	if (0 == (options & (SPACEMESH_API_COMPUTE_LEAFS | SPACEMESH_API_COMPUTE_POW))) {
+		return SPACEMESH_API_ERROR_NO_COMPOTE_OPTIONS;
+	}
 
 	cgpu = spacemesh_api_get_gpu(provider_id);
 
 	if (NULL == cgpu) {
-		return -1;
+		return SPACEMESH_API_ERROR_INVALID_PARAMETER;
 	}
 #ifdef _DEBUG
 	memset(out, 0, (end_position - start_position + 1));
@@ -49,7 +59,7 @@ int scryptPositions(
 		hashes_computed = &hashes_computed_local;
 	}
 
-	cgpu->drv->scrypt_positions(cgpu, (uint8_t*)data, start_position, end_position, hash_len_bits, options, out, N, R, P, &tv_start, &tv_end, hashes_computed);
+	status = cgpu->drv->scrypt_positions(cgpu, (uint8_t*)data, start_position, end_position, hash_len_bits, options, out, N, R, P, idx_solution, &tv_start, &tv_end, hashes_computed);
 
 	t = 1e-6 * (tv_end.tv_usec - tv_start.tv_usec) + (tv_end.tv_sec - tv_start.tv_sec);
 #if 0
@@ -61,7 +71,7 @@ int scryptPositions(
 		*hashes_per_sec = (uint64_t)(*hashes_computed / t);
 	}
 
-	return 0;
+	return status;
 }
 
 int64_t unit_test_hash(uint32_t provider_id, uint8_t *input, uint8_t *hashes)
