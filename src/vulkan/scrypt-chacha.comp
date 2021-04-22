@@ -15,6 +15,7 @@ layout(binding = 2) buffer Params
 	uvec2 global_work_offset;
 	uint N;
 	uint hash_len_bits;
+	uvec4 idx_solution;
 };
 
 layout(binding = 3) buffer ClBuffer
@@ -43,6 +44,9 @@ shared uint labels[WORKSIZE * 16];
 
 #define ROTL64(x, y) rotate2(x, uint(y))
 #define ROTL32(x, y) ((x << y) | (x >> (32-y)))
+
+#define bswap_32(x) ((((x) << 24) & 0xff000000u) | (((x) << 8) & 0x00ff0000u) \
+                   | (((x) >> 8) & 0x0000ff00u) | (((x) >> 24) & 0x000000ffu))
 
 struct scrypt_hash_state {
 	uvec4 state4[(SCRYPT_KECCAK_F + 127) / 128]; // 8 bytes of extra
@@ -607,12 +611,59 @@ main()
 	hmac_pw.inner.buffer4[4].xy = uvec2(0, 0x80000000);
 	keccak_block(hmac_pw.inner, hmac_pw.inner.buffer4);
 //	scrypt_hash_update_64(&st->outer, innerhash);
-	for (i = 0; i < 4; i++) {
-		hmac_pw.outer.buffer4[i] = hmac_pw.inner.state4[i];
-	}
+	hmac_pw.outer.buffer4[0] = hmac_pw.inner.state4[0];
+	hmac_pw.outer.buffer4[1] = hmac_pw.inner.state4[1];
+	hmac_pw.outer.buffer4[2] = hmac_pw.inner.state4[2];
+	hmac_pw.outer.buffer4[3] = hmac_pw.inner.state4[3];
 //	return scrypt_hash_finish_80_after_64_1(&st->outer);
 	hmac_pw.outer.buffer4[4].xy = uvec2(0x01, 0x80000000);
 	keccak_block(hmac_pw.outer, hmac_pw.outer.buffer4);
+
+	int cmp = 0;
+
+	tmp = bswap_32(hmac_pw.outer.state4[0].x);
+	if (buffer0[5].x != tmp) {
+		cmp = tmp < buffer0[5].x ? -1 : 1;
+	}
+
+	tmp = bswap_32(hmac_pw.outer.state4[0].y);
+	if (cmp == 0 && buffer0[5].y != tmp) {
+		cmp = tmp < buffer0[5].y ? -1 : 1;
+	}
+
+	tmp = bswap_32(hmac_pw.outer.state4[0].z);
+	if (cmp == 0 && buffer0[5].z != tmp) {
+		cmp = tmp < buffer0[5].z ? -1 : 1;
+	}
+
+	tmp = bswap_32(hmac_pw.outer.state4[0].w);
+	if (cmp == 0 && buffer0[5].w != tmp) {
+		cmp = tmp < buffer0[5].w ? -1 : 1;
+	}
+
+	tmp = bswap_32(hmac_pw.outer.state4[1].x);
+	if (cmp == 0 && buffer0[6].x != tmp) {
+		cmp = tmp < buffer0[6].x ? -1 : 1;
+	}
+
+	tmp = bswap_32(hmac_pw.outer.state4[1].y);
+	if (cmp == 0 && buffer0[6].y != tmp) {
+		cmp = tmp < buffer0[6].y ? -1 : 1;
+	}
+
+	tmp = bswap_32(hmac_pw.outer.state4[1].z);
+	if (cmp == 0 && buffer0[6].z != tmp) {
+		cmp = tmp < buffer0[6].z ? -1 : 1;
+	}
+
+	tmp = bswap_32(hmac_pw.outer.state4[1].w);
+	if (cmp == 0 && buffer0[6].w != tmp) {
+		cmp = tmp < buffer0[6].w ? -1 : 1;
+	}
+
+	if (cmp < 0) {
+		idx_solution.xy = nonce;
+	}
 
 //	labels[lid] = hmac_pw.outer.state4[0].x & LABEL_MASK;
 //////////////////////////////////////////////////

@@ -80,6 +80,11 @@ SPACEMESHAPI int spacemesh_api_get_providers(
 	int max_providers			    // buffer size
 );
 
+// enable/disable log output
+SPACEMESHAPI void spacemesh_api_logging(
+	int enable
+);
+
 SPACEMESHAPI int64_t unit_test_hash(uint32_t provider_id, uint8_t *input, uint8_t *hashes);
 SPACEMESHAPI int64_t unit_test_bit_stream(uint32_t provider_id, uint8_t *hashes, uint64_t count, uint8_t *output, uint32_t hash_len_bits);
 

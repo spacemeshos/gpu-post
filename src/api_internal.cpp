@@ -193,6 +193,11 @@ extern "C" int spacemesh_api_get_providers(
 
 extern "C" int opt_logs = 0;
 
+extern "C" void spacemesh_api_logging(int enable)
+{
+	opt_logs = enable;
+}
+
 void applog(int prio, const char *fmt, ...)
 {
 	if (opt_logs) {

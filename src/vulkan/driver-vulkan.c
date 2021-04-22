@@ -17,6 +17,8 @@
 #include "driver-vulkan.h"
 #include "scrypt-chacha-vulkan.inl"
 
+#define	PREIMAGE_SIZE	128
+
 static const uint64_t keccak_round_constants[24] =
 {
 	0x0000000000000001ull, 0x0000000000008082ull,
@@ -91,6 +93,7 @@ typedef struct AlgorithmParams {
 	uint64_t global_work_offset;
 	uint32_t N;
 	uint32_t hash_len_bits;
+	uint64_t idx_solution[2];
 } AlgorithmParams;
 
 struct device_drv vulkan_drv;
@@ -161,7 +164,7 @@ static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameS
 	state->bufSize = alignBuffer(scrypt_mem * ipt * cgpu->thread_concurrency, state->alignment);
 	state->memConstantSize = alignBuffer(sizeof(AlgorithmConstants), state->alignment);
 	state->memParamsSize = alignBuffer(sizeof(AlgorithmParams), state->alignment);
-	state->memInputSize = alignBuffer(72, state->alignment);
+	state->memInputSize = alignBuffer(PREIMAGE_SIZE, state->alignment);
 	state->memOutputSize = alignBuffer(chunkSize, state->alignment);
 	state->sharedMemorySize = state->memConstantSize + state->memParamsSize + state->memInputSize + 2 * state->memOutputSize;
 
@@ -371,7 +374,7 @@ static bool vulkan_init(struct cgpu_info *cgpu)
 
 static int vulkan_scrypt_positions(
 	struct cgpu_info *cgpu,
-	uint8_t *pdata,
+	uint8_t *preimage,
 	uint64_t start_position,
 	uint64_t end_position,
 	uint32_t hash_len_bits,
@@ -393,6 +396,7 @@ static int vulkan_scrypt_positions(
 	if (vulkan_prepare(cgpu, N, r, p, hash_len_bits, 0 != (options & SPACEMESH_API_THROTTLED_MODE), false))
 	{
 		_vulkanState *state = (_vulkanState *)cgpu->device_data;
+		int status = SPACEMESH_API_ERROR_NONE;
 		AlgorithmParams params;
 
 		gettimeofday(tv_start, NULL);
@@ -403,12 +407,20 @@ static int vulkan_scrypt_positions(
 		uint64_t outLength = ((end_position - start_position + 1) * hash_len_bits + 7) / 8;
 		uint64_t computedPositions = 0;
 		uint8_t *out = output;
+		bool computeLeafs = 0 != (options & SPACEMESH_API_COMPUTE_LEAFS);
+		bool computePow = 0 != (options & SPACEMESH_API_COMPUTE_POW);
+
+		uint32_t pdata[32];
+		memcpy(pdata, preimage, PREIMAGE_SIZE);
+		for (int i = 20; i < 28; i++) {
+			pdata[i] = bswap_32(pdata[i]);
+		}
 
 		// transfer input to GPU
 		char *ptr = NULL;
 		uint64_t tfxOrigin = state->memParamsSize + state->memConstantSize;
 		CHECK_RESULT(gVulkan.vkMapMemory(state->vkDevice, state->gpuSharedMemory, tfxOrigin, state->memInputSize, 0, (void **)&ptr), "vkMapMemory", 0);
-		memcpy(ptr, (const void*)pdata, 72);
+		memcpy(ptr, (const void*)pdata, PREIMAGE_SIZE);
 		gVulkan.vkUnmapMemory(state->vkDevice, state->gpuSharedMemory);
 
 		params.N = N;
@@ -420,7 +432,8 @@ static int vulkan_scrypt_positions(
 
 		do {
 			params.global_work_offset = n;
-	
+			params.idx_solution[0] = 0xffffffffffffffff;
+
 			CHECK_RESULT(gVulkan.vkMapMemory(state->vkDevice, state->gpuSharedMemory, state->memConstantSize, state->memParamsSize, 0, (void **)&ptr), "vkMapMemory", 0);
 			memcpy(ptr, (const void*)&params, sizeof(params));
 			gVulkan.vkUnmapMemory(state->vkDevice, state->gpuSharedMemory);
@@ -443,14 +456,31 @@ static int vulkan_scrypt_positions(
 			gVulkan.vkResetFences(state->vkDevice, 1, &state->fence);
 #endif
 
-			uint32_t length = (uint32_t)min(chunkSize, outLength);
+			if (computePow) {
+				CHECK_RESULT(gVulkan.vkMapMemory(state->vkDevice, state->gpuSharedMemory, state->memConstantSize, state->memParamsSize, 0, (void **)&ptr), "vkMapMemory", 0);
+				memcpy(&params, ptr, sizeof(params));
+				gVulkan.vkUnmapMemory(state->vkDevice, state->gpuSharedMemory);
+				if (params.idx_solution[0] != 0xffffffffffffffff) {
+					if (idx_solution) {
+						*idx_solution = params.idx_solution[0];
+					}
+					if (!computeLeafs) {
+						status = SPACEMESH_API_POW_SOLUTION_FOUND;
+						break;
+					}
+				}
+			}
 
-			CHECK_RESULT(gVulkan.vkMapMemory(state->vkDevice, state->gpuSharedMemory, tfxOrigin, state->memOutputSize, 0, (void **)&ptr), "vkMapMemory", 0);
-			memcpy(out, ptr, length);
-			gVulkan.vkUnmapMemory(state->vkDevice, state->gpuSharedMemory);
+			if (computeLeafs) {
+				uint32_t length = (uint32_t)min(chunkSize, outLength);
 
-			out += length;
-			outLength -= length;
+				CHECK_RESULT(gVulkan.vkMapMemory(state->vkDevice, state->gpuSharedMemory, tfxOrigin, state->memOutputSize, 0, (void **)&ptr), "vkMapMemory", 0);
+				memcpy(out, ptr, length);
+				gVulkan.vkUnmapMemory(state->vkDevice, state->gpuSharedMemory);
+				out += length;
+				outLength -= length;
+			}
+
 			positions -= cgpu->thread_concurrency;
 
 		} while (n <= end_position && !g_spacemesh_api_abort_flag);
@@ -465,9 +495,15 @@ static int vulkan_scrypt_positions(
 			*hashes_computed = computedPositions;
 		}
 
-		int usedBits = (computedPositions * hash_len_bits % 8);
-		if (usedBits) {
-			output[(computedPositions * hash_len_bits) / 8] &= 0xff >> (8 - usedBits);
+		if (computeLeafs) {
+			int usedBits = (computedPositions * hash_len_bits % 8);
+			if (usedBits) {
+				output[(computedPositions * hash_len_bits) / 8] &= 0xff >> (8 - usedBits);
+			}
+		}
+
+		if (status) {
+			return status;
 		}
 
 		return (n <= end_position) ? SPACEMESH_API_ERROR_CANCELED : SPACEMESH_API_ERROR_NONE;

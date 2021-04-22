@@ -113,10 +113,6 @@ static bool cuda_init(struct cgpu_info *cgpu)
 	return true;
 }
 
-#define bswap_32x4(x) ((((x) << 24) & 0xff000000u) | (((x) << 8) & 0x00ff0000u) \
-					 | (((x) >> 8) & 0x0000ff00u) | (((x) >> 24) & 0x000000ffu))
-
-
 static int cuda_scrypt_positions(
 	struct cgpu_info *cgpu,
 	uint8_t *preimage,
@@ -245,9 +241,11 @@ static int cuda_scrypt_positions(
 			*hashes_computed = positions;
 		}
 
-		int usedBits = (positions * hash_len_bits % 8);
-		if (usedBits) {
-			output[(positions * hash_len_bits) / 8] &= 0xff >> (8 - usedBits);
+		if (computeLeafs) {
+			int usedBits = (positions * hash_len_bits % 8);
+			if (usedBits) {
+				output[(positions * hash_len_bits) / 8] &= 0xff >> (8 - usedBits);
+			}
 		}
 
 		if (status) {
