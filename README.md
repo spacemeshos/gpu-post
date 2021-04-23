@@ -186,4 +186,6 @@ Scrypt Benchmarks (n=512, r=1, p=1) 1 byte per leaf, batch size leaves per API c
 | 04/04/2020 	| avive   	| sm-scrypt 	| Apple M1         | MacOS 11.2 | vulkan optimized prototype   	     	|   	214 | 0.214
 | 04/21/2020 	| avive   	| sm-scrypt 	| Nvidia RTX 2070 Super, 8GB    | Ubuntu 20.04, Driver 460.73.01  | CUDA optimized prototype   	     	|  2038 | 2.038
 
-
+## Additional Compute Benchmarks 
+- [Cuda Benchmarks](https://browser.geekbench.com/cuda-benchmarks)
+- [Vulkan Benchmarks](https://browser.geekbench.com/vulkan-benchmarks)
