@@ -15,11 +15,11 @@ int test_of_cancelation();
 
 void do_benchmark(int aLabelSize, int aLabelsCount)
 {
-	uint8_t id[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-	uint8_t salt[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+	uint8_t id[32];
+	uint8_t salt[32];
 
 	int providersCount = spacemesh_api_get_providers(NULL, 0);
-/*
+
 	srand(time(nullptr));
 	for (int i = 0; i < sizeof(id); i++) {
 		id[i] = rand();
@@ -27,7 +27,7 @@ void do_benchmark(int aLabelSize, int aLabelsCount)
 	for (int i = 0; i < sizeof(salt); i++) {
 		salt[i] = rand();
 	}
-*/
+
 	if (providersCount > 0) {
 		PostComputeProvider *providers = (PostComputeProvider *)malloc(providersCount * sizeof(PostComputeProvider));
 
@@ -37,15 +37,13 @@ void do_benchmark(int aLabelSize, int aLabelsCount)
 				printf("Buffer allocation error\n");
 				return;
 			}
-			uint64_t idx_solution = -1;
-			uint8_t D[32] = { 0x0, 0x0, 0x0, 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 			for (int i = 0; i < providersCount; i++) {
 				if (providers[i].compute_api != COMPUTE_API_CLASS_CPU)
 				{
 					uint64_t hashes_computed;
 					uint64_t hashes_per_sec;
-					int status = scryptPositions(providers[i].id, id, 0, aLabelsCount - 1, aLabelSize, salt, SPACEMESH_API_COMPUTE_POW, out, 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
-					printf("%s: status %d, %u hashes, %u h/s, solution at %u\n", providers[i].model, status, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec, (uint32_t)idx_solution);
+					int status = scryptPositions(providers[i].id, id, 0, aLabelsCount - 1, aLabelSize, salt, SPACEMESH_API_COMPUTE_LEAFS, out, 512, 1, 1, NULL, NULL, &hashes_computed, &hashes_per_sec);
+					printf("%s: status %d, %u hashes, %u h/s\n", providers[i].model, status, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
 				}
 			}
 			free(out);
@@ -146,6 +144,61 @@ void do_test(int aLabelSize, int aLabelsCount, int aReferenceProvider, bool aPri
 			free(out);
 		}
 
+		free(providers);
+	}
+}
+
+void do_test_pow(int aLabelsCount, unsigned aDiff)
+{
+	uint8_t id[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+	uint8_t salt[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
+	int providersCount = spacemesh_api_get_providers(NULL, 0);
+	/*
+		srand(time(nullptr));
+		for (int i = 0; i < sizeof(id); i++) {
+			id[i] = rand();
+		}
+		for (int i = 0; i < sizeof(salt); i++) {
+			salt[i] = rand();
+		}
+	*/
+	if (providersCount > 0) {
+		PostComputeProvider *providers = (PostComputeProvider *)malloc(providersCount * sizeof(PostComputeProvider));
+
+		if (spacemesh_api_get_providers(providers, providersCount) == providersCount) {
+			uint64_t idx_solution = -1;
+			uint8_t D[32] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+			if (aDiff) {
+				int i = 0;
+				while (aDiff >= 8) {
+					D[i] = 0;
+					i++;
+					aDiff -= 8;
+				}
+				if (aDiff) {
+					D[i] = (1 << (8 - aDiff)) - 1;
+				}
+			}
+			for (int i = 0; i < providersCount; i++) {
+				if (providers[i].compute_api != COMPUTE_API_CLASS_CPU)
+				{
+					uint64_t hashes_computed;
+					uint64_t hashes_per_sec;
+					int status = scryptPositions(providers[i].id, id, 0, aLabelsCount - 1, 8, salt, SPACEMESH_API_COMPUTE_POW, NULL, 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
+					switch (status) {
+					case SPACEMESH_API_POW_SOLUTION_FOUND:
+						printf("%s: %u hashes, %u h/s, solution at %u\n", providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec, (uint32_t)idx_solution);
+						break;
+					case SPACEMESH_API_ERROR_NONE:
+						printf("%s: %u hashes, %u h/s, solution not found\n", providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
+						break;
+					default:
+						printf("%s: error %d, %u hashes, %u h/sn", providers[i].model, status, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
+					}
+				}
+			}
+		}
 		free(providers);
 	}
 }
@@ -305,10 +358,12 @@ int main(int argc, char **argv)
 {
 	bool runBenchmark = false;
 	bool runTest = false;
+	bool runTestPow = false;
 	bool createTestVector = false;
 	bool checkTestVector = false;
 	int labelSize = 8;
 	int labelsCount = MAX_CPU_LABELS_COUNT;
+	int powDiff = 16;
 	int referenceProvider = -1;
 	bool printDataCompare = false;
 
@@ -322,6 +377,9 @@ int main(int argc, char **argv)
 		}
 		else if (0 == strcmp(argv[i], "--test") || 0 == strcmp(argv[i], "-t")) {
 			runTest = true;
+		}
+		else if (0 == strcmp(argv[i], "--test-pow") || 0 == strcmp(argv[i], "-tp")) {
+			runTestPow = true;
 		}
 		else if (0 == strcmp(argv[i], "--test-vector-create")) {
 			createTestVector = true;
@@ -353,11 +411,23 @@ int main(int argc, char **argv)
 		else if (0 == strcmp(argv[i], "--integration-test-cancelation") || 0 == strcmp(argv[i], "-ic")) {
 			return test_of_cancelation();
 		}
+		else if (0 == strcmp(argv[i], "--pow-diff") || 0 == strcmp(argv[i], "-d")) {
+			i++;
+			if (i < argc) {
+				powDiff = atoi(argv[i]);
+				if (powDiff < 0) {
+					powDiff = 0;
+				}
+				else if (powDiff > 256) {
+					powDiff = 256;
+				}
+			}
+		}
 		else if (0 == strcmp(argv[i], "--label-size") || 0 == strcmp(argv[i], "-s")) {
 			i++;
 			if (i < argc) {
 				labelSize = atoi(argv[i]);
-				if (labelsCount < 1) {
+				if (labelSize < 1) {
 					labelSize = 1;
 				}
 				else if (labelSize > 256) {
@@ -403,8 +473,13 @@ int main(int argc, char **argv)
 		return 0;
 	}
 	if (runTest) {
-		printf("Test: Label size: %u, count %u, buffer %.1fM\n", labelSize, labelsCount, ((uint64_t(labelsCount) * uint64_t(labelSize) + 7ull) / 8ull) / (1024.0 * 1024));
+		printf("Test LEAFS: Label size: %u, count %u, buffer %.1fM\n", labelSize, labelsCount, ((uint64_t(labelsCount) * uint64_t(labelSize) + 7ull) / 8ull) / (1024.0 * 1024));
 		do_test(labelSize, labelsCount, referenceProvider, printDataCompare);
+		return 0;
+	}
+	if (runTestPow) {
+		printf("Test POW: count %u\n", labelsCount);
+		do_test_pow(labelsCount, powDiff);
 		return 0;
 	}
 #ifdef WIN32
