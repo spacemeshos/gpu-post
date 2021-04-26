@@ -30,12 +30,6 @@ int scryptPositions(
 	uint64_t hashes_computed_local;
 	int status;
 
-	memcpy(data, id, 32);
-	data[4] = 0;
-	memcpy(data + 5, salt, 32);
-	data[9] = 0;
-	memcpy(data + 10, D, 32);
-
 	spacemesh_api_init();
 
 	if (R != 1 || P != 1) {
@@ -51,12 +45,28 @@ int scryptPositions(
 	if (NULL == cgpu) {
 		return SPACEMESH_API_ERROR_INVALID_PARAMETER;
 	}
+	if (options & SPACEMESH_API_COMPUTE_LEAFS) {
+		if (NULL == out) {
+			return SPACEMESH_API_ERROR_INVALID_PARAMETER;
+		}
+	}
 #ifdef _DEBUG
 	memset(out, 0, (end_position - start_position + 1));
 #endif
 
 	if (!hashes_computed) {
 		hashes_computed = &hashes_computed_local;
+	}
+
+	memcpy(data, id, 32);
+	data[4] = 0;
+	memcpy(data + 5, salt, 32);
+	data[9] = 0;
+	if (options & SPACEMESH_API_COMPUTE_POW) {
+		if (NULL == D) {
+			return SPACEMESH_API_ERROR_INVALID_PARAMETER;
+		}
+		memcpy(data + 10, D, 32);
 	}
 
 	status = cgpu->drv->scrypt_positions(cgpu, (uint8_t*)data, start_position, end_position, hash_len_bits, options, out, N, R, P, idx_solution, &tv_start, &tv_end, hashes_computed);

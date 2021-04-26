@@ -50,9 +50,8 @@ typedef char *  va_list;
 
 #define	SPACEMESH_API_CPU				0x00000001
 #define	SPACEMESH_API_CUDA				0x00000002
-#define	SPACEMESH_API_OPENCL			0x00000004
 #define	SPACEMESH_API_VULKAN			0x00000008
-#define	SPACEMESH_API_GPU				(SPACEMESH_API_CUDA | SPACEMESH_API_OPENCL | SPACEMESH_API_VULKAN)
+#define	SPACEMESH_API_GPU				(SPACEMESH_API_CUDA | SPACEMESH_API_VULKAN)
 #define	SPACEMESH_API_ALL				(SPACEMESH_API_CPU | SPACEMESH_API_GPU)
 
 enum {
@@ -331,10 +330,6 @@ struct cgpu_info {
 	int backoff;
 #endif
 
-#ifdef HAVE_OPENCL
-	unsigned int platform;
-#endif
-
 	volatile bool available;
 	volatile bool busy;
 	bool shutdown;
@@ -348,7 +343,6 @@ extern CRITICAL_SECTION g_spacemesh_api_applog_lock;
 extern pthread_mutex_t g_spacemesh_api_applog_lock;
 #endif
 extern bool g_spacemesh_api_have_cuda;
-extern bool g_spacemesh_api_have_opencl;
 extern bool g_spacemesh_api_have_vulkan;
 
 #define EXIT_CODE_OK            0
