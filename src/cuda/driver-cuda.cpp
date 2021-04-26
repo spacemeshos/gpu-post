@@ -156,7 +156,7 @@ static int cuda_scrypt_positions(
 		uint32_t pdata[32];
 		memcpy(pdata, preimage, PREIMAGE_SIZE);
 		for (int i = 20; i < 28; i++) {
-			pdata[i] = bswap_32(pdata[i]);
+			pdata[i] = swab32(pdata[i]);
 		}
 
 		/* byte swap pdata into data[0]/[1] arrays */
