@@ -371,7 +371,7 @@ void create_test_vector()
 					printf("Test vector: %s: %u hashes, %u h/s\n", providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
 
 					const uint8_t *src = vector;
-					
+
 					for (uint32_t length = sizeof(vector); length > 0; length -= std::min<uint32_t>(32, length)) {
 						for (int i = 0; i < 32; i++) {
 							printf("0x%02x, ", *src++);
