@@ -19,4 +19,7 @@ Benchmarking and Testing
 --reference-provider or -r	<id> the result of this provider will be used as a reference [default - CPU]
 --print              or -p	print detailed data comparison report for incorrect results
 
+--pow-diff           or -d  <0-256> count of leading zero bits in target D value [default - 16]
+--srand-seed                <unsigned int> set srand seed value for POW test: 0 - use zero id/seed [default], -1 - use random value
+
 ```
