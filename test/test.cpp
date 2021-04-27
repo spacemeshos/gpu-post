@@ -13,6 +13,14 @@ int test_of_cancelation();
 
 #define	MAX_CPU_LABELS_COUNT	(9 * 128 * 1024)
 
+void print_hex32(const uint8_t *aSrc)
+{
+	printf("0x");
+	for (int i = 0; i < 32; i++) {
+		printf("%02x", aSrc[i]);
+	}
+}
+
 void do_benchmark(int aLabelSize, int aLabelsCount)
 {
 	uint8_t id[32];
@@ -148,21 +156,29 @@ void do_test(int aLabelSize, int aLabelsCount, int aReferenceProvider, bool aPri
 	}
 }
 
-void do_test_pow(int aLabelsCount, unsigned aDiff)
+void do_test_pow(int aLabelsCount, unsigned aDiff, unsigned aSeed)
 {
 	uint8_t id[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 	uint8_t salt[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
 	int providersCount = spacemesh_api_get_providers(NULL, 0);
-	/*
-		srand(time(nullptr));
+
+	if (aSeed) {
+		if (aSeed == -1) {
+			srand(time(nullptr));
+		}
+		else {
+			srand(aSeed);
+		}
+
 		for (int i = 0; i < sizeof(id); i++) {
 			id[i] = rand();
 		}
 		for (int i = 0; i < sizeof(salt); i++) {
 			salt[i] = rand();
 		}
-	*/
+	}
+
 	if (providersCount > 0) {
 		PostComputeProvider *providers = (PostComputeProvider *)malloc(providersCount * sizeof(PostComputeProvider));
 
@@ -180,6 +196,16 @@ void do_test_pow(int aLabelsCount, unsigned aDiff)
 					D[i] = (1 << (8 - aDiff)) - 1;
 				}
 			}
+			printf("Target D: ");
+			print_hex32(D);
+			printf("\n");
+			uint32_t cpu_id = -1;
+			for (int i = 0; i < providersCount; i++) {
+				if (providers[i].compute_api == COMPUTE_API_CLASS_CPU) {
+					cpu_id = providers[i].id;
+					break;
+				}
+			}
 			for (int i = 0; i < providersCount; i++) {
 				if (providers[i].compute_api != COMPUTE_API_CLASS_CPU)
 				{
@@ -189,6 +215,16 @@ void do_test_pow(int aLabelsCount, unsigned aDiff)
 					switch (status) {
 					case SPACEMESH_API_POW_SOLUTION_FOUND:
 						printf("%s: %u hashes, %u h/s, solution at %u\n", providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec, (uint32_t)idx_solution);
+						if (-1 != cpu_id) {
+							uint8_t hash[32];
+							scryptPositions(cpu_id, id, idx_solution, idx_solution, 256, salt, SPACEMESH_API_COMPUTE_LEAFS, hash, 512, 1, 1, NULL, NULL, &hashes_computed, &hashes_per_sec);
+							printf("D: ");
+							print_hex32(D);
+							printf("\n");
+							printf("H: ");
+							print_hex32(hash);
+							printf("\n");
+						}
 						break;
 					case SPACEMESH_API_ERROR_NONE:
 						printf("%s: %u hashes, %u h/s, solution not found\n", providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
@@ -365,6 +401,7 @@ int main(int argc, char **argv)
 	int labelsCount = MAX_CPU_LABELS_COUNT;
 	int powDiff = 16;
 	int referenceProvider = -1;
+	unsigned srand_seed = 0;
 	bool printDataCompare = false;
 
 	if (argc == 1) {
@@ -453,11 +490,20 @@ int main(int argc, char **argv)
 				referenceProvider = atoi(argv[i]);
 			}
 		}
+		else if (0 == strcmp(argv[i], "--srand-seed")) {
+			i++;
+			if (i < argc) {
+				srand_seed = strtoul(argv[i], NULL, 10);
+			}
+		}
 		else if (0 == strcmp(argv[i], "--print") || 0 == strcmp(argv[i], "-p")) {
 			printDataCompare = true;
 		}
 		else if (0 == strcmp(argv[i], "--logs")) {
 			spacemesh_api_logging(1);
+		}
+		else {
+			printf("Unknown options: %s\n", argv[i]);
 		}
 	}
 	if (createTestVector) {
@@ -479,7 +525,7 @@ int main(int argc, char **argv)
 	}
 	if (runTestPow) {
 		printf("Test POW: count %u\n", labelsCount);
-		do_test_pow(labelsCount, powDiff);
+		do_test_pow(labelsCount, powDiff, srand_seed);
 		return 0;
 	}
 #ifdef WIN32
