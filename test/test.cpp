@@ -390,6 +390,23 @@ void create_test_vector()
 	}
 }
 
+void print_usage() {
+	printf("Usage:\n");
+	printf("--list               or -l	print available providers\n");
+	printf("--benchmark          or -b	run benchmark\n");
+	printf("--test               or -t	run basic test\n");
+	printf("--test-vector-check		run a CPU test and compare with test-vector\n");
+	printf("--test-pow           or -tp 	test pow computation\n");
+	printf("--unit-tests         or -u 	run unit tests\n");
+	printf("--integration-tests  or -i  	run integration tests\n");
+	printf("--label-size         or -s	<1-256>	set label size [1-256]\n");
+	printf("--labels-count       or -n	<1-32M>	set labels count [up to 32M]\n");
+	printf("--reference-provider or -r	<id> the result of this provider will be used as a reference [default - CPU]\n");
+	printf("--print              or -p	print detailed data comparison report for incorrect results\n");
+	printf("--pow-diff           or -d 	<0-256> count of leading zero bits in target D value [default - 16]\n");
+	printf("--srand-seed         or -ss	<unsigned int> set srand seed value for POW test: 0 - use zero id/seed [default], -1 - use random value\n");
+}
+
 int main(int argc, char **argv)
 {
 	bool runBenchmark = false;
@@ -405,7 +422,7 @@ int main(int argc, char **argv)
 	bool printDataCompare = false;
 
 	if (argc == 1) {
-		printf("Usage:\n");
+		print_usage();
 		return 0;
 	}
 	for (int i = 1; i < argc; i++) {
@@ -490,7 +507,7 @@ int main(int argc, char **argv)
 				referenceProvider = atoi(argv[i]);
 			}
 		}
-		else if (0 == strcmp(argv[i], "--srand-seed")) {
+		else if (0 == strcmp(argv[i], "--srand-seed") || 0 == strcmp(argv[i], "-ss")) {
 			i++;
 			if (i < argc) {
 				srand_seed = strtoul(argv[i], NULL, 10);
