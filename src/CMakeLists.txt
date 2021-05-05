@@ -28,19 +28,6 @@ if (MSVC)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif()
 
-# A custom command and target to turn the Vulkan kernel into a byte array header
-
-add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/scrypt-chacha-vulkan.inl
-    COMMAND ${CMAKE_COMMAND} ARGS
-    -DBIN2H_SOURCE_FILE="${CMAKE_CURRENT_SOURCE_DIR}/vulkan/scrypt-chacha.comp"
-    -DBIN2H_VARIABLE_NAME=scrypt_chacha_comp
-    -DBIN2H_HEADER_FILE="${CMAKE_CURRENT_BINARY_DIR}/scrypt-chacha-vulkan.inl"
-    -P "${CMAKE_CURRENT_SOURCE_DIR}/bin2h.cmake"
-    COMMENT "Generating Vulkan Kernel Byte Array"
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/scrypt-chacha.comp
-)
-
 include_directories(.)
 include_directories(../include)
 
@@ -121,7 +108,6 @@ if (SPACEMESHVULKAN)
 
     include_directories(${VulkanIncludes})
     include_directories(${GLSLANG_SPIRV_INCLUDE_DIR})
-#    include_directories(../third_party/glslang)
 
     message("------------------------------------------------------------------------")
     message("-- Vulkan API Includes ${VulkanIncludes}")
@@ -133,12 +119,9 @@ if (SPACEMESHVULKAN)
         vulkan/driver-vulkan.h
         vulkan/vulkan-helpers.c
         vulkan/vulkan-helpers.h
-        vulkan/glsl_compiler.cpp
-
-        ${CMAKE_CURRENT_BINARY_DIR}/scrypt-chacha-vulkan.inl
     )
 
-    include_directories(${CMAKE_CURRENT_BINARY_DIR})
+    add_subdirectory(vulkan/gen)
 endif()
 
 if (SPACEMESH_LIB_SHARED)
@@ -154,17 +137,6 @@ if (SPACEMESH_LIB_SHARED)
             target_link_libraries(gpu-setup "${CUDA_TOOLKIT_ROOT_DIR}/lib/x64/cuda.lib" "${CUDA_TOOLKIT_ROOT_DIR}/lib/x64/cudart_static.lib")
         else()
             target_link_libraries(gpu-setup -L${CUDA_LIB_PATH} -lcuda)
-        endif()
-    endif()
-
-    if (SPACEMESHVULKAN)
-        # Add Include/Lib (Windows) and include/lib (Linux)
-        if(WIN32)
-            target_link_libraries(gpu-setup "$ENV{VULKAN_SDK}/Lib/shaderc_combined.lib")
-        elseif(APPLE)
-            target_link_libraries(gpu-setup -L$ENV{VULKAN_SDK}/lib shaderc_combined)
-        elseif(UNIX)
-            target_link_libraries(gpu-setup -L$ENV{VULKAN_SDK}/lib shaderc_combined)
         endif()
     endif()
 else()

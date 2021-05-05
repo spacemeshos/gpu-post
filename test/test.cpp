@@ -230,7 +230,7 @@ void do_test_pow(int aLabelsCount, unsigned aDiff, unsigned aSeed)
 						printf("%s: %u hashes, %u h/s, solution not found\n", providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
 						break;
 					default:
-						printf("%s: error %d, %u hashes, %u h/sn", providers[i].model, status, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
+						printf("%s: error %d, %u hashes, %u h/s\n", providers[i].model, status, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
 					}
 				}
 			}

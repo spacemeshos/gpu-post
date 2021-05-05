@@ -15,6 +15,8 @@ layout(binding = 2) buffer Params
 	uvec2 global_work_offset;
 	uint N;
 	uint hash_len_bits;
+	uint concurrent_threads;
+	uint padding[3];
 	uvec4 idx_solution;
 };
 
@@ -180,9 +182,8 @@ const uvec4 ROTATE_7 =  uvec4(7, 7, 7, 7);
 #define CO Coord(z,x,y)
 
 void
-scrypt_ROMix(inout uvec4 X[8], const uint N, const uint gid, const uint Nfactor)
+scrypt_ROMix(inout uvec4 X[8], const uint N, const uint gid, const uint effective_concurrency)
 {
-	const uint effective_concurrency = (CONCURRENT_THREADS << 9) >> Nfactor;
 	const uint zSIZE = 8;
 	const uint ySIZE = (N/LOOKUP_GAP + (((N%LOOKUP_GAP)>0) ? 1 : 0));
 	const uint xSIZE = effective_concurrency;
@@ -436,6 +437,8 @@ main()
 		tmp >>= 1;
 		Nfactor++;
 	}
+
+	const uint effective_concurrency = (concurrent_threads << 9) >> Nfactor;
 	
 	password[0] = buffer0[0];
 	password[1] = buffer0[1];
@@ -552,7 +555,7 @@ main()
 	}
 //////////////////////////////////////////////////
 	/* 2: X = ROMix(X) */
-	scrypt_ROMix(X, N, gid, Nfactor);
+	scrypt_ROMix(X, N, gid, effective_concurrency);
 
 	/* 3: Out = PBKDF2(password, X) */
 //////////////////////////////////////////////////

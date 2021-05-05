@@ -15,14 +15,14 @@
  * limitations under the License.
  */
 
+#include <fstream>
 #include <string>
 #include <vector>
 #include <stdarg.h>
 
-#include "api_internal.h"
-#undef max
-#undef min
-#include "vulkan-helpers.h"
+#define	VK_NO_PROTOTYPES 1
+#include <vulkan/vulkan.h>
+#include <vulkan/vulkan_core.h>
 
 #if (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
 #include <MoltenVKGLSLToSPIRVConverter/GLSLToSPIRVConverter.h>
@@ -31,6 +31,8 @@
 #endif
 
 #include <glslang/Include/ResourceLimits.h>
+
+#include "scrypt-chacha-vulkan.inl"
 
 static void init_resources(TBuiltInResource &Resources)
 {
@@ -141,26 +143,26 @@ inline EShLanguage FindShaderLanguage(VkShaderStageFlagBits stage)
 {
 	switch (stage)
 	{
-		case VK_SHADER_STAGE_VERTEX_BIT:
-			return EShLangVertex;
+	case VK_SHADER_STAGE_VERTEX_BIT:
+		return EShLangVertex;
 
-		case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:
-			return EShLangTessControl;
+	case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:
+		return EShLangTessControl;
 
-		case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:
-			return EShLangTessEvaluation;
+	case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:
+		return EShLangTessEvaluation;
 
-		case VK_SHADER_STAGE_GEOMETRY_BIT:
-			return EShLangGeometry;
+	case VK_SHADER_STAGE_GEOMETRY_BIT:
+		return EShLangGeometry;
 
-		case VK_SHADER_STAGE_FRAGMENT_BIT:
-			return EShLangFragment;
+	case VK_SHADER_STAGE_FRAGMENT_BIT:
+		return EShLangFragment;
 
-		case VK_SHADER_STAGE_COMPUTE_BIT:
-			return EShLangCompute;
+	case VK_SHADER_STAGE_COMPUTE_BIT:
+		return EShLangCompute;
 
-		default:
-			return EShLangVertex;
+	default:
+		return EShLangVertex;
 	}
 }
 
@@ -171,7 +173,6 @@ bool compile_to_spirv(
 	std::vector<std::uint32_t> &spirv,
 	std::string &info_log)
 {
-#if 1
 	EShLanguage language = FindShaderLanguage(stage);
 
 	glslang::TShader shader(language);
@@ -203,91 +204,6 @@ bool compile_to_spirv(
 	}
 
 	glslang::GlslangToSpv(*program.getIntermediate(language), spirv);
-#else
-	// Initialize glslang library.
-	glslang::InitializeProcess();
-
-	EShMessages messages = static_cast<EShMessages>(EShMsgDefault | EShMsgVulkanRules | EShMsgSpvRules);
-
-	EShLanguage language = FindShaderLanguage(stage);
-
-	const char *file_name_list[1] = {""};
-	const char *shader_source     = reinterpret_cast<const char *>(glsl_source.data());
-
-	glslang::TShader shader(language);
-	shader.setStringsWithLengthsAndNames(&shader_source, nullptr, file_name_list, 1);
-	shader.setEntryPoint(entry_point.c_str());
-	shader.setSourceEntryPoint(entry_point.c_str());
-
-	if (!shader.parse(&glslang::DefaultTBuiltInResource, 100, false, messages))
-	{
-		info_log = std::string(shader.getInfoLog()) + "\n" + std::string(shader.getInfoDebugLog());
-		return false;
-	}
-
-	// Add shader to new program object.
-	glslang::TProgram program;
-	program.addShader(&shader);
-
-	// Link program.
-	if (!program.link(messages))
-	{
-		info_log = std::string(program.getInfoLog()) + "\n" + std::string(program.getInfoDebugLog());
-		return false;
-	}
-
-	// Save any info log that was generated.
-	if (shader.getInfoLog())
-	{
-		info_log += std::string(shader.getInfoLog()) + "\n" + std::string(shader.getInfoDebugLog()) + "\n";
-	}
-
-	if (program.getInfoLog())
-	{
-		info_log += std::string(program.getInfoLog()) + "\n" + std::string(program.getInfoDebugLog());
-	}
-
-	glslang::TIntermediate *intermediate = program.getIntermediate(language);
-
-	// Translate to SPIRV.
-	if (!intermediate)
-	{
-		info_log += "Failed to get shared intermediate code.\n";
-		return false;
-	}
-
-	spv::SpvBuildLogger logger;
-
-	glslang::GlslangToSpv(*intermediate, spirv, &logger);
-
-	info_log += logger.getAllMessages() + "\n";
-
-	// Shutdown glslang library.
-	glslang::FinalizeProcess();
-#endif
-	return true;
-}
-
-extern "C" bool loadSource(const char * file_name, std::vector<uint8_t> &buffer)
-{
-	size_t shader_size;
-
-	FILE *fp = fopen(file_name, "rb");
-	if (fp == NULL) {
-		applog(LOG_ERR, "Program %s not found\n", file_name);
-		return false;
-	}
-	fseek(fp, 0, SEEK_END);
-	shader_size = (size_t)(ftell(fp) * sizeof(char));
-	fseek(fp, 0, SEEK_SET);
-
-	buffer.resize(shader_size + 1, 0);
-	size_t read_size = fread(buffer.data(), sizeof(char), shader_size, fp);
-	fclose(fp);
-	if (read_size != shader_size) {
-		applog(LOG_ERR, "Failed to read shader %s!\n", file_name);
-		return false;
-	}
 
 	return true;
 }
@@ -379,9 +295,8 @@ struct GlCodeWritter
 	bool _use_word_copy;
 };
 
-extern "C" VkPipeline compileShader(VkDevice vkDevice, VkPipelineLayout pipelineLayout, VkShaderModule *shader_module, const char *glsl_source, const char *options, int work_size, int hash_len_bits, bool copy_only)
+extern "C" bool compileShaderToSpirV(const char *glsl_source, const char *options, int work_size, int hash_len_bits, bool copy_only, std::vector<uint32_t> &spirv)
 {
-	std::vector<uint32_t> spirv;
 	std::string           info_log;
 	std::string           source;
 
@@ -512,42 +427,11 @@ extern "C" VkPipeline compileShader(VkDevice vkDevice, VkPipelineLayout pipeline
 	// Compile the GLSL source
 	if (!compile_to_spirv(VK_SHADER_STAGE_COMPUTE_BIT, source, "main", spirv, info_log))
 	{
-		applog(LOG_ERR, "Failed to compile shader, Error: %s\n", info_log.c_str());
-		return VK_NULL_HANDLE;
+		printf("Failed to compile shader, Error: %s\n", info_log.c_str());
+		return false;
 	}
 
-	VkShaderModuleCreateInfo shaderModuleCreateInfo = {
-		VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-		0,
-		0,
-		spirv.size() * sizeof(uint32_t),
-		spirv.data()
-	};
-
-	CHECK_RESULT(gVulkan.vkCreateShaderModule(vkDevice, &shaderModuleCreateInfo, 0, shader_module), "vkCreateShaderModule", VK_NULL_HANDLE);
-
-	VkComputePipelineCreateInfo computePipelineCreateInfo = {
-		VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-		0,
-		0,
-		{
-			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			0,
-			0,
-			VK_SHADER_STAGE_COMPUTE_BIT,
-			*shader_module,
-			"main",
-			0
-		},
-		pipelineLayout,
-		0,
-		0
-	};
-
-	VkPipeline pipeline;
-	CHECK_RESULT(gVulkan.vkCreateComputePipelines(vkDevice, 0, 1, &computePipelineCreateInfo, 0, &pipeline), "vkCreateComputePipelines", VK_NULL_HANDLE);
-
-	return pipeline;
+	return true;
 }
 
 extern "C" void init_glslang()
@@ -558,5 +442,36 @@ extern "C" void init_glslang()
 extern "C" void finalize_glslang()
 {
 	glslang::FinalizeProcess();
+}
+
+bool saveToFile(const char *aFileName, const void *aData, size_t aSize)
+{
+	std::ofstream out(aFileName, std::ios::binary | std::ios::out);
+	if (!out.fail()) {
+		return out.write(reinterpret_cast<const char*>(aData), aSize).tellp() == static_cast<std::streampos>(aSize);
+	}
+	return false;
+}
+
+int main(int argc, char **argv)
+{
+	init_glslang();
+
+	for (int hash_len_bits = 1; hash_len_bits <= 256; hash_len_bits++) {
+		char options[256];
+		std::vector<uint32_t> spirv;
+		
+		snprintf(options, sizeof(options), "#version 450\n#define LOOKUP_GAP %d\n#define WORKSIZE %d\n#define LABEL_SIZE %d\n",	4, 64, hash_len_bits);
+
+		if (compileShaderToSpirV(scrypt_chacha_comp, options, 64, hash_len_bits, false, spirv)) {
+			char filename[128];
+			snprintf(filename, sizeof(filename), "kernel-%02d-%03d.spirv", 64, hash_len_bits);
+			saveToFile(filename, spirv.data(), spirv.size() * sizeof(uint32_t));
+		}
+	}
+
+	finalize_glslang();
+
+	return 0;
 }
 
