@@ -10,10 +10,6 @@
 #include "cuda/driver-cuda.h"
 #endif
 
-#ifdef HAVE_OPENCL
-#include "opencl/driver-opencl.h"
-#endif
-
 #include "scrypt-jane/scrypt-jane.h"
 
 volatile bool g_spacemesh_api_abort_flag = false;
@@ -26,7 +22,6 @@ pthread_mutex_t g_spacemesh_api_applog_lock;
 
 static int s_total_devices = 0;
 bool g_spacemesh_api_have_cuda = false;
-bool g_spacemesh_api_have_opencl = false;
 bool g_spacemesh_api_have_vulkan = false;
 
 static struct cgpu_info s_gpus[MAX_GPUDEVICES]; /* Maximum number apparently possible */
@@ -53,10 +48,6 @@ extern "C" void spacemesh_api_init()
 
 #ifdef HAVE_CUDA
 		g_spacemesh_api_have_cuda = cuda_drv.drv_detect(s_gpus, &s_total_devices) > 0;
-#endif
-
-#ifdef HAVE_OPENCL
-		g_spacemesh_api_have_opencl = opencl_drv.drv_detect(s_gpus, &s_total_devices) > 0;
 #endif
 
 		if (cpu_drv.drv_detect(&s_cpu, NULL) > 0) {
@@ -192,6 +183,11 @@ extern "C" int spacemesh_api_get_providers(
 }
 
 extern "C" int opt_logs = 0;
+
+extern "C" void spacemesh_api_logging(int enable)
+{
+	opt_logs = enable;
+}
 
 void applog(int prio, const char *fmt, ...)
 {

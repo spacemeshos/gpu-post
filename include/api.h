@@ -17,13 +17,21 @@ extern "C" {
 # define SPACEMESHAPI
 #endif
 
-#define	SPACEMESH_API_ERROR_NONE		0
-#define	SPACEMESH_API_ERROR				-1
-#define	SPACEMESH_API_ERROR_TIMEOUT		-2
-#define	SPACEMESH_API_ERROR_ALREADY		-3
-#define	SPACEMESH_API_ERROR_CANCELED	-4
+#define	SPACEMESH_API_POW_SOLUTION_FOUND		1
+#define	SPACEMESH_API_ERROR_NONE				0
+#define	SPACEMESH_API_ERROR						-1
+#define	SPACEMESH_API_ERROR_TIMEOUT				-2
+#define	SPACEMESH_API_ERROR_ALREADY				-3
+#define	SPACEMESH_API_ERROR_CANCELED			-4
+#define	SPACEMESH_API_ERROR_NO_COMPOTE_OPTIONS	-5
+#define	SPACEMESH_API_ERROR_INVALID_PARAMETER	-6
 
 #define	SPACEMESH_API_THROTTLED_MODE	0x00008000
+
+enum {
+	SPACEMESH_API_COMPUTE_LEAFS = 1 << 0,
+	SPACEMESH_API_COMPUTE_POW = 1 << 1,
+};
 
 // Compute API class
 typedef enum _ComputeApiClass {
@@ -46,11 +54,14 @@ SPACEMESHAPI int scryptPositions(
     uint64_t end_position,		// e.g. 49,999
     uint32_t hash_len_bits,		// (1...256) for each hash output, the number of prefix bits (not bytes) to copy into the buffer
     const uint8_t *salt,		// 32 bytes
-    uint32_t options,			// throttle etc.
+    uint32_t options,			// compute leafs and or compute pow
     uint8_t *out,				// memory buffer large enough to include hash_len_bits * number of requested hashes
     uint32_t N,					// scrypt N
     uint32_t R,					// scrypt r
     uint32_t P,					// scrypt p
+	uint8_t *D,					// Target D for the POW computation. 256 bits.
+	uint64_t *idx_solution,		// index of output where output < D if POW compute was on. MAX_UINT64 otherwise.
+
 	uint64_t *hashes_computed,	//
 	uint64_t *hashes_per_sec	//
 	);
@@ -67,6 +78,11 @@ SPACEMESHAPI int spacemesh_api_stop_inprogress();
 SPACEMESHAPI int spacemesh_api_get_providers(
 	PostComputeProvider *providers, // out providers info buffer, if NULL - return count of available providers
 	int max_providers			    // buffer size
+);
+
+// enable/disable log output
+SPACEMESHAPI void spacemesh_api_logging(
+	int enable
 );
 
 SPACEMESHAPI int64_t unit_test_hash(uint32_t provider_id, uint8_t *input, uint8_t *hashes);

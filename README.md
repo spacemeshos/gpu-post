@@ -78,10 +78,6 @@ SPACEMESHVULKAN "Build with Vulkan support" default: ON
 ```
   cmake ..
 ```
-Disable OpenCL:
-```
-  cmake .. -DSPACEMESHCL=OFF
-```
 Disable CUDA:
 ```
   cmake .. -DSPACEMESHCUDA=OFF
@@ -131,7 +127,7 @@ int scryptPositions(
 );
 ```
 
-return to the client the system GPU capabilities. E.g. OPENCL, CUDA/NVIDIA or NONE
+return to the client the system GPU capabilities. E.g. CUDA/NVIDIA or NONE
 ```
 int stats();
 ```

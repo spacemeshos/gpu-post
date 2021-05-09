@@ -92,7 +92,7 @@ static const uint64_t host_keccak_round_constants[24] = {
 };
 
 __constant__ uint64_t c_keccak_round_constants[24];
-__constant__ uint32_t c_data[20];
+__constant__ uint32_t c_data[32];
 
 #define U8TO32_LE(p)                                            \
 	(((uint32_t)((p)[0])      ) | ((uint32_t)((p)[1]) <<  8) |  \
@@ -420,7 +420,62 @@ void cuda_pre_keccak512(uint32_t *g_idata, uint64_t nonce, uint32_t r)
 		g_idata += SCRYPT_HASH_DIGEST_SIZE / sizeof(uint32_t);
 		bytes -= SCRYPT_HASH_DIGEST_SIZE;
 	}
+
+	union {
+		uint64_t u64;
+		uint32_t u32[2];
+	} d;
 }
+
+#define CHECK_POW() \
+	int cmp = 0; \
+	union { \
+		uint64_t u64; \
+		uint32_t u32[2]; \
+	} d; \
+ \
+	d.u64 = hmac_pw.outer.state[0]; \
+	d.u32[0] = cuda_swab32(d.u32[0]); \
+	d.u32[1] = cuda_swab32(d.u32[1]); \
+	if (c_data[20] != d.u32[0]) { \
+		cmp = d.u32[0] < c_data[20] ? -1 : 1; \
+	} \
+	if (cmp == 0 && c_data[21] != d.u32[1]) { \
+		cmp = d.u32[1] < c_data[21] ? -1 : 1; \
+	} \
+ \
+	d.u64 = hmac_pw.outer.state[1]; \
+	d.u32[0] = cuda_swab32(d.u32[0]); \
+	d.u32[1] = cuda_swab32(d.u32[1]); \
+	if (cmp == 0 && c_data[22] != d.u32[0]) { \
+		cmp = d.u32[0] < c_data[22] ? -1 : 1; \
+	} \
+	if (cmp == 0 && c_data[23] != d.u32[1]) { \
+		cmp = d.u32[1] < c_data[23] ? -1 : 1; \
+	} \
+ \
+	d.u64 = hmac_pw.outer.state[2]; \
+	d.u32[0] = cuda_swab32(d.u32[0]); \
+	d.u32[1] = cuda_swab32(d.u32[1]); \
+	if (cmp == 0 && c_data[24] != d.u32[0]) { \
+		cmp = d.u32[0] < c_data[24] ? -1 : 1; \
+	} \
+	if (cmp == 0 && c_data[25] != d.u32[1]) { \
+		cmp = d.u32[1] < c_data[25] ? -1 : 1; \
+	} \
+ \
+	d.u64 = hmac_pw.outer.state[3]; \
+	d.u32[0] = cuda_swab32(d.u32[0]); \
+	d.u32[1] = cuda_swab32(d.u32[1]); \
+	if (cmp == 0 && c_data[26] != d.u32[0]) { \
+		cmp = d.u32[0] < c_data[26] ? -1 : 1; \
+	} \
+	if (cmp == 0 && c_data[27] != d.u32[1]) { \
+		cmp = d.u32[1] < c_data[27] ? -1 : 1; \
+	} \
+	if (cmp < 0) { \
+		solutions[0] = nonce; \
+	}
 
 __global__ __launch_bounds__(128)
 void cuda_pre_keccak512_1_1(uint32_t *g_idata, uint64_t nonce)
@@ -461,12 +516,12 @@ void cuda_pre_keccak512_1_1(uint32_t *g_idata, uint64_t nonce)
 }
 
 __global__ __launch_bounds__(128)
-void cuda_post_keccak512_8(uint32_t *g_odata, uint8_t *labels, uint64_t nonce, uint32_t r)
+void cuda_post_keccak512_8(uint32_t *g_odata, uint8_t *labels, uint64_t nonce, uint64_t *solutions)
 {
 	uint32_t data[20];
 
 	const uint32_t thread = blockIdx.x * blockDim.x + threadIdx.x;
-	g_odata += thread * 32 * r;
+	g_odata += thread * 32;
 	nonce   += thread;
 
 #pragma unroll
@@ -481,22 +536,24 @@ void cuda_post_keccak512_8(uint32_t *g_odata, uint8_t *labels, uint64_t nonce, u
 	pbkdf2_hmac_init72(&hmac_pw, data);
 
 	/* hmac(password, salt...) */
-	uint32_t buffered = pbkdf2_hmac_update(&hmac_pw, g_odata, 128 * r);
+	uint32_t buffered = pbkdf2_hmac_update(&hmac_pw, g_odata, 128);
 
 	/* U1 = hmac(password, salt || be(i)) */
 	uint32_t be = 0x01000000U;//cuda_swab32(1);
 	buffered = pbkdf2_hmac_buffer_update4(&hmac_pw, be, buffered);
 	labels[thread] = pbkdf2_hmac_finish(&hmac_pw, buffered);
+
+	CHECK_POW()
 }
 
 __global__ __launch_bounds__(128)
-void cuda_post_keccak512_7(uint32_t *g_odata, uint8_t *out, uint64_t nonce, uint32_t r)
+void cuda_post_keccak512_7(uint32_t *g_odata, uint8_t *out, uint64_t nonce, uint64_t *solutions)
 {
 	uint32_t data[20];
 	uint32_t label;
 
 	const uint32_t thread = blockIdx.x * blockDim.x + threadIdx.x;
-	g_odata += thread * 32 * r;
+	g_odata += thread * 32;
 	nonce += thread;
 
 #pragma unroll
@@ -511,12 +568,15 @@ void cuda_post_keccak512_7(uint32_t *g_odata, uint8_t *out, uint64_t nonce, uint
 	pbkdf2_hmac_init72(&hmac_pw, data);
 
 	/* hmac(password, salt...) */
-	uint32_t buffered = pbkdf2_hmac_update(&hmac_pw, g_odata, 128 * r);
+	uint32_t buffered = pbkdf2_hmac_update(&hmac_pw, g_odata, 128);
 
 	/* U1 = hmac(password, salt || be(i)) */
 	uint32_t be = 0x01000000U;//cuda_swab32(1);
 	buffered = pbkdf2_hmac_buffer_update4(&hmac_pw, be, buffered);
 	label = pbkdf2_hmac_finish(&hmac_pw, buffered) & 0x7f;
+
+	CHECK_POW()
+
 	out += thread * 28 / 32;
 
 	uint32_t labels1, labels2, labels3, labels4, labels5, labels6, labels7;
@@ -584,13 +644,13 @@ void cuda_post_keccak512_7(uint32_t *g_odata, uint8_t *out, uint64_t nonce, uint
 }
 
 __global__ __launch_bounds__(128)
-void cuda_post_keccak512_6(uint32_t *g_odata, uint8_t *out, uint64_t nonce, uint32_t r)
+void cuda_post_keccak512_6(uint32_t *g_odata, uint8_t *out, uint64_t nonce, uint64_t *solutions)
 {
 	uint32_t data[20];
 	uint32_t label;
 
 	const uint32_t thread = blockIdx.x * blockDim.x + threadIdx.x;
-	g_odata += thread * 32 * r;
+	g_odata += thread * 32;
 	nonce += thread;
 
 #pragma unroll
@@ -605,12 +665,15 @@ void cuda_post_keccak512_6(uint32_t *g_odata, uint8_t *out, uint64_t nonce, uint
 	pbkdf2_hmac_init72(&hmac_pw, data);
 
 	/* hmac(password, salt...) */
-	uint32_t buffered = pbkdf2_hmac_update(&hmac_pw, g_odata, 128 * r);
+	uint32_t buffered = pbkdf2_hmac_update(&hmac_pw, g_odata, 128);
 
 	/* U1 = hmac(password, salt || be(i)) */
 	uint32_t be = 0x01000000U;//cuda_swab32(1);
 	buffered = pbkdf2_hmac_buffer_update4(&hmac_pw, be, buffered);
 	label = pbkdf2_hmac_finish(&hmac_pw, buffered) & 0x3f;
+
+	CHECK_POW()
+
 	out += thread * 24 / 32;
 
 	uint2 labels1, labels2, labels3;
@@ -669,13 +732,13 @@ void cuda_post_keccak512_6(uint32_t *g_odata, uint8_t *out, uint64_t nonce, uint
 }
 
 __global__ __launch_bounds__(128)
-void cuda_post_keccak512_5(uint32_t *g_odata, uint8_t *out, uint64_t nonce, uint32_t r)
+void cuda_post_keccak512_5(uint32_t *g_odata, uint8_t *out, uint64_t nonce, uint64_t *solutions)
 {
 	uint32_t data[20];
 	uint32_t label;
 
 	const uint32_t thread = blockIdx.x * blockDim.x + threadIdx.x;
-	g_odata += thread * 32 * r;
+	g_odata += thread * 32;
 	nonce += thread;
 
 #pragma unroll
@@ -690,12 +753,15 @@ void cuda_post_keccak512_5(uint32_t *g_odata, uint8_t *out, uint64_t nonce, uint
 	pbkdf2_hmac_init72(&hmac_pw, data);
 
 	/* hmac(password, salt...) */
-	uint32_t buffered = pbkdf2_hmac_update(&hmac_pw, g_odata, 128 * r);
+	uint32_t buffered = pbkdf2_hmac_update(&hmac_pw, g_odata, 128);
 
 	/* U1 = hmac(password, salt || be(i)) */
 	uint32_t be = 0x01000000U;//cuda_swab32(1);
 	buffered = pbkdf2_hmac_buffer_update4(&hmac_pw, be, buffered);
 	label = pbkdf2_hmac_finish(&hmac_pw, buffered) & 0x1f;
+
+	CHECK_POW()
+
 	out += thread * 20 / 32;
 
 	uint32_t labels1, labels2, labels3, labels4, labels5;
@@ -755,13 +821,13 @@ void cuda_post_keccak512_5(uint32_t *g_odata, uint8_t *out, uint64_t nonce, uint
 }
 
 __global__ __launch_bounds__(128)
-void cuda_post_keccak512_4(uint32_t *g_odata, uint8_t *out, uint64_t nonce, uint32_t r)
+void cuda_post_keccak512_4(uint32_t *g_odata, uint8_t *out, uint64_t nonce, uint64_t *solutions)
 {
 	uint32_t data[20];
 	uint32_t label;
 
 	const uint32_t thread = blockIdx.x * blockDim.x + threadIdx.x;
-	g_odata += thread * 32 * r;
+	g_odata += thread * 32;
 	nonce += thread;
 
 #pragma unroll
@@ -776,12 +842,15 @@ void cuda_post_keccak512_4(uint32_t *g_odata, uint8_t *out, uint64_t nonce, uint
 	pbkdf2_hmac_init72(&hmac_pw, data);
 
 	/* hmac(password, salt...) */
-	uint32_t buffered = pbkdf2_hmac_update(&hmac_pw, g_odata, 128 * r);
+	uint32_t buffered = pbkdf2_hmac_update(&hmac_pw, g_odata, 128);
 
 	/* U1 = hmac(password, salt || be(i)) */
 	uint32_t be = 0x01000000U;//cuda_swab32(1);
 	buffered = pbkdf2_hmac_buffer_update4(&hmac_pw, be, buffered);
 	label = pbkdf2_hmac_finish(&hmac_pw, buffered) & 0x0f;
+
+	CHECK_POW()
+
 	out += thread * 16 / 32;
 
 	uint4 labels;
@@ -828,13 +897,13 @@ void cuda_post_keccak512_4(uint32_t *g_odata, uint8_t *out, uint64_t nonce, uint
 }
 
 __global__ __launch_bounds__(128)
-void cuda_post_keccak512_3(uint32_t *g_odata, uint8_t *out, uint64_t nonce, uint32_t r)
+void cuda_post_keccak512_3(uint32_t *g_odata, uint8_t *out, uint64_t nonce, uint64_t *solutions)
 {
 	uint32_t data[20];
 	uint32_t label;
 
 	const uint32_t thread = blockIdx.x * blockDim.x + threadIdx.x;
-	g_odata += thread * 32 * r;
+	g_odata += thread * 32;
 	nonce += thread;
 
 #pragma unroll
@@ -849,12 +918,15 @@ void cuda_post_keccak512_3(uint32_t *g_odata, uint8_t *out, uint64_t nonce, uint
 	pbkdf2_hmac_init72(&hmac_pw, data);
 
 	/* hmac(password, salt...) */
-	uint32_t buffered = pbkdf2_hmac_update(&hmac_pw, g_odata, 128 * r);
+	uint32_t buffered = pbkdf2_hmac_update(&hmac_pw, g_odata, 128);
 
 	/* U1 = hmac(password, salt || be(i)) */
 	uint32_t be = 0x01000000U;//cuda_swab32(1);
 	buffered = pbkdf2_hmac_buffer_update4(&hmac_pw, be, buffered);
 	label = pbkdf2_hmac_finish(&hmac_pw, buffered) & 0x07;
+
+	CHECK_POW()
+
 	out += thread * 12 / 32;
 
 	uint32_t labels1, labels2, labels3;
@@ -906,13 +978,13 @@ void cuda_post_keccak512_3(uint32_t *g_odata, uint8_t *out, uint64_t nonce, uint
 }
 
 __global__ __launch_bounds__(128)
-void cuda_post_keccak512_2(uint32_t *g_odata, uint8_t *out, uint64_t nonce, uint32_t r)
+void cuda_post_keccak512_2(uint32_t *g_odata, uint8_t *out, uint64_t nonce, uint64_t *solutions)
 {
 	uint32_t data[20];
 	uint32_t label;
 
 	const uint32_t thread = blockIdx.x * blockDim.x + threadIdx.x;
-	g_odata += thread * 32 * r;
+	g_odata += thread * 32;
 	nonce += thread;
 
 #pragma unroll
@@ -927,12 +999,15 @@ void cuda_post_keccak512_2(uint32_t *g_odata, uint8_t *out, uint64_t nonce, uint
 	pbkdf2_hmac_init72(&hmac_pw, data);
 
 	/* hmac(password, salt...) */
-	uint32_t buffered = pbkdf2_hmac_update(&hmac_pw, g_odata, 128 * r);
+	uint32_t buffered = pbkdf2_hmac_update(&hmac_pw, g_odata, 128);
 
 	/* U1 = hmac(password, salt || be(i)) */
 	uint32_t be = 0x01000000U;//cuda_swab32(1);
 	buffered = pbkdf2_hmac_buffer_update4(&hmac_pw, be, buffered);
 	label = pbkdf2_hmac_finish(&hmac_pw, buffered) & 0x03;
+
+	CHECK_POW()
+
 	out += thread * 8 / 32;
 
 	uint2 labels;
@@ -977,13 +1052,13 @@ void cuda_post_keccak512_2(uint32_t *g_odata, uint8_t *out, uint64_t nonce, uint
 }
 
 __global__ __launch_bounds__(128)
-void cuda_post_keccak512_1(uint32_t *g_odata, uint8_t *out, uint64_t nonce, uint32_t r)
+void cuda_post_keccak512_1(uint32_t *g_odata, uint8_t *out, uint64_t nonce, uint64_t *solutions)
 {
 	uint32_t data[20];
 	uint32_t label;
 
 	const uint32_t thread = blockIdx.x * blockDim.x + threadIdx.x;
-	g_odata += thread * 32 * r;
+	g_odata += thread * 32;
 	nonce += thread;
 
 #pragma unroll
@@ -998,12 +1073,15 @@ void cuda_post_keccak512_1(uint32_t *g_odata, uint8_t *out, uint64_t nonce, uint
 	pbkdf2_hmac_init72(&hmac_pw, data);
 
 	/* hmac(password, salt...) */
-	uint32_t buffered = pbkdf2_hmac_update(&hmac_pw, g_odata, 128 * r);
+	uint32_t buffered = pbkdf2_hmac_update(&hmac_pw, g_odata, 128);
 
 	/* U1 = hmac(password, salt || be(i)) */
 	uint32_t be = 0x01000000U;//cuda_swab32(1);
 	buffered = pbkdf2_hmac_buffer_update4(&hmac_pw, be, buffered);
 	label = pbkdf2_hmac_finish(&hmac_pw, buffered) & 0x01;
+
+	CHECK_POW()
+
 	out += thread * 4 / 32;
 
 	uint32_t labels;
@@ -1110,7 +1188,7 @@ __device__ void labels_copy(uint8_t *hashes, uint32_t hashes_count, uint8_t *out
 }
 
 __global__ __launch_bounds__(128)
-void cuda_post_keccak512_9_255(uint32_t *g_odata, uint8_t *out, uint64_t nonce, uint32_t r, uint32_t hash_len_bits)
+void cuda_post_keccak512_9_255(uint32_t *g_odata, uint8_t *out, uint64_t nonce, uint64_t *solutions, uint32_t hash_len_bits)
 {
 	__shared__ uint32_t hashes[128][8];
 
@@ -1118,7 +1196,7 @@ void cuda_post_keccak512_9_255(uint32_t *g_odata, uint8_t *out, uint64_t nonce, 
 	uint32_t label;
 
 	const uint32_t thread = blockIdx.x * blockDim.x + threadIdx.x;
-	g_odata += thread * 32 * r;
+	g_odata += thread * 32;
 	nonce += thread;
 
 #pragma unroll
@@ -1133,13 +1211,15 @@ void cuda_post_keccak512_9_255(uint32_t *g_odata, uint8_t *out, uint64_t nonce, 
 	pbkdf2_hmac_init72(&hmac_pw, data);
 
 	/* hmac(password, salt...) */
-	uint32_t buffered = pbkdf2_hmac_update(&hmac_pw, g_odata, 128 * r);
+	uint32_t buffered = pbkdf2_hmac_update(&hmac_pw, g_odata, 128);
 
 	/* U1 = hmac(password, salt || be(i)) */
 	uint32_t be = 0x01000000U;//cuda_swab32(1);
 	buffered = pbkdf2_hmac_buffer_update4(&hmac_pw, be, buffered);
 	label = pbkdf2_hmac_finish(&hmac_pw, buffered) & 0x01;
-	
+
+	CHECK_POW()
+ 
 	*(uint64_t*)&hashes[threadIdx.x][0] = hmac_pw.outer.state[0];
 	*(uint64_t*)&hashes[threadIdx.x][2] = hmac_pw.outer.state[1];
 	*(uint64_t*)&hashes[threadIdx.x][4] = hmac_pw.outer.state[2];
@@ -1152,13 +1232,13 @@ void cuda_post_keccak512_9_255(uint32_t *g_odata, uint8_t *out, uint64_t nonce, 
 }
 
 __global__ __launch_bounds__(128)
-void cuda_post_keccak512_256(uint32_t *g_odata, uint8_t *out, uint64_t nonce, uint32_t r)
+void cuda_post_keccak512_256(uint32_t *g_odata, uint8_t *out, uint64_t nonce, uint64_t *solutions)
 {
 	uint32_t data[20];
 	uint32_t label;
 
 	const uint32_t thread = blockIdx.x * blockDim.x + threadIdx.x;
-	g_odata += thread * 32 * r;
+	g_odata += thread * 32;
 	nonce += thread;
 
 #pragma unroll
@@ -1173,12 +1253,14 @@ void cuda_post_keccak512_256(uint32_t *g_odata, uint8_t *out, uint64_t nonce, ui
 	pbkdf2_hmac_init72(&hmac_pw, data);
 
 	/* hmac(password, salt...) */
-	uint32_t buffered = pbkdf2_hmac_update(&hmac_pw, g_odata, 128 * r);
+	uint32_t buffered = pbkdf2_hmac_update(&hmac_pw, g_odata, 128);
 
 	/* U1 = hmac(password, salt || be(i)) */
 	uint32_t be = 0x01000000U;//cuda_swab32(1);
 	buffered = pbkdf2_hmac_buffer_update4(&hmac_pw, be, buffered);
 	label = pbkdf2_hmac_finish(&hmac_pw, buffered) & 0x01;
+
+	CHECK_POW()
 
 	uint64_t *hashes = (uint64_t *)(out + thread * 32);
 
@@ -1236,42 +1318,42 @@ extern "C" void pre_keccak512_1_1(_cudaState *cudaState, int stream, uint64_t no
 	cuda_pre_keccak512_1_1 << <grid, block, 0, cudaState->context_streams[stream] >> >(cudaState->context_idata[stream], nonce);
 }
 
-extern "C" void post_keccak512(_cudaState *cudaState, int stream, uint64_t nonce, int throughput, uint32_t r, uint32_t hash_len_bits)
+extern "C" void post_keccak512(_cudaState *cudaState, int stream, uint64_t nonce, int throughput, uint32_t hash_len_bits)
 {
 	dim3 block(128);
 	dim3 grid((throughput + 127) / 128);
 
 	switch (hash_len_bits) {
 	case 8:
-		cuda_post_keccak512_8 << <grid, block, 0, cudaState->context_streams[stream] >> > ((uint32_t *)cudaState->context_odata[stream], cudaState->context_labels[stream], nonce, r);
+		cuda_post_keccak512_8 << <grid, block, 0, cudaState->context_streams[stream] >> > ((uint32_t *)cudaState->context_odata[stream], cudaState->context_labels[stream], nonce, cudaState->context_solutions[stream]);
 		break;
 	case 7:
-		cuda_post_keccak512_7 << <grid, block, 0, cudaState->context_streams[stream] >> > ((uint32_t *)cudaState->context_odata[stream], cudaState->context_labels[stream], nonce, r);
+		cuda_post_keccak512_7 << <grid, block, 0, cudaState->context_streams[stream] >> > ((uint32_t *)cudaState->context_odata[stream], cudaState->context_labels[stream], nonce, cudaState->context_solutions[stream]);
 		break;
 	case 6:
-		cuda_post_keccak512_6 << <grid, block, 0, cudaState->context_streams[stream] >> > ((uint32_t *)cudaState->context_odata[stream], cudaState->context_labels[stream], nonce, r);
+		cuda_post_keccak512_6 << <grid, block, 0, cudaState->context_streams[stream] >> > ((uint32_t *)cudaState->context_odata[stream], cudaState->context_labels[stream], nonce, cudaState->context_solutions[stream]);
 		break;
 	case 5:
-		cuda_post_keccak512_5 << <grid, block, 0, cudaState->context_streams[stream] >> > ((uint32_t *)cudaState->context_odata[stream], cudaState->context_labels[stream], nonce, r);
+		cuda_post_keccak512_5 << <grid, block, 0, cudaState->context_streams[stream] >> > ((uint32_t *)cudaState->context_odata[stream], cudaState->context_labels[stream], nonce, cudaState->context_solutions[stream]);
 		break;
 	case 4:
-		cuda_post_keccak512_4 << <grid, block, 0, cudaState->context_streams[stream] >> > ((uint32_t *)cudaState->context_odata[stream], cudaState->context_labels[stream], nonce, r);
+		cuda_post_keccak512_4 << <grid, block, 0, cudaState->context_streams[stream] >> > ((uint32_t *)cudaState->context_odata[stream], cudaState->context_labels[stream], nonce, cudaState->context_solutions[stream]);
 		break;
 	case 3:
-		cuda_post_keccak512_3 << <grid, block, 0, cudaState->context_streams[stream] >> > ((uint32_t *)cudaState->context_odata[stream], cudaState->context_labels[stream], nonce, r);
+		cuda_post_keccak512_3 << <grid, block, 0, cudaState->context_streams[stream] >> > ((uint32_t *)cudaState->context_odata[stream], cudaState->context_labels[stream], nonce, cudaState->context_solutions[stream]);
 		break;
 	case 2:
-		cuda_post_keccak512_2 << <grid, block, 0, cudaState->context_streams[stream] >> > ((uint32_t *)cudaState->context_odata[stream], cudaState->context_labels[stream], nonce, r);
+		cuda_post_keccak512_2 << <grid, block, 0, cudaState->context_streams[stream] >> > ((uint32_t *)cudaState->context_odata[stream], cudaState->context_labels[stream], nonce, cudaState->context_solutions[stream]);
 		break;
 	case 1:
-		cuda_post_keccak512_1 << <grid, block, 0, cudaState->context_streams[stream] >> > ((uint32_t *)cudaState->context_odata[stream], cudaState->context_labels[stream], nonce, r);
+		cuda_post_keccak512_1 << <grid, block, 0, cudaState->context_streams[stream] >> > ((uint32_t *)cudaState->context_odata[stream], cudaState->context_labels[stream], nonce, cudaState->context_solutions[stream]);
 		break;
 	case 256:
-		cuda_post_keccak512_256 << <grid, block, 0, cudaState->context_streams[stream] >> > ((uint32_t *)cudaState->context_odata[stream], cudaState->context_labels[stream], nonce, r);
+		cuda_post_keccak512_256 << <grid, block, 0, cudaState->context_streams[stream] >> > ((uint32_t *)cudaState->context_odata[stream], cudaState->context_labels[stream], nonce, cudaState->context_solutions[stream]);
 		break;
 	default:
 		if (hash_len_bits < 256) {
-			cuda_post_keccak512_9_255 << <grid, block, 0, cudaState->context_streams[stream] >> > ((uint32_t *)cudaState->context_odata[stream], cudaState->context_labels[stream], nonce, r, hash_len_bits);
+			cuda_post_keccak512_9_255 << <grid, block, 0, cudaState->context_streams[stream] >> > ((uint32_t *)cudaState->context_odata[stream], cudaState->context_labels[stream], nonce, cudaState->context_solutions[stream], hash_len_bits);
 		}
 	}
 }

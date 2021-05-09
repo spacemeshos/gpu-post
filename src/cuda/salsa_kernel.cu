@@ -82,11 +82,14 @@ _cudaState *initCuda(struct cgpu_info *cgpu, uint32_t N, uint32_t r, uint32_t p,
 	checkCudaErrors(cgpu->driver_id, cudaHostAlloc((void **) &tmp, labels_size, cudaHostAllocDefault)); cudaState->context_L[1] = (uint8_t*)tmp;
 
 	// allocate pinned host memory for scrypt_core input/output
-	checkCudaErrors(cgpu->driver_id, cudaHostAlloc((void **) &tmp, mem_size, cudaHostAllocDefault)); cudaState->context_X[0] = tmp;
-	checkCudaErrors(cgpu->driver_id, cudaHostAlloc((void **) &tmp, mem_size, cudaHostAllocDefault)); cudaState->context_X[1] = tmp;
+	checkCudaErrors(cgpu->driver_id, cudaHostAlloc((void **) &tmp, 32, cudaHostAllocDefault)); cudaState->context_X[0] = (uint64_t*)tmp;
+	checkCudaErrors(cgpu->driver_id, cudaHostAlloc((void **) &tmp, 32, cudaHostAllocDefault)); cudaState->context_X[1] = (uint64_t*)tmp;
 
 	checkCudaErrors(cgpu->driver_id, cudaMalloc((void **) &tmp, labels_size)); cudaState->context_labels[0] = (uint8_t*)tmp;
 	checkCudaErrors(cgpu->driver_id, cudaMalloc((void **) &tmp, labels_size)); cudaState->context_labels[1] = (uint8_t*)tmp;
+
+	checkCudaErrors(cgpu->driver_id, cudaMalloc((void **)&tmp, 32)); cudaState->context_solutions[0] = (uint64_t*)tmp;
+	checkCudaErrors(cgpu->driver_id, cudaMalloc((void **)&tmp, 32)); cudaState->context_solutions[1] = (uint64_t*)tmp;
 
 	// create two CUDA streams
 	cudaStream_t tmp2;
@@ -294,6 +297,18 @@ void cuda_scrypt_DtoH(_cudaState *cudaState, uint8_t *X, int stream, uint32_t si
 	checkCudaErrors(cudaState->cuda_id, cudaMemcpyAsync(X, cudaState->context_labels[stream], size, cudaMemcpyDeviceToHost, cudaState->context_streams[stream]));
 }
 
+void cuda_solutions_DtoH(_cudaState *cudaState, int stream)
+{
+	// copy result from device to host (asynchronously)
+	checkCudaErrors(cudaState->cuda_id, cudaMemcpyAsync(cudaState->context_X[stream], cudaState->context_solutions[stream], 32, cudaMemcpyDeviceToHost, cudaState->context_streams[stream]));
+}
+
+void cuda_solutions_HtoD(_cudaState *cudaState, int stream)
+{
+	// copy result from device to host (asynchronously)
+	checkCudaErrors(cudaState->cuda_id, cudaMemcpyAsync(cudaState->context_solutions[stream], cudaState->context_X[stream], 32, cudaMemcpyHostToDevice, cudaState->context_streams[stream]));
+}
+
 bool cuda_scrypt_sync(struct cgpu_info *cgpu, _cudaState *cudaState, int stream)
 {
 	cudaError_t err;
@@ -316,7 +331,7 @@ bool cuda_scrypt_sync(struct cgpu_info *cgpu, _cudaState *cudaState, int stream)
 	return true;
 }
 
-uint32_t* cuda_transferbuffer(_cudaState *cudaState, int stream)
+uint64_t* cuda_transferbuffer(_cudaState *cudaState, int stream)
 {
 	return cudaState->context_X[stream];
 }

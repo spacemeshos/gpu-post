@@ -28,19 +28,6 @@ if (MSVC)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif()
 
-# A custom command and target to turn the OpenCL kernel into a byte array header
-
-add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/scrypt-chacha-cl.inl
-    COMMAND ${CMAKE_COMMAND} ARGS
-    -DBIN2H_SOURCE_FILE="${CMAKE_CURRENT_SOURCE_DIR}/opencl/scrypt-chacha.cl"
-    -DBIN2H_VARIABLE_NAME=scrypt_chacha_cl
-    -DBIN2H_HEADER_FILE="${CMAKE_CURRENT_BINARY_DIR}/scrypt-chacha-cl.inl"
-    -P "${CMAKE_CURRENT_SOURCE_DIR}/bin2h.cmake"
-    COMMENT "Generating OpenCL Kernel Byte Array"
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/opencl/scrypt-chacha.cl
-)
-
 # A custom command and target to turn the Vulkan kernel into a byte array header
 
 add_custom_command(
@@ -56,51 +43,6 @@ add_custom_command(
 
 include_directories(.)
 include_directories(../include)
-
-if (SPACEMESHCL)
-    set(SOURCES
-        ${SOURCES}
-        opencl/driver-opencl.c
-        opencl/driver-opencl.h
-        opencl/ocl.c
-        opencl/ocl.h
-
-        opencl/CL/cl.h
-        opencl/CL/cl_egl.h
-        opencl/CL/cl_ext.h
-        opencl/CL/cl_gl.h
-        opencl/CL/cl_gl_ext.h
-        opencl/CL/cl_platform.h
-        opencl/CL/opencl.h
-
-        opencl/ICD/icd.c
-        opencl/ICD/icd.h
-        opencl/ICD/icd_dispatch.c
-        opencl/ICD/icd_dispatch.h
-        opencl/ICD/icd_envvars.h
-        opencl/ICD/icd_platform.h
-
-        ${CMAKE_CURRENT_BINARY_DIR}/scrypt-chacha-cl.inl
-    )
-    if (MSVC)
-        set(SOURCES
-            ${SOURCES}
-            opencl/ICD/windows/icd_windows.c
-            opencl/ICD/windows/icd_windows.h
-            opencl/ICD/windows/icd_windows_dxgk.c
-            opencl/ICD/windows/icd_windows_dxgk.h
-            opencl/ICD/windows/icd_windows_envvars.c
-        )
-    else()
-        set(SOURCES
-            ${SOURCES}
-            opencl/ICD/linux/icd_linux.c
-            opencl/ICD/linux/icd_linux_envvars.c
-        )
-    endif()
-    include_directories(${CMAKE_CURRENT_BINARY_DIR})
-    include_directories(opencl)
-endif()
 
 if (SPACEMESHCUDA)
     if(MSVC)

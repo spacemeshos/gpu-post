@@ -483,38 +483,6 @@ extern "C" VkPipeline compileShader(VkDevice vkDevice, VkPipelineLayout pipeline
 				source += "labels[tmp++] = hmac_pw.outer.state4[1].z;\n";
 				last = "labels[tmp++] = hmac_pw.outer.state4[1].w";
 			}
-			if (writter._label_words_size > 8) {
-				source += "labels[tmp++] = hmac_pw.outer.state4[1].w;\n";
-				last = "labels[tmp++] = hmac_pw.outer.state4[2].x";
-			}
-			if (writter._label_words_size > 9) {
-				source += "labels[tmp++] = hmac_pw.outer.state4[2].x;\n";
-				last = "labels[tmp++] = hmac_pw.outer.state4[2].y";
-			}
-			if (writter._label_words_size > 10) {
-				source += "labels[tmp++] = hmac_pw.outer.state4[2].y;\n";
-				last = "labels[tmp++] = hmac_pw.outer.state4[2].z";
-			}
-			if (writter._label_words_size > 11) {
-				source += "labels[tmp++] = hmac_pw.outer.state4[2].z;\n";
-				last = "labels[tmp++] = hmac_pw.outer.state4[2].w";
-			}
-			if (writter._label_words_size > 12) {
-				source += "labels[tmp++] = hmac_pw.outer.state4[2].w;\n";
-				last = "labels[tmp++] = hmac_pw.outer.state4[3].x";
-			}
-			if (writter._label_words_size > 13) {
-				source += "labels[tmp++] = hmac_pw.outer.state4[3].x;\n";
-				last = "labels[tmp++] = hmac_pw.outer.state4[3].y";
-			}
-			if (writter._label_words_size > 14) {
-				source += "labels[tmp++] = hmac_pw.outer.state4[3].y;\n";
-				last = "labels[tmp++] = hmac_pw.outer.state4[3].z";
-			}
-			if (writter._label_words_size > 15) {
-				source += "labels[tmp++] = hmac_pw.outer.state4[3].z;\n";
-				last = "labels[tmp++] = hmac_pw.outer.state4[3].w";
-			}
 			source += last;
 			if (0 == hash_len_bits % 32) {
 				source += ";\n";
