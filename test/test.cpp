@@ -160,6 +160,9 @@ void do_test(int aLabelSize, int aLabelsCount, int aReferenceProvider, bool aPri
 // compute pos and compute pow - the core lib use case here
 void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed)
 {
+	uint8_t id[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+	uint8_t salt[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
 	int providersCount = spacemesh_api_get_providers(NULL, 0);
 
 	if (aSeed) {
@@ -184,8 +187,6 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed)
 		if (spacemesh_api_get_providers(providers, providersCount) == providersCount) {
 			uint8_t D[32] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
-			uint8_t id[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-			uint8_t salt[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
 			if (aDiff) {
 				int i = 0;
@@ -218,7 +219,7 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed)
 						labels_per_iter = MAX_LABELS_COUNT_API_CALL;
 						iters = aLabelsCount / MAX_LABELS_COUNT_API_CALL;
 					}
-					printf("Labels iterations: %u, labels_per_iter: %u\n", iters, labels_per_iter);
+					printf("Labels compute iterations: %u, labels_per_iter: %u\n", iters, labels_per_iter);
 
 					uint64_t idx = 0;
 					uint64_t idx_solution = -1;
@@ -227,26 +228,28 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed)
 					uint8_t hash[32];
 
 					for (int j=0; j < iters; j++) {
-
-						uint64_t idx_temp = -1;
-
 						if (idx_solution == -1) {
 							printf("no pow solution found yet - compte leaves and look for solution...\n");
-							int status = scryptPositions(providers[i].id, id, idx, labels_per_iter - 1, 8, salt, SPACEMESH_API_COMPUTE_LEAFS, hash, 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
+							int status = scryptPositions(providers[i].id, id, 0, labels_per_iter - 1, 8, salt, SPACEMESH_API_COMPUTE_LEAFS, hash, 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
 
 							// todo: assert status
 
-							printf("Computed leaves+pow, %u leaves at index %u: %s: %u hashes, %u h/s\n", labels_per_iter, idx, providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
+							printf("Computed leaves + pow, %u leaves at index %llu: %s: %u hashes, %u h/s\n", labels_per_iter, idx, providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
 							if (idx_solution != -1) {
-								printf("Found solution at %u\n", (uint32_t)idx_solution);
+								printf("Found pow solution at index %u\n", (uint32_t)idx_solution);
 							} else {
-								printf("Solution not found in this iteration\n");
+								printf("Pow solution not found in this iteration.\n");
 							}
 						} else {
 							// solution was found - compute leaves only and don't overwrite hash
-							scryptPositions(providers[i].id, id, idx, labels_per_iter - 1, 8, salt, SPACEMESH_API_COMPUTE_LEAFS, NULL, 512, 1, 1, D, &idx_temp, &hashes_computed, &hashes_per_sec);
-							printf("Compute leaves only, %u leaves at index %u: %s: %u hashes, %u h/s, solution at %u\n", labels_per_iter, idx, providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec, (uint32_t)idx_solution);
+							uint64_t idx_temp = -1;
+							int status = scryptPositions(providers[i].id, id, idx, labels_per_iter - 1, 8, salt, SPACEMESH_API_COMPUTE_LEAFS, NULL, 512, 1, 1, D, &idx_temp, &hashes_computed, &hashes_per_sec);
+
+							// todo: check status
+							printf("Compute leaves only, %u leaves at index %llu: %s: %u hashes, %u h/s, solution at %u\n", labels_per_iter, idx, providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec, (uint32_t)idx_solution);
 						}
+
+						// start index of next iteration
 						idx += labels_per_iter;
 					}
 
@@ -268,13 +271,14 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed)
 								}
 								break;
 							case SPACEMESH_API_ERROR_NONE:
-								printf("Compute pow only, at index %u: %s: %u hashes, %u h/s, solution at %u\n", idx, providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec, (uint32_t)idx_solution);
+								printf("Compute pow only, at index  %llu: %s: %u hashes, %u h/s, solution at  %u\n", idx, providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec, (uint32_t)idx_solution);
 								break;
 							default:
 								printf("%s: error %d, %u hashes, %u h/s\n", providers[i].model, status, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
 								break;
 						}
 
+						// start index of next iteration
 						idx += labels_per_iter;
 					}
 				}
