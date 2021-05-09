@@ -12,6 +12,7 @@ int test_of_concurrency();
 int test_of_cancelation();
 
 #define	MAX_CPU_LABELS_COUNT	(9 * 128 * 1024)
+#define MAX_LABELS_COUNT_API_CALL (32 * 1024 * 1024)
 
 void print_hex32(const uint8_t *aSrc)
 {
@@ -152,6 +153,133 @@ void do_test(int aLabelSize, int aLabelsCount, int aReferenceProvider, bool aPri
 			free(out);
 		}
 
+		free(providers);
+	}
+}
+
+// compute pos and compute pow - the core lib use case here
+void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed)
+{
+	int providersCount = spacemesh_api_get_providers(NULL, 0);
+
+	if (aSeed) {
+		if (aSeed == -1) {
+			srand(time(nullptr));
+		}
+		else {
+			srand(aSeed);
+		}
+
+		for (int i = 0; i < sizeof(id); i++) {
+			id[i] = rand();
+		}
+		for (int i = 0; i < sizeof(salt); i++) {
+			salt[i] = rand();
+		}
+	}
+
+	if (providersCount > 0) {
+		PostComputeProvider *providers = (PostComputeProvider *)malloc(providersCount * sizeof(PostComputeProvider));
+
+		if (spacemesh_api_get_providers(providers, providersCount) == providersCount) {
+			uint8_t D[32] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+
+			uint8_t id[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+			uint8_t salt[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
+			if (aDiff) {
+				int i = 0;
+				while (aDiff >= 8) {
+					D[i] = 0;
+					i++;
+					aDiff -= 8;
+				}
+				if (aDiff) {
+					D[i] = (1 << (8 - aDiff)) - 1;
+				}
+			}
+			printf("Target D: ");
+			print_hex32(D);
+			printf("\n");
+			uint32_t cpu_id = -1;
+			for (int i = 0; i < providersCount; i++) {
+				if (providers[i].compute_api == COMPUTE_API_CLASS_CPU) {
+					cpu_id = providers[i].id;
+					break;
+				}
+			}
+			for (int i = 0; i < providersCount; i++) {
+				if (providers[i].compute_api != COMPUTE_API_CLASS_CPU)
+				{
+					int labels_per_iter = aLabelsCount;
+					int iters = 1;
+
+					if (aLabelsCount > MAX_LABELS_COUNT_API_CALL) {
+						labels_per_iter = MAX_LABELS_COUNT_API_CALL;
+						iters = aLabelsCount / MAX_LABELS_COUNT_API_CALL;
+					}
+					printf("Labels iterations: %u, labels_per_iter: %u\n", iters, labels_per_iter);
+
+					uint64_t idx = 0;
+					uint64_t idx_solution = -1;
+					uint64_t hashes_computed;
+					uint64_t hashes_per_sec;
+					uint8_t hash[32];
+
+					for (int j=0; j < iters; j++) {
+
+						uint64_t idx_temp = -1;
+
+						if (idx_solution == -1) {
+							printf("no pow solution found yet - compte leaves and look for solution...\n");
+							int status = scryptPositions(providers[i].id, id, idx, labels_per_iter - 1, 8, salt, SPACEMESH_API_COMPUTE_LEAFS, hash, 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
+
+							// todo: assert status
+
+							printf("Computed leaves+pow, %u leaves at index %u: %s: %u hashes, %u h/s\n", labels_per_iter, idx, providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
+							if (idx_solution != -1) {
+								printf("Found solution at %u\n", (uint32_t)idx_solution);
+							} else {
+								printf("Solution not found in this iteration\n");
+							}
+						} else {
+							// solution was found - compute leaves only and don't overwrite hash
+							scryptPositions(providers[i].id, id, idx, labels_per_iter - 1, 8, salt, SPACEMESH_API_COMPUTE_LEAFS, NULL, 512, 1, 1, D, &idx_temp, &hashes_computed, &hashes_per_sec);
+							printf("Compute leaves only, %u leaves at index %u: %s: %u hashes, %u h/s, solution at %u\n", labels_per_iter, idx, providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec, (uint32_t)idx_solution);
+						}
+						idx += labels_per_iter;
+					}
+
+					// finished leaves computation - we need to continue look for a pow solution until one is found, if was not found yet
+					while (idx_solution == -1) {
+						printf("Calling pow compute...\n");
+						int status = scryptPositions(providers[i].id, id, idx, labels_per_iter - 1, 8, salt, SPACEMESH_API_COMPUTE_POW, hash, 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
+
+						switch(status) {
+							case SPACEMESH_API_POW_SOLUTION_FOUND:
+								printf("Pow solution at %u\n", (uint32_t)idx_solution);
+								if (-1 != cpu_id) {
+									printf("D: ");
+									print_hex32(D);
+									printf("\n");
+									printf("H: ");
+									print_hex32(hash);
+									printf("\n");
+								}
+								break;
+							case SPACEMESH_API_ERROR_NONE:
+								printf("Compute pow only, at index %u: %s: %u hashes, %u h/s, solution at %u\n", idx, providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec, (uint32_t)idx_solution);
+								break;
+							default:
+								printf("%s: error %d, %u hashes, %u h/s\n", providers[i].model, status, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
+								break;
+						}
+
+						idx += labels_per_iter;
+					}
+				}
+			}
+		}
 		free(providers);
 	}
 }
@@ -394,6 +522,7 @@ void print_usage() {
 	printf("Usage:\n");
 	printf("--list               or -l	print available providers\n");
 	printf("--benchmark          or -b	run benchmark\n");
+	printf("--core               or -c	test the core library use case\n");
 	printf("--test               or -t	run basic test\n");
 	printf("--test-vector-check		run a CPU test and compare with test-vector\n");
 	printf("--test-pow           or -tp 	test pow computation\n");
@@ -412,6 +541,7 @@ int main(int argc, char **argv)
 	bool runBenchmark = false;
 	bool runTest = false;
 	bool runTestPow = false;
+	bool runTestCore = false;
 	bool createTestVector = false;
 	bool checkTestVector = false;
 	int labelSize = 8;
@@ -434,6 +564,9 @@ int main(int argc, char **argv)
 		}
 		else if (0 == strcmp(argv[i], "--test-pow") || 0 == strcmp(argv[i], "-tp")) {
 			runTestPow = true;
+		}
+		else if (0 == strcmp(argv[i], "--core") || 0 == strcmp(argv[i], "-c")) {
+			runTestCore = true;
 		}
 		else if (0 == strcmp(argv[i], "--test-vector-create")) {
 			createTestVector = true;
@@ -494,10 +627,7 @@ int main(int argc, char **argv)
 			if (i < argc) {
 				labelsCount = atoi(argv[i]);
 				if (labelsCount < 1) {
-					labelsCount = 250000;
-				}
-				else if (labelsCount > 32 * 1024 * 1024) {
-					labelsCount = 32 * 1024 * 1024;
+					labelsCount = MAX_LABELS_COUNT_API_CALL;
 				}
 			}
 		}
@@ -543,6 +673,11 @@ int main(int argc, char **argv)
 	if (runTestPow) {
 		printf("Test POW: count %u\n", labelsCount);
 		do_test_pow(labelsCount, powDiff, srand_seed);
+		return 0;
+	}
+	if (runTestCore) {
+		printf("Test POS+POW core use case: count %u\n", labelsCount);
+		test_core(labelsCount, powDiff, srand_seed);
 		return 0;
 	}
 #ifdef WIN32
