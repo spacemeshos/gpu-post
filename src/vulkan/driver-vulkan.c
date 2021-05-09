@@ -15,7 +15,6 @@
 #ifdef HAVE_VULKAN
 #include "vulkan-helpers.h"
 #include "driver-vulkan.h"
-#include "scrypt-chacha-vulkan.inl"
 
 #define	PREIMAGE_SIZE	128
 
@@ -93,12 +92,12 @@ typedef struct AlgorithmParams {
 	uint64_t global_work_offset;
 	uint32_t N;
 	uint32_t hash_len_bits;
+	uint32_t concurrent_threads;
+	uint32_t padding[3];
 	uint64_t idx_solution[2];
 } AlgorithmParams;
 
 struct device_drv vulkan_drv;
-
-void init_glslang();
 
 static uint64_t alignBuffer(uint64_t size, uint64_t align)
 {
@@ -223,11 +222,17 @@ static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameS
 
 	CHECK_RESULT(gVulkan.vkCreateFence(state->vkDevice, &fenceCreateInfo, NULL, &state->fence), "vkCreateFence", NULL);
 
+#if 0
 	char options[256];
-	snprintf(options, sizeof(options), "#version 450\n#define LOOKUP_GAP %d\n#define CONCURRENT_THREADS %d\n#define WORKSIZE %d\n#define LABEL_SIZE %d\n",
-		cgpu->lookup_gap, (unsigned int)cgpu->thread_concurrency, (int)cgpu->work_size, hash_len_bits);
+	snprintf(options, sizeof(options), "#version 450\n#define LOOKUP_GAP %d\n#define WORKSIZE %d\n#define LABEL_SIZE %d\n",
+		cgpu->lookup_gap, (int)cgpu->work_size, hash_len_bits);
 
 	state->pipeline = compileShader(state->vkDevice, state->pipelineLayout, &state->shaderModule, scrypt_chacha_comp, options, (int)cgpu->work_size, hash_len_bits, copy_only);
+#else
+	char filename[64];
+	snprintf(filename, sizeof(filename), "kernel-%02d-%03d.spirv", (int)cgpu->work_size, hash_len_bits);
+	state->pipeline = loadShader(state->vkDevice, state->pipelineLayout, &state->shaderModule, filename);
+#endif
 	if (!state->pipeline) {
 		return NULL;
 	}
@@ -328,8 +333,6 @@ static int vulkan_detect(struct cgpu_info *gpus, int *active)
 	memcpy(gpuConstants.keccakf_rotc, keccak_rotc, sizeof(keccak_rotc));
 	memcpy(gpuConstants.keccakf_piln, keccak_piln, sizeof(keccak_piln));
 
-	init_glslang();
-
 	return most_devices;
 }
 
@@ -425,6 +428,7 @@ static int vulkan_scrypt_positions(
 
 		params.N = N;
 		params.hash_len_bits = hash_len_bits;
+		params.concurrent_threads = cgpu->thread_concurrency;
 
 		const uint64_t delay = 5ULL * 1000ULL * 1000ULL * 1000ULL;
 
@@ -539,6 +543,7 @@ static int64_t vulkan_hash(struct cgpu_info *cgpu, uint8_t *pdata, uint8_t *outp
 		params.N = 512;
 		params.hash_len_bits = 256;
 		params.global_work_offset = 0;
+		params.concurrent_threads = cgpu->thread_concurrency;
 
 		const uint64_t delay = 5ULL * 1000ULL * 1000ULL * 1000ULL;
 

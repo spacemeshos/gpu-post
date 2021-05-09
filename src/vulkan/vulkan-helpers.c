@@ -357,6 +357,7 @@ VkPipeline loadShader(VkDevice vkDevice, VkPipelineLayout pipelineLayout, VkShad
 
 	free(shader);
 	fclose(fp);
+
 	return pipeline;
 }
 

@@ -76,7 +76,7 @@ typedef struct _Vulkan {
 extern "C" {
 #endif
 
-	extern Vulkan gVulkan;
+extern Vulkan gVulkan;
 extern VkInstance gInstance;
 extern VkPhysicalDevice* gPhysicalDevices;
 extern uint32_t gPhysicalDeviceCount;
@@ -89,7 +89,6 @@ VkBuffer createBuffer(VkDevice vkDevice, uint32_t computeQueueFamillyIndex, VkDe
 VkPipelineLayout bindBuffers(VkDevice vkDevice, VkDescriptorSet *descriptorSet, VkDescriptorPool *descriptorPool, VkDescriptorSetLayout *descriptorSetLayout, VkBuffer b0, VkBuffer b1, VkBuffer b2, VkBuffer b3, VkBuffer b4, VkBuffer b5);
 uint64_t getBufferMemoryRequirements(VkDevice vkDevice, VkBuffer b);
 VkPipeline loadShader(VkDevice vkDevice, VkPipelineLayout pipelineLayout, VkShaderModule *shader_module, const char * spirv_file_name);
-VkPipeline compileShader(VkDevice vkDevice, VkPipelineLayout pipelineLayout, VkShaderModule *shader_module, const char *glsl_source, const char *options, int work_size, int hash_len_bits, bool copy_only);
 
 #ifdef __cplusplus
 }
