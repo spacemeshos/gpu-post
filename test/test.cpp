@@ -199,7 +199,6 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed)
 		PostComputeProvider *providers = (PostComputeProvider *)malloc(providersCount * sizeof(PostComputeProvider));
 
 		if (spacemesh_api_get_providers(providers, providersCount) == providersCount) {
-
 			printf("Target D: ");
 			print_hex32(D);
 			printf("\n");
@@ -213,14 +212,14 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed)
 			for (int i = 0; i < providersCount; i++) {
 				if (providers[i].compute_api != COMPUTE_API_CLASS_CPU)
 				{
-					int labels_per_iter = aLabelsCount;
+					uint64_t labels_per_iter = aLabelsCount;
 					int iters = 1;
 
 					if (aLabelsCount > MAX_LABELS_COUNT_API_CALL) {
 						labels_per_iter = MAX_LABELS_COUNT_API_CALL;
 						iters = aLabelsCount / MAX_LABELS_COUNT_API_CALL;
 					}
-					printf("Labels compute iterations: %u, labels_per_iter: %u\n", iters, labels_per_iter);
+					printf("Labels compute iterations: %u, labels_per_iter: %llu\n", iters, labels_per_iter);
 
 					const size_t labelsBufferSize = (size_t(labels_per_iter) * size_t(8) + 7ull) / 8ull;
 					uint8_t *out;
@@ -232,17 +231,19 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed)
 					uint64_t hashes_per_sec;
 
 					for (int j=0; j < iters; j++) {
-
-
 						if (idx_solution == -1) {
-							printf("Compute labeles and look for pow solution...\n");
+							printf("Compute labels and look for pow solution...\n");
 							int status = scryptPositions(providers[i].id, id, idx, labels_per_iter - 1, 8, salt, SPACEMESH_API_COMPUTE_LEAFS, out, 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
 
 							if (status != SPACEMESH_API_ERROR_NONE && status != SPACEMESH_API_POW_SOLUTION_FOUND) {
 								printf("Compute returned an error: %u", status);
 							}
 
-							printf("Computed labels + pow, %u labels at index %llu: %s: %u hashes, %u h/s\n", labels_per_iter, idx, providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
+							if (hashes_computed != labels_per_iter) {
+								printf("error: compute diff than expected: value: %llu, expected: %llu\n", hashes_computed, labels_per_iter);
+							}
+
+							printf("Computed labels + pow, %llu labels at index %llu: %s: %u hashes, %u h/s\n", labels_per_iter, idx, providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
 
 							if (idx_solution != -1) {
 								printf("Found pow solution at index %u\n", (uint32_t)idx_solution);
@@ -258,7 +259,7 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed)
 								printf("Compute returned an error: %u", status);
 							}
 
-							printf("Compute labels only, %u labels at index %llu: %s: %u hashes, %u h/s, solution at %u\n", labels_per_iter, idx, providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec, (uint32_t)idx_solution);
+							printf("Compute labels only, %llu labels at index %llu: %s: %u hashes, %u h/s, solution at %u\n", labels_per_iter, idx, providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec, (uint32_t)idx_solution);
 						}
 
 						// start index of next iteration
@@ -269,9 +270,9 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed)
 					while (idx_solution == -1) {
 						printf("Calling pow compute...\n");
 
-						// Expected hash to be correct when COMPUTE_POW is used so there shouldn't be need to call again to get it with COMPUTE_LEAFS
+						int status = scryptPositions(providers[i].id, id, idx, labels_per_iter - 1, 8, salt, SPACEMESH_API_COMPUTE_POW, out, 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
 
-						int status = scryptPositions(providers[i].id, id, idx, labels_per_iter - 1, 8, salt, SPACEMESH_API_COMPUTE_POW, NULL, 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
+						printf("Compute pow only, at index: %llu: %s: %u hashes, %u h/s\n", idx, providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
 
 						switch(status) {
 							case SPACEMESH_API_POW_SOLUTION_FOUND:
@@ -291,7 +292,9 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed)
 								}
 								break;
 							case SPACEMESH_API_ERROR_NONE:
-								printf("Compute pow only, at index  %llu: %s: %u hashes, %u h/s\n", idx, providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
+								if (hashes_computed != labels_per_iter) {
+									printf("error: compute diff than expected: value: %llu, expected: %llu\n", hashes_computed, labels_per_iter);
+								}
 								break;
 							default:
 								printf("%s: error %d, %u hashes, %u h/s\n", providers[i].model, status, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
