@@ -181,24 +181,25 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed)
 		}
 	}
 
+	uint8_t D[32] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+
+	if (aDiff) {
+		int i = 0;
+		while (aDiff >= 8) {
+			D[i] = 0;
+			i++;
+			aDiff -= 8;
+		}
+		if (aDiff) {
+			D[i] = (1 << (8 - aDiff)) - 1;
+		}
+	}
+
 	if (providersCount > 0) {
 		PostComputeProvider *providers = (PostComputeProvider *)malloc(providersCount * sizeof(PostComputeProvider));
 
 		if (spacemesh_api_get_providers(providers, providersCount) == providersCount) {
-			uint8_t D[32] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
-
-			if (aDiff) {
-				int i = 0;
-				while (aDiff >= 8) {
-					D[i] = 0;
-					i++;
-					aDiff -= 8;
-				}
-				if (aDiff) {
-					D[i] = (1 << (8 - aDiff)) - 1;
-				}
-			}
 			printf("Target D: ");
 			print_hex32(D);
 			printf("\n");
@@ -226,11 +227,17 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed)
 					uint64_t hashes_computed;
 					uint64_t hashes_per_sec;
 					uint8_t hash[32];
+					uint8_t *out;
+
+					const size_t labelsBufferSize = (size_t(labels_per_iter) * size_t(8) + 7ull) / 8ull;
+
+					out = (uint8_t*)calloc(1, labelsBufferSize);
+
 
 					for (int j=0; j < iters; j++) {
 						if (idx_solution == -1) {
 							printf("no pow solution found yet - compte leaves and look for solution...\n");
-							int status = scryptPositions(providers[i].id, id, 0, labels_per_iter - 1, 8, salt, SPACEMESH_API_COMPUTE_LEAFS, hash, 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
+							int status = scryptPositions(providers[i].id, id, idx, labels_per_iter - 1, 8, salt, SPACEMESH_API_COMPUTE_LEAFS, out, 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
 
 							// todo: assert status
 
