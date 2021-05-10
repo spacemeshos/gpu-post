@@ -195,13 +195,14 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 		}
 	}
 
+	printf("Target D: ");
+	print_hex32(D);
+	printf("\n");
+
 	if (providersCount > 0) {
 		PostComputeProvider *providers = (PostComputeProvider *)malloc(providersCount * sizeof(PostComputeProvider));
 
 		if (spacemesh_api_get_providers(providers, providersCount) == providersCount) {
-			printf("Target D: ");
-			print_hex32(D);
-			printf("\n");
 			uint32_t cpu_id = -1;
 			for (int i = 0; i < providersCount; i++) {
 				if (providers[i].compute_api == COMPUTE_API_CLASS_CPU) {
@@ -219,11 +220,12 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 						labels_per_iter = MAX_LABELS_COUNT_API_CALL;
 						iters = aLabelsCount / MAX_LABELS_COUNT_API_CALL;
 					}
-					printf("Labels compute iterations: %u, labels_per_iter: %llu. Label size (bits): %u\n", iters, labels_per_iter, labelSize);
+					printf("Labels+Pow Task. Iters: %u, Total labels: %d, Labels per iter: %llu. Label size (bits): %u\n", iters,  aLabelsCount, labels_per_iter, labelSize);
 
-					const size_t labelsBufferSize = (size_t(labels_per_iter) * size_t(labelSize) + 7ull) / 8ull;
-					uint8_t *out;
-					out = (uint8_t*)calloc(1, labelsBufferSize);
+					const uint64_t labelsBufferSize = (uint64_t(labels_per_iter) * uint64_t(labelSize) + 7ull) / 8ull;
+					uint8_t *out = (uint8_t *)malloc(labelsBufferSize);
+
+					printf("buffer size: %0.1f MiB\n", labelsBufferSize / (1024.0*1024));
 
 					uint64_t idx = 0;
 					uint64_t idx_solution = -1;
@@ -231,8 +233,12 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 					uint64_t hashes_per_sec;
 
 					for (int j=0; j < iters; j++) {
+
+						hashes_computed = 0;
+						hashes_per_sec = 0;
+
 						if (idx_solution == -1) {
-							printf("Compute labels and look for pow solution...\n");
+							printf("Compute labels and look for a pow solution... Iteration: %d\n", j);
 							int status = scryptPositions(providers[i].id, id, idx, labels_per_iter - 1, labelSize, salt, SPACEMESH_API_COMPUTE_LEAFS, out, 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
 
 							if (status != SPACEMESH_API_ERROR_NONE && status != SPACEMESH_API_POW_SOLUTION_FOUND) {
@@ -240,13 +246,13 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 							}
 
 							if (hashes_computed != labels_per_iter) {
-								printf("error: compute diff than expected: value: %llu, expected: %llu\n", hashes_computed, labels_per_iter);
+								printf ("Compute error: hashes computed: %llu, hashes expected: %llu\n", hashes_computed, labels_per_iter);
 							}
 
-							printf("Computed labels + pow, %llu labels at index %llu: %s: %u hashes, %u h/s\n", labels_per_iter, idx, providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
+							printf("Labels + pow: requested %llu labels at index %llu. Computed hashes: %llu, (%llu h/s)\n", labels_per_iter, idx, hashes_computed, hashes_per_sec);
 
 							if (idx_solution != -1) {
-								printf("Found pow solution at index %u\n", (uint32_t)idx_solution);
+								printf("Found pow solution at index %llu\n", idx_solution);
 							} else {
 								printf("Pow solution not found in this iteration.\n");
 							}
@@ -259,7 +265,7 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 								printf("Compute returned an error: %u", status);
 							}
 
-							printf("Compute labels only, %llu labels at index %llu: %s: %u hashes, %u h/s, solution at %u\n", labels_per_iter, idx, providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec, (uint32_t)idx_solution);
+							printf("Compute labels only. Requested: %llu labels at index %llu. hHshes computed: %llu. (%llu h/s). Solution index:  %llu\n", labels_per_iter, idx, hashes_computed, hashes_per_sec, idx_solution);
 						}
 
 						// start index of next iteration
@@ -268,40 +274,42 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 
 					// finished leaves computation - we need to continue look for a pow solution until one is found, if was not found yet
 					while (idx_solution == -1) {
+						hashes_computed = 0;
+						hashes_per_sec = 0;
+
 						printf("Calling pow compute...\n");
 
 						int status = scryptPositions(providers[i].id, id, idx, labels_per_iter - 1, labelSize, salt, SPACEMESH_API_COMPUTE_POW, out, 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
 
-						printf("Compute pow only, at index: %llu: %s: %u hashes, %u h/s\n", idx, providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
+						printf("Compute pow only at index: %llu. hashes computed: %llu (%llu h/s)\n", idx, hashes_computed, hashes_per_sec);
 
 						switch(status) {
 							case SPACEMESH_API_POW_SOLUTION_FOUND:
 								printf("Pow solution at %u\n", (uint32_t)idx_solution);
 
-								// compute hash at solution:
+								// compute 256 hash at solution index:
 								uint8_t hash[32];
 								scryptPositions(cpu_id, id, idx_solution, idx_solution, 256, salt, SPACEMESH_API_COMPUTE_LEAFS, hash, 512, 1, 1, NULL, NULL, &hashes_computed, &hashes_per_sec);
 
-								if (-1 != cpu_id) {
-									printf("D: ");
-									print_hex32(D);
-									printf("\n");
-									printf("H: ");
-									print_hex32(hash);
-									printf("\n");
-								}
+								printf("D: ");
+								print_hex32(D);
+								printf("\n");
+								printf("H: ");
+								print_hex32(hash);
+								printf("\n");
 								break;
+
 							case SPACEMESH_API_ERROR_NONE:
 								if (hashes_computed != labels_per_iter) {
-									printf("error: compute diff than expected: value: %llu, expected: %llu\n", hashes_computed, labels_per_iter);
+									printf("Error: compute diff than expected: hashes computed: %llu, labels requested: %llu\n", hashes_computed, labels_per_iter);
 								}
 								break;
 							default:
-								printf("%s: error %d, %u hashes, %u h/s\n", providers[i].model, status, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
+								printf("Error %d. Hashes computed: %llu, (%llu h/s)\n", status, hashes_computed, hashes_per_sec);
 								break;
 						}
 
-						// start index of next iteration
+						// set index for next iteration
 						idx += labels_per_iter;
 					}
 				}
