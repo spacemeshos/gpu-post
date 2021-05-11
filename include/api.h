@@ -59,7 +59,7 @@ SPACEMESHAPI int scryptPositions(
     uint32_t N,					// scrypt N
     uint32_t R,					// scrypt r
     uint32_t P,					// scrypt p
-	uint8_t *D,					// Target D for the POW computation. 256 bits.
+	uint8_t *D,					// Target D for the POW computation. 32 bytes
 	uint64_t *idx_solution,		// index of output where output < D if POW compute was on. MAX_UINT64 otherwise.
 
 	uint64_t *hashes_computed,	//

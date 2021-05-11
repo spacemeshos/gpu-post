@@ -9,7 +9,7 @@ GPI: One of the following:
 - A GPU and drivers supporting CUDA 10.0 (or later) runtime such as a modern Nvidia GPU.
 - A GPU and drivers supporting Vulkan 1.2 (or later) runtime such as a modern AMD and Intel GPUs.
 
-Both discrete and on-board GPUs are supported as long as they support the minimum CUDA or Vulkan runtimes. 
+Both discrete and on-board GPUs are supported as long as they support the minimum CUDA or Vulkan runtimes.
 
 ## Build System Requirements
 
@@ -100,56 +100,82 @@ You may need to set CUDA_TOOLKIT_ROOT_DIR:
   cmake .. -DCMAKE_C_COMPILER=gcc-6 -DCMAKE_CXX_COMPILER=g++-6 -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-9.0
 ```
 
-## Recommendations
+## Build Recommendations
 
-Recommendations for choosing an implementation:
+Choosing an implementation:
 
 | OS / GPU     	| Windows 	| Linux      	| macOS        	|
 |------------	|----------	|-----------	|--------------	|
 | Nvidia	| CUDA      	| CUDA      	| Vulkan      	|
 | AMD		| Vulkan      	| Vulkan      	| Vulkan      	|
 | Intel		| Vulkan      	| Vulkan      	| Vulkan      	|
+| M1        | Vulkan        | VULKAN        | Vulkan        |
 
 ## API
 
-```
+```c
 int scryptPositions(
-    const uint8_t *id,			// 32 bytes
+	uint32_t provider_id,		// POST compute provider ID
+	const uint8_t *id,			// 32 bytes
     uint64_t start_position,	// e.g. 0
     uint64_t end_position,		// e.g. 49,999
     uint32_t hash_len_bits,		// (1...256) for each hash output, the number of prefix bits (not bytes) to copy into the buffer
     const uint8_t *salt,		// 32 bytes
-    uint32_t options,			// throttle etc.
+    uint32_t options,			// compute leafs and/or compute pow
     uint8_t *out,				// memory buffer large enough to include hash_len_bits * number of requested hashes
     uint32_t N,					// scrypt N
     uint32_t R,					// scrypt r
-    uint32_t P					// scrypt p
-);
+    uint32_t P,					// scrypt p
+	uint8_t *D,					// Target D for the POW computation. 256 bits.
+	uint64_t *idx_solution,		// index of output where output < D if POW compute was on. MAX_UINT64 otherwise.
+	uint64_t *hashes_computed,	// The number of hashes computed, should be equal to the number of requested hashes.
+	uint64_t *hashes_per_sec	// Performance
+	);
 ```
 
 return to the client the system GPU capabilities. E.g. CUDA/NVIDIA or NONE
-```
+```c
 int stats();
 ```
 
 stop all GPU work and don’t fill the passed-in buffer with any more results.
-```
+```c
 int stop(
 	uint32_t ms_timeout			// timeout in milliseconds
 );
 ```
 
 return non-zero if stop in progress
-```
+```c
 SPACEMESHAPI int spacemesh_api_stop_inprogress();
 ```
 
-return POST compute providers info
-```
+return POS compute providers info
+```c
 SPACEMESHAPI int spacemesh_api_get_providers(
 	PostComputeProvider *providers, // out providers info buffer, if NULL - return count of available providers
 	int max_providers			    // buffer size
 );
+```
+
+## Linking
+- Copy all files from a library Github release zip file to your project resources directory.
+- The files should be included in your app's runtime resources.
+- Use api.h to link the library from your code.
+- On macOS, set an env var at runtime with the location of `MoltenVK_icd.json` in your app's resources directory. e.g. `VK_ICD_FILENAMES="[proj_resources_lib]/MoltenVK_icd.json"`.
+
+## Testing
+
+Integration test of the basic library use case in a Spacemesh full node to generate proof of space and find a pow solution:
+
+```bash
+/build/test/.gpu-setup-test -c -n 100663296 -d 20
+```
+
+## Benchmarking
+
+```bash
+/build/test/.gpu-setup-test -b
 ```
 
 ## Initial Benchmarks
@@ -182,6 +208,6 @@ Scrypt Benchmarks (n=512, r=1, p=1) 1 byte per leaf, batch size leaves per API c
 | 04/04/2020 	| avive   	| sm-scrypt 	| Apple M1         | MacOS 11.2 | vulkan optimized prototype   	     	|   	214 | 0.214
 | 04/21/2020 	| avive   	| sm-scrypt 	| Nvidia RTX 2070 Super, 8GB    | Ubuntu 20.04, Driver 460.73.01  | CUDA optimized prototype   	     	|  2038 | 2.038
 
-## Additional Compute Benchmarks 
+## Additional Compute Benchmarks
 - [Cuda Benchmarks](https://browser.geekbench.com/cuda-benchmarks)
 - [Vulkan Benchmarks](https://browser.geekbench.com/vulkan-benchmarks)
