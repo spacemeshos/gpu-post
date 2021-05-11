@@ -120,7 +120,6 @@ Recommendations for choosing an implementation:
 
 ## API
 
-
 ```
 int scryptPositions(
 	uint32_t provider_id,		// POST compute provider ID
