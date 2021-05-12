@@ -287,18 +287,6 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 
 						switch(status) {
 							case SPACEMESH_API_POW_SOLUTION_FOUND:
-								printf("Pow solution at %u\n", (uint32_t)idx_solution);
-
-								// compute 256 hash at solution index:
-								uint8_t hash[32];
-								scryptPositions(cpu_id, id, idx_solution, idx_solution, 256, salt, SPACEMESH_API_COMPUTE_LEAFS, hash, 512, 1, 1, NULL, NULL, &hashes_computed, &hashes_per_sec);
-
-								printf("D: ");
-								print_hex32(D);
-								printf("\n");
-								printf("H: ");
-								print_hex32(hash);
-								printf("\n");
 								break;
 
 							case SPACEMESH_API_ERROR_NONE:
@@ -314,6 +302,25 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 						// set index for next iteration
 						idx += labels_per_iter;
 					}
+
+				 	if (idx_solution != -1ull) {
+
+						printf("Pow solution at %u\n", (uint32_t)idx_solution);
+
+						// compute 256 hash at solution index:
+						uint8_t hash[32];
+						scryptPositions(cpu_id, id, idx_solution, idx_solution, 256, salt, SPACEMESH_API_COMPUTE_LEAFS, hash, 512, 1, 1, NULL, NULL, &hashes_computed, &hashes_per_sec);
+
+						printf("D: ");
+						print_hex32(D);
+						printf("\n");
+						printf("H: ");
+						print_hex32(hash);
+						printf("\n");
+					} else {
+						printf("error: no pow solution found");
+					}
+
 				}
 			}
 		}
