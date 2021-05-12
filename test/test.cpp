@@ -258,6 +258,8 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 							}
 						} else {
 							// solution was found - compute labels only and don't overwrite hash
+							printf("Compute labels only... Iteration: %d\n", j);
+
 							uint64_t idx_temp = -1;
 							int status = scryptPositions(providers[i].id, id, idx, idx + labels_per_iter - 1, labelSize, salt, SPACEMESH_API_COMPUTE_LEAFS, out, 512, 1, 1, D, &idx_temp, &hashes_computed, &hashes_per_sec);
 
