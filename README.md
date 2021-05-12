@@ -159,6 +159,7 @@ SPACEMESHAPI int spacemesh_api_get_providers(
 ```
 
 ## Linking
+
 - Copy all files from a library Github release zip file to your project resources directory.
 - The files should be included in your app's runtime resources.
 - Use api.h to link the library from your code.

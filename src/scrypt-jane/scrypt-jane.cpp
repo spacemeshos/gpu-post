@@ -512,6 +512,7 @@ static int cpu_scrypt_positions(
 		uint8_t label;
 		bool use_byte_copy = 0 == (hash_len_bits % 8);
 		bool compute_pow = 0 != (options & SPACEMESH_API_COMPUTE_POW);
+		bool computeLeafs = 0 != (options & SPACEMESH_API_COMPUTE_LEAFS);
 		uint64_t *D = (uint64_t*)(pdata + 80);
 		int status = SPACEMESH_API_ERROR_NONE;
 
@@ -535,7 +536,9 @@ static int cpu_scrypt_positions(
 								*idx_solution = n;
 							}
 							status = SPACEMESH_API_POW_SOLUTION_FOUND;
-							break;
+							if (!computeLeafs) {
+								break;
+							}
 						}
 					}
 				}
@@ -630,7 +633,7 @@ static int cpu_scrypt_positions(
 			*hashes_computed = n - start_position;
 		}
 
-		if (status) {
+		if (0 == g_spacemesh_api_abort_flag && 0 != status) {
 			return status;
 		}
 

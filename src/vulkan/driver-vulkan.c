@@ -468,8 +468,8 @@ static int vulkan_scrypt_positions(
 					if (idx_solution) {
 						*idx_solution = params.idx_solution[0];
 					}
+					status = SPACEMESH_API_POW_SOLUTION_FOUND;
 					if (!computeLeafs) {
-						status = SPACEMESH_API_POW_SOLUTION_FOUND;
 						break;
 					}
 				}
@@ -506,7 +506,7 @@ static int vulkan_scrypt_positions(
 			}
 		}
 
-		if (status) {
+		if (0 == g_spacemesh_api_abort_flag && 0 != status) {
 			return status;
 		}
 
