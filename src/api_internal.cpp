@@ -199,15 +199,12 @@ void applog(int prio, const char *fmt, ...)
 		{
 			const char* color = "";
 			const time_t now = time(NULL);
-			char *f;
-			int len;
 			struct tm tm;
+			char format[128];
 
 			localtime_r(&now, &tm);
 
-			len = 40 + (int)strlen(fmt) + 2;
-			f = (char*)alloca(len);
-			sprintf(f, "[%d-%02d-%02d %02d:%02d:%02d]%s %s%s\n",
+			snprintf(format, sizeof(format), "[%d-%02d-%02d %02d:%02d:%02d]%s %s%s\n",
 				tm.tm_year + 1900,
 				tm.tm_mon + 1,
 				tm.tm_mday,
@@ -218,12 +215,8 @@ void applog(int prio, const char *fmt, ...)
 				fmt,
 				""
 			);
-			if (prio == LOG_RAW) {
-				// no time prefix, for ccminer -n
-				sprintf(f, "%s%s\n", fmt, "");
-			}
 			pthread_mutex_lock(&g_spacemesh_api_applog_lock);
-			vfprintf(stdout, f, ap);	/* atomic write to stdout */
+			vfprintf(stdout, format, ap);
 			fflush(stdout);
 			pthread_mutex_unlock(&g_spacemesh_api_applog_lock);
 		}

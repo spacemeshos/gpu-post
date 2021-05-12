@@ -59,10 +59,7 @@ enum {
 	LOG_WARNING,
 	LOG_NOTICE,
 	LOG_INFO,
-	LOG_DEBUG,
-	/* custom notices */
-	LOG_BLUE = 0x10,
-	LOG_RAW  = 0x99
+	LOG_DEBUG
 };
 
 typedef unsigned char uchar;

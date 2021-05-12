@@ -228,7 +228,7 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 					printf("buffer size: %0.1f MiB\n", labelsBufferSize / (1024.0*1024));
 
 					uint64_t idx = 0;
-					uint64_t idx_solution = -1;
+					uint64_t idx_solution = -1ull;
 					uint64_t hashes_computed;
 					uint64_t hashes_per_sec;
 
@@ -237,7 +237,7 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 						hashes_computed = 0;
 						hashes_per_sec = 0;
 
-						if (idx_solution == -1) {
+						if (idx_solution == -1ull) {
 							printf("Compute labels and look for a pow solution... Iteration: %d\n", j);
 							int status = scryptPositions(providers[i].id, id, idx, idx + labels_per_iter - 1, labelSize, salt, SPACEMESH_API_COMPUTE_LEAFS | SPACEMESH_API_COMPUTE_POW, out, 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
 
@@ -251,7 +251,7 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 
 							printf("Labels + pow: requested %llu labels at index %llu. Computed hashes: %llu, (%llu h/s)\n", labels_per_iter, idx, hashes_computed, hashes_per_sec);
 
-							if (idx_solution != -1) {
+							if (idx_solution != -1ull) {
 								printf("Found pow solution at index %llu\n", idx_solution);
 							} else {
 								printf("Pow solution not found in this iteration.\n");
@@ -273,7 +273,7 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 					}
 
 					// finished leaves computation - we need to continue look for a pow solution until one is found, if was not found yet
-					while (idx_solution == -1) {
+					while (idx_solution == -1ull) {
 						hashes_computed = 0;
 						hashes_per_sec = 0;
 

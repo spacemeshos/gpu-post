@@ -214,8 +214,8 @@ static int cuda_scrypt_positions(
 				if (idx_solution) {
 					*idx_solution = cuda_X[nxt][0];
 				}
+				status = SPACEMESH_API_POW_SOLUTION_FOUND;
 				if (!computeLeafs) {
-					status = SPACEMESH_API_POW_SOLUTION_FOUND;
 					break;
 				}
 			}
@@ -248,7 +248,7 @@ static int cuda_scrypt_positions(
 			}
 		}
 
-		if (status) {
+		if (0 == g_spacemesh_api_abort_flag && 0 != status) {
 			return status;
 		}
 
