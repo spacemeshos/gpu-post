@@ -381,7 +381,8 @@ static uint32_t * getShader(uint32_t workSize, uint32_t labelSize, uint32_t *sha
 					applog(LOG_INFO, "64:%03u %u -> %u\n", vulkan_shaders_vault_header[0], vulkan_shaders_vault_header[2], vulkan_shaders_vault_header[1]);
 					*shader_size = vulkan_shaders_vault_header[1];
 					uint8_t *src = vulkan_shaders_vault + vulkan_shaders_vault_header[3];
-					if (Z_OK != uncompress((uint8_t*)shader, shader_size, src, vulkan_shaders_vault_header[2])) {
+					uLongf shaderSize = vulkan_shaders_vault_header[1];
+					if (Z_OK != uncompress((uint8_t*)shader, &shaderSize, src, vulkan_shaders_vault_header[2])) {
 						applog(LOG_ERR, "Failed to uncompress shader %u:%u\n", workSize, labelSize);
 						free(shader);
 						return NULL;
