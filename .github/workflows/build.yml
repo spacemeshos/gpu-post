@@ -16,6 +16,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        submodules: true
 
     - name: Install CUDA
       env:
@@ -60,6 +62,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        submodules: true
 
     - name: Install CUDA
       run: choco install cuda --version=${{ matrix.cuda }} --checksum ${{ matrix.cuda_hash }}
@@ -110,6 +114,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        submodules: true
 
     - name: Install Vulkan
       run: .github/tools/macos-install-vulkan.sh
