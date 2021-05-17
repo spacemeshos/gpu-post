@@ -92,6 +92,13 @@ if (SPACEMESHCUDA)
     )
 endif()
 
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/vulkan-shaders-vault.inl
+    COMMAND ${CMAKE_CURRENT_BINARY_DIR}/vulkan/gen/shaders-gen
+    COMMENT "Generating Vulkan Kernels Byte Array"
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/gen/scrypt-chacha.comp ${CMAKE_CURRENT_BINARY_DIR}/vulkan/gen/shaders-gen
+)
+
 if (SPACEMESHVULKAN)
     # Look for vulkan SDK
     # For a Windows build on Linux, install the Vulkan SDK with wine, and set VULKAN_SDK to ..../.wine/drive_c/VulkanSDK/1.x.y
@@ -119,8 +126,15 @@ if (SPACEMESHVULKAN)
         vulkan/driver-vulkan.h
         vulkan/vulkan-helpers.c
         vulkan/vulkan-helpers.h
+
+		${CMAKE_CURRENT_BINARY_DIR}/vulkan-shaders-vault.inl
     )
 
+    include_directories(vulkan/zlib)
+	include_directories(${CMAKE_CURRENT_BINARY_DIR})
+	include_directories(${CMAKE_CURRENT_BINARY_DIR}/vulkan/zlib)
+
+    add_subdirectory(vulkan/zlib)
     add_subdirectory(vulkan/gen)
 endif()
 
@@ -138,6 +152,10 @@ if (SPACEMESH_LIB_SHARED)
         else()
             target_link_libraries(gpu-setup -L${CUDA_LIB_PATH} -lcuda)
         endif()
+    endif()
+
+	if (SPACEMESHVULKAN)
+	    target_link_libraries(gpu-setup zlibstatic)
     endif()
 else()
     if (SPACEMESHCUDA)

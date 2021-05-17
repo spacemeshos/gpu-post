@@ -19,6 +19,9 @@ set(SOURCES
     ${CMAKE_CURRENT_BINARY_DIR}/scrypt-chacha-vulkan.inl
 )
 
+include_directories(vulkan/zlib)
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/vulkan/zlib)
+
 add_executable(shaders-gen ${SOURCES})
 
 # Add Include/Lib (Windows) and include/lib (Linux)
@@ -29,3 +32,5 @@ elseif(APPLE)
 elseif(UNIX)
     target_link_libraries(shaders-gen -L$ENV{VULKAN_SDK}/lib -lvulkan shaderc_combined)
 endif()
+
+target_link_libraries(shaders-gen zlibstatic)

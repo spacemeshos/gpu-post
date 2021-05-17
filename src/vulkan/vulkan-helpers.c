@@ -6,6 +6,8 @@
 
 #ifdef HAVE_VULKAN
 #include "vulkan-helpers.h"
+#include "zlib.h"
+#include "vulkan-shaders-vault.inl"
 
 Vulkan gVulkan = { NULL };
 VkInstance gInstance = NULL;
@@ -301,7 +303,7 @@ uint64_t getBufferMemoryRequirements(VkDevice vkDevice, VkBuffer b)
 	return req.alignment;
 }
 
-VkPipeline loadShader(VkDevice vkDevice, VkPipelineLayout pipelineLayout, VkShaderModule *shader_module, const char * spirv_file_name)
+VkPipeline loadShaderFromFile(VkDevice vkDevice, VkPipelineLayout pipelineLayout, VkShaderModule *shader_module, const char * spirv_file_name)
 {
 	uint32_t *shader;
 	size_t shader_size;
@@ -357,6 +359,86 @@ VkPipeline loadShader(VkDevice vkDevice, VkPipelineLayout pipelineLayout, VkShad
 
 	free(shader);
 	fclose(fp);
+
+	return pipeline;
+}
+
+static uint32_t * getShader(uint32_t workSize, uint32_t labelSize, uint32_t *shader_size)
+{
+	uint32_t *vulkan_shaders_vault_header = (uint32_t *)vulkan_shaders_vault;
+	uint32_t count;
+
+	for (count = *vulkan_shaders_vault_header++; count > 0; count--, vulkan_shaders_vault_header += 2) {
+		if (vulkan_shaders_vault_header[0] == workSize) {
+			vulkan_shaders_vault_header = (uint32_t *)(vulkan_shaders_vault + vulkan_shaders_vault_header[1]);
+			for (count = *vulkan_shaders_vault_header++; count > 0; count--, vulkan_shaders_vault_header += 4) {
+				if (vulkan_shaders_vault_header[0] == labelSize) {
+					uint32_t *shader = (uint32_t*)calloc(1, vulkan_shaders_vault_header[1]);
+					if (NULL == shader) {
+						applog(LOG_ERR, "Failed to allocate shader %u:%u %u\n", workSize, labelSize, vulkan_shaders_vault_header[1]);
+						return NULL;
+					}
+					applog(LOG_INFO, "64:%03u %u -> %u\n", vulkan_shaders_vault_header[0], vulkan_shaders_vault_header[2], vulkan_shaders_vault_header[1]);
+					*shader_size = vulkan_shaders_vault_header[1];
+					uint8_t *src = vulkan_shaders_vault + vulkan_shaders_vault_header[3];
+					if (Z_OK != uncompress((uint8_t*)shader, shader_size, src, vulkan_shaders_vault_header[2])) {
+						applog(LOG_ERR, "Failed to uncompress shader %u:%u\n", workSize, labelSize);
+						free(shader);
+						return NULL;
+					}
+					return shader;
+				}
+			}
+			break;
+		}
+	}
+	return NULL;
+}
+
+VkPipeline loadShader(VkDevice vkDevice, VkPipelineLayout pipelineLayout, VkShaderModule *shader_module, uint32_t workSize, uint32_t labelSize)
+{
+	uint32_t shader_size = 0;
+	uint32_t *shader = getShader(workSize, labelSize, &shader_size);
+
+	if (NULL == shader) {
+		applog(LOG_ERR, "SPIR-V program %d:%d not found\n", workSize, labelSize);
+		return NULL;
+	}
+
+	applog(LOG_INFO, "SPIR-V program %u:%u %u bytes\n", workSize, labelSize, shader_size);
+
+	VkShaderModuleCreateInfo shaderModuleCreateInfo = {
+		VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+		0,
+		0,
+		shader_size,
+		shader
+	};
+
+	CHECK_RESULT(gVulkan.vkCreateShaderModule(vkDevice, &shaderModuleCreateInfo, 0, shader_module), "vkCreateShaderModule", NULL);
+
+	VkComputePipelineCreateInfo computePipelineCreateInfo = {
+		VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+		0,
+		0,
+		{
+			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+			0,
+			0,
+			VK_SHADER_STAGE_COMPUTE_BIT,
+			*shader_module,
+			"main",
+			0
+		},
+		pipelineLayout,
+		0,
+		0
+	};
+
+	VkPipeline pipeline;
+	CHECK_RESULT(gVulkan.vkCreateComputePipelines(vkDevice, 0, 1, &computePipelineCreateInfo, 0, &pipeline), "vkCreateComputePipelines", NULL);
+
+	free(shader);
 
 	return pipeline;
 }
