@@ -30,6 +30,7 @@ int initVulkanLibrary()
 			gVulkan.library = dlopen("libvulkan.so.1", RTLD_NOW | RTLD_LOCAL);
 		}
 #elif defined( __APPLE__ )
+		setenv("VK_ICD_FILENAMES", "./MoltenVK_icd.json", 1);
 		gVulkan.library = dlopen("libvulkan.dylib", RTLD_NOW | RTLD_LOCAL);
 #elif defined( _WIN32 )
 		gVulkan.library = LoadLibraryA("vulkan-1.dll");
