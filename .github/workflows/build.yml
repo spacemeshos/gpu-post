@@ -16,6 +16,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        submodules: true
 
     - name: Install CUDA
       env:
@@ -60,6 +62,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        submodules: true
 
     - name: Install CUDA
       run: choco install cuda --version=${{ matrix.cuda }} --checksum ${{ matrix.cuda_hash }}
@@ -110,11 +114,13 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        submodules: true
 
     - name: Install Vulkan
       run: .github/tools/macos-install-vulkan.sh
 
-    - run: cmake -DSPACEMESHCL=OFF -DSPACEMESHCUDA=OFF .
+    - run: cmake -DSPACEMESHCUDA=OFF .
 
     - run: make
 
@@ -136,6 +142,24 @@ jobs:
       with:
         name: macos
         path: include/api.h
+
+    - name: Upload MoltenVK
+      uses: actions/upload-artifact@v2
+      with:
+        name: macos
+        path: ${{ env.VULKAN_ROOT_LOCATION }}/MoltenVK/dylib/macOS/libMoltenVK.dylib
+
+    - name: Upload MoltenVK config
+      uses: actions/upload-artifact@v2
+      with:
+        name: macos
+        path: ${{ env.VULKAN_ROOT_LOCATION }}/MoltenVK/dylib/macOS/MoltenVK_icd.json
+
+    - name: Upload Vulkan
+      uses: actions/upload-artifact@v2
+      with:
+        name: macos
+        path: ${{ env.VULKAN_ROOT_LOCATION }}/macOS/lib/libvulkan.*.dylib
 
   release:
     runs-on: ubuntu-latest

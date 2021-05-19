@@ -1,0 +1,3 @@
+[submodule "zlib"]
+	path = src/vulkan/zlib
+	url = https://github.com/madler/zlib

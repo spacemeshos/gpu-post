@@ -229,9 +229,9 @@ static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameS
 
 	state->pipeline = compileShader(state->vkDevice, state->pipelineLayout, &state->shaderModule, scrypt_chacha_comp, options, (int)cgpu->work_size, hash_len_bits, copy_only);
 #else
-	char filename[64];
-	snprintf(filename, sizeof(filename), "kernel-%02d-%03d.spirv", (int)cgpu->work_size, hash_len_bits);
-	state->pipeline = loadShader(state->vkDevice, state->pipelineLayout, &state->shaderModule, filename);
+//	char filename[64];
+//	snprintf(filename, sizeof(filename), "kernel-%02d-%03d.spirv", (int)cgpu->work_size, hash_len_bits);
+	state->pipeline = loadShader(state->vkDevice, state->pipelineLayout, &state->shaderModule, cgpu->work_size, hash_len_bits);
 #endif
 	if (!state->pipeline) {
 		return NULL;

@@ -20,6 +20,8 @@
 #include <vector>
 #include <stdarg.h>
 
+#include "zlib.h"
+
 #define	VK_NO_PROTOTYPES 1
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
@@ -457,6 +459,14 @@ int main(int argc, char **argv)
 {
 	init_glslang();
 
+	std::vector<uint8_t> out((4 + 4 * 256) * sizeof(uint32_t));
+	uint32_t *header = (uint32_t *)out.data();
+
+	header[0] = 1;
+	header[1] = 64;
+	header[2] = 12;
+	header[3] = 256;
+
 	for (int hash_len_bits = 1; hash_len_bits <= 256; hash_len_bits++) {
 		char options[256];
 		std::vector<uint32_t> spirv;
@@ -464,10 +474,39 @@ int main(int argc, char **argv)
 		snprintf(options, sizeof(options), "#version 450\n#define LOOKUP_GAP %d\n#define WORKSIZE %d\n#define LABEL_SIZE %d\n",	4, 64, hash_len_bits);
 
 		if (compileShaderToSpirV(scrypt_chacha_comp, options, 64, hash_len_bits, false, spirv)) {
-			char filename[128];
-			snprintf(filename, sizeof(filename), "kernel-%02d-%03d.spirv", 64, hash_len_bits);
-			saveToFile(filename, spirv.data(), spirv.size() * sizeof(uint32_t));
+//			char filename[128];
+//			snprintf(filename, sizeof(filename), "kernel-%02d-%03d.spirv", 64, hash_len_bits);
+//			saveToFile(filename, spirv.data(), spirv.size() * sizeof(uint32_t));
+			uLongf destLen = spirv.size() * sizeof(uint32_t);
+			std::vector<Bytef> dst(destLen);
+			if (Z_OK != compress2(dst.data(), &destLen, (Bytef*)spirv.data(), destLen, 9)) {
+				return 1;
+			}
+			header[hash_len_bits * 4 + 0] = hash_len_bits;
+			header[hash_len_bits * 4 + 1] = spirv.size() * sizeof(uint32_t);
+			header[hash_len_bits * 4 + 2] = destLen;
+			header[hash_len_bits * 4 + 3] = out.size();
+
+			printf("64:%03u %u -> %u\n", header[hash_len_bits * 4 + 0], header[hash_len_bits * 4 + 1], header[hash_len_bits * 4 + 2]);
+
+			out.insert(out.end(), dst.begin(), dst.begin() + destLen);
+			header = (uint32_t *)out.data();
 		}
+	}
+
+	if (FILE *h = fopen("vulkan-shaders-vault.inl", "wb")) {
+		fprintf(h, "uint8_t vulkan_shaders_vault[] = {\r\n");
+		uint8_t *src = out.data();
+		for (uint32_t length = (uint32_t)out.size(); length > 0; length -= std::min<uint32_t>(32, length)) {
+			for (int i = 0; i < std::min<uint32_t>(32, length); i++) {
+				fprintf(h, "0x%02x, ", *src++);
+			}
+			fprintf(h, "\n");
+		}
+
+		fprintf(h, "};\r\n");
+
+		fclose(h);
 	}
 
 	finalize_glslang();
