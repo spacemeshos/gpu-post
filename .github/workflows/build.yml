@@ -46,6 +46,11 @@ jobs:
     - uses: actions/upload-artifact@v2
       with:
         name: linux
+        path: test/gpu-setup-test
+
+    - uses: actions/upload-artifact@v2
+      with:
+        name: linux
         path: include/api.h
 
   windows:
@@ -97,6 +102,12 @@ jobs:
         name: windows
         path: build/src/gpu-setup*.dll
 
+    - name: Upload test app
+      uses: actions/upload-artifact@v2
+      with:
+        name: windows
+        path: test/gpu-setup-test.exe
+
     - name: Upload lib
       uses: actions/upload-artifact@v2
       with:
@@ -136,6 +147,12 @@ jobs:
       with:
         name: macos
         path: src/libgpu-setup*.dylib
+
+    - name: Upload test app
+      uses: actions/upload-artifact@v2
+      with:
+        name: macos
+        path: test/gpu-setup-test
 
     - name: Upload api.h
       uses: actions/upload-artifact@v2
