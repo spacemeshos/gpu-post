@@ -108,7 +108,7 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: windows
-        path: test/gpu-setup-test.exe
+        path: build/test/gpu-setup-test.exe
 
     - name: Upload lib
       uses: actions/upload-artifact@v2
