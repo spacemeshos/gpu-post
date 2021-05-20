@@ -85,27 +85,39 @@ To build the library with full support for both CUDA and Vulkan on Windows or on
 4. Run test: `CMake -> Debug from Build Folder -> gpu-setup-test.exe`
 
 ### Ubuntu or macOS
-1. Create build directory:
+Create a build directory:
 ```bash
   cd gpu-post
   mkdir build
   cd build
 ```
-2. Configure:
+
+Configure your build using the default configuration:
 ```bash
   cmake ..
 ```
-Disable CUDA:
+
+To disable CUDA use:
 ```bash
   cmake .. -DSPACEMESHCUDA=OFF
 ```
-3. Build:
+
+To disable VULKAN use:
+```bash
+  cmake .. -DSPACEMESHVULKAN=OFF
+```
+
+
+Build the project:
 ```bash
   make
 ```
-4. Run test:
+
+Run the tests:
 ```bash
-  ./test/gpu-setup-test
+  ./test/gpu-setup-test -t
+  ./test/gpu-setup-test -u
+  ./test/gpu-setup-test -b
 ```
 
 CUDA 9 Configuration:
