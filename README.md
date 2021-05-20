@@ -1,43 +1,50 @@
 # GPU Proof of Spacemesh Time Init (aka Smeshing Setup) Library
 
 ## Current functionality
-A c libraray implementing the POST API setup method for cpu, cuda and vulkan compute platforms.
+A c libraray implementing the POST API setup method for general-purpose CPUs and for CUDA and Vulkan compute processors.
 
-## Runtime Requirements
-OS: Windows 10, macOS or Linux.
-GPI: One of the following:
-- A GPU and drivers supporting CUDA 10.0 (or later) runtime such as a modern Nvidia GPU.
-- A GPU and drivers supporting Vulkan 1.2 (or later) runtime such as a modern AMD and Intel GPUs.
+## Runtime System Requirements
+Windows 10, macOS or Ubuntu.
+One or more of the following processors:
+- A GPU and drivers with CUDA 11.0 support such as a modern Nvidia GPU and Nvidia drivers versoin R450 or later.
+- A GPU and drivers with Vulkan 1.2 suppport such as a modern AMD, Apple M1 processor, and Intel GPUs.
+- A x86-64 cpu such as AMD or Intel cpus.
 
-Both discrete and on-board GPUs are supported as long as they support the minimum CUDA or Vulkan runtimes.
+
+
+- Both discrete and on-board GPUs are supported as long as they support the minimum CUDA or Vulkan runtime vesion.
+- We currently provide release binaries and build instructions for Ubuntu 20.04 but the library can be built on other Linux distros for usage on these systems.
+
+---
 
 ## Build System Requirements
 
+### All Platforms
+- For building CUDA support: NVIDIA Cuda Tookit 11, an NVIDIA GPU with CUDA support, and an Nvdia driver version R450 or newer.
+- For building Vulkan support: Vulkan SDK 1.2 and a GPU with Vulkan 1.2 runtime support.
+
 ### Windows
 - Windows 10 Pro.
-- Microsoft Visual Studio 2017 (any edition such as community is okay). Visual Studio 2019 is NOT supported. You may also need to install specific versions of the Windows SDK when prompted when attempting to build for the first time.
-- NVIDIA GPU Computing Toolkit 10.0 (but not later versions), and an NVIDIA GPU supporting CUDA 10.0 computation for CUDA testing.
-- Vulkan SDK 1.2, and an AMD GPU supporting Vulkan 1.2 for Vulkan testing.
+- Microsoft Visual Studio 2017 (any edition). Visual Studio 2019 is NOT supported.
+- You may also need to install specific versions of the Windows SDK when prompted when attempting to build the library for the first time.
 
-### Linux
-- Modern 64-bit Linux, such as Ubuntu, Debian.
-- NVIDIA GPU Computing Toolkit 9 or 10, and an NVIDIA GPU supporting CUDA 9 or 10 computation for CUDA testing.
-- Vulkan SDK 1.2.
-- Cmake
-- GCC 6 or 7
+### Ubuntu
+- Ubuntu 20.04
+- Cmake, GCC 7
 
-### OS X
-- Cmake
-- Vulkan SDK 1.2.
+### macOS
+- Xcode
+- Xcode Command Line Dev Tools
+- Cmake, GCC 7
 
-### OS X Dev Env Setup
+### macOS Dev Env Setup
 1. Install latest version of Xcode with the command line dev tools.
-1. Download the Vulkan 1.2 sdk installer for OS X from https://vulkan.lunarg.com/sdk/home#mac
+1. Download the Vulkan 1.2 sdk installer for macOS from https://vulkan.lunarg.com/sdk/home#mac
 1. Copy Vulkan SDK from the Vulkan installer volume to a directory in your hard-drive.
-1. Install the SDK from your hard-drive directory and not from the installer volume by running $ sudo ./install_vulkan.py.
-1. Add the Vulkan env vars to your .bash_profile file with the root location set to the sdk directory on your hard-drive. For example, if Vulkan sdk 1.2.154 is installed then the env vars should be set like this:
+1. Install the SDK from your hard-drive directory and not from the installer volume by running `$ sudo ./install_vulkan.py`.
+1. Add the Vulkan env vars to your `.bash_profile` file with the root location set to the sdk directory on your hard-drive. For example, if Vulkan sdk 1.2.154 is installed then the env vars should be set like this:
 
-```
+```bash
 export VULKAN_SDK_VERSION="1.2.154.0"
 export VULKAN_ROOT_LOCATION="$HOME/dev/vulkan-sdk-1.2.154"
 export VULKAN_SDK="$VULKAN_ROOT_LOCATION/macOS"
@@ -47,123 +54,141 @@ export PATH="/usr/local/opt/python/libexec/bin:$VULKAN_SDK/bin:$PATH"
 export DYLD_LIBRARY_PATH="$DYLD_LIBRARY_PATH:$VULKAN_SDK/lib/"
 ```
 
-## Building
+---
 
-Build options:
+## Build Configuration
+
+Default build configuration:
+
 ### Windows and Linux
-```
+```c
 SPACEMESHCUDA   "Build with CUDA support"   default: ON
 SPACEMESHVULKAN "Build with Vulkan support" default: ON
 ```
+
 ### macOS
-```
+```c
 SPACEMESHCUDA   "Build with CUDA support"   default: OFF
 SPACEMESHVULKAN "Build with Vulkan support" default: ON
 ```
 
+---
+
+## Building
+
+To build the library with full support for both CUDA and Vulkan on Windows or on Linux use a system with an Nvidia GPU and drivers. Otherwie, turn off CUDA support and build for Vulkan only. Building on macOS only supports Vulkan.
+
 ### Windows
 1. Open project folder into Visual Studio 2017: `File -> Open -> Folder`.
-2. Set "x64-Release" Project Settings.
+2. Set `x64-Release` Project Settings.
 3. Build: `CMake -> Rebuild All`.
 4. Run test: `CMake -> Debug from Build Folder -> gpu-setup-test.exe`
 
-### Linux or macOS
+### Ubuntu or macOS
 1. Create build directory:
-```
+```bash
   cd gpu-post
   mkdir build
   cd build
 ```
 2. Configure:
-```
+```bash
   cmake ..
 ```
 Disable CUDA:
-```
+```bash
   cmake .. -DSPACEMESHCUDA=OFF
 ```
 3. Build:
-```
+```bash
   make
 ```
 4. Run test:
-```  
+```bash
   ./test/gpu-setup-test
 ```
 
 CUDA 9 Configuration:
-```
+```bash
   cmake .. -DCMAKE_C_COMPILER=gcc-6 -DCMAKE_CXX_COMPILER=g++-6
 ```
 You may need to set CUDA_TOOLKIT_ROOT_DIR:
-```
+```bash
   cmake .. -DCMAKE_C_COMPILER=gcc-6 -DCMAKE_CXX_COMPILER=g++-6 -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-9.0
 ```
 
-## Build Recommendations
+----
 
-Choosing an implementation:
+## Runtime Providers Recommendations
+
+The library supports multiple compute providers at runtime. For best performance, use the following providers based on your OS and GPU:
 
 | OS / GPU     	| Windows 	| Linux      	| macOS        	|
 |------------	|----------	|-----------	|--------------	|
-| Nvidia	| CUDA      	| CUDA      	| Vulkan      	|
-| AMD		| Vulkan      	| Vulkan      	| Vulkan      	|
-| Intel		| Vulkan      	| Vulkan      	| Vulkan      	|
-| M1        | Vulkan        | VULKAN        | Vulkan        |
+| Nvidia	    | CUDA      | CUDA      	| Vulkan      	|
+| AMD		    | Vulkan    | Vulkan      	| Vulkan      	|
+| Intel		    | Vulkan    | Vulkan      	| Vulkan      	|
+| Apple M1      | Vulkan    | Vulkan        | Vulkan        |
+
+---
 
 ## API
 
+Compute leaves and/or pow solution:
+
 ```c
 int scryptPositions(
-	uint32_t provider_id,		// POST compute provider ID
-	const uint8_t *id,			// 32 bytes
-    uint64_t start_position,	// e.g. 0
-    uint64_t end_position,		// e.g. 49,999
-    uint32_t hash_len_bits,		// (1...256) for each hash output, the number of prefix bits (not bytes) to copy into the buffer
-    const uint8_t *salt,		// 32 bytes
-    uint32_t options,			// compute leafs and/or compute pow
-    uint8_t *out,				// memory buffer large enough to include hash_len_bits * number of requested hashes
-    uint32_t N,					// scrypt N
-    uint32_t R,					// scrypt r
-    uint32_t P,					// scrypt p
-	uint8_t *D,					// Target D for the POW computation. 256 bits.
-	uint64_t *idx_solution,		// index of output where output < D if POW compute was on. MAX_UINT64 otherwise.
-	uint64_t *hashes_computed,	// The number of hashes computed, should be equal to the number of requested hashes.
-	uint64_t *hashes_per_sec	// Performance
+	uint32_t provider_id,	  // POST compute provider ID
+	const uint8_t *id,		 // 32 bytes
+    uint64_t start_position,   // e.g. 0
+    uint64_t end_position,	 // e.g. 49,999
+    uint32_t hash_len_bits,	// (1...256) for each hash output, the number of prefix bits (not bytes) to copy into the buffer
+    const uint8_t *salt,	   // 32 bytes
+    uint32_t options,		  // compute leafs and/or compute pow
+    uint8_t *out,              // memory buffer large enough to include hash_len_bits * number of requested hashes
+    uint32_t N,				// scrypt N
+    uint32_t R,				// scrypt r
+    uint32_t P,				// scrypt p
+	uint8_t *D,				// Target D for the POW computation. 256 bits.
+	uint64_t *idx_solution,	// index of output where output < D if POW compute was on. MAX_UINT64 otherwise.
+	uint64_t *hashes_computed, // The number of hashes computed, should be equal to the number of requested hashes.
+	uint64_t *hashes_per_sec   // Performance
 	);
 ```
 
-return to the client the system GPU capabilities. E.g. CUDA/NVIDIA or NONE
+Gets the system's GPU capabilities. E.g. CUDA and/or NVIDIA or NONE:
 ```c
 int stats();
 ```
 
-stop all GPU work and don’t fill the passed-in buffer with any more results.
+Stops all GPU work and don’t fill the passed-in buffer with any more results:
 ```c
 int stop(
 	uint32_t ms_timeout			// timeout in milliseconds
 );
 ```
 
-return non-zero if stop in progress
+Returns non-zero if stop in progress:
 ```c
 SPACEMESHAPI int spacemesh_api_stop_inprogress();
 ```
 
-return POS compute providers info
+Returns POS compute providers info:
 ```c
 SPACEMESHAPI int spacemesh_api_get_providers(
-	PostComputeProvider *providers, // out providers info buffer, if NULL - return count of available providers
-	int max_providers			    // buffer size
+	PostComputeProvider *providers, // out providers info buffer, if NULL - returns count of available providers
+	int max_providers// buffer size
 );
 ```
 
-## Linking
+---
 
-- Copy all files from a library Github release zip file to your project resources directory.
-- The files should be included in your app's runtime resources.
-- Use api.h to link the library from your code.
-- On macOS, set an env var at runtime with the location of `MoltenVK_icd.json` in your app's resources directory. e.g. `VK_ICD_FILENAMES="[proj_resources_lib]/MoltenVK_icd.json"`.
+## Linking
+1. Download relase artifacts from a github release in this repo for your platform or build the artifects from source code.
+1. Copy all artifacts to your project resources directory. The files should be included in your app's runtime resources.
+1. Use api.h to link the library from your code.
+
+---
 
 ## Testing
 
@@ -173,11 +198,14 @@ Integration test of the basic library use case in a Spacemesh full node to gener
 /build/test/.gpu-setup-test -c -n 100663296 -d 20
 ```
 
+---
+
 ## Benchmarking
 
 ```bash
 /build/test/.gpu-setup-test -b
 ```
+---
 
 ## Initial Benchmarks
 
@@ -209,6 +237,10 @@ Scrypt Benchmarks (n=512, r=1, p=1) 1 byte per leaf, batch size leaves per API c
 | 04/04/2020 	| avive   	| sm-scrypt 	| Apple M1         | MacOS 11.2 | vulkan optimized prototype   	     	|   	214 | 0.214
 | 04/21/2020 	| avive   	| sm-scrypt 	| Nvidia RTX 2070 Super, 8GB    | Ubuntu 20.04, Driver 460.73.01  | CUDA optimized prototype   	     	|  2038 | 2.038
 
-## Additional Compute Benchmarks
-- [Cuda Benchmarks](https://browser.geekbench.com/cuda-benchmarks)
-- [Vulkan Benchmarks](https://browser.geekbench.com/vulkan-benchmarks)
+---
+
+## 3rd Party Vulkan and CUDA Benchmarks
+The library performance on a GPU depends on the GPU's CUDA and Vulkan performance. The following benchmarks are available from geekbench:
+
+- [Geekbench Cuda Benchmarks](https://browser.geekbench.com/cuda-benchmarks)
+- [Geekbench Vulkan Benchmarks](https://browser.geekbench.com/vulkan-benchmarks)
