@@ -120,15 +120,6 @@ Run the tests:
   ./test/gpu-setup-test -b
 ```
 
-CUDA 9 Configuration:
-```bash
-  cmake .. -DCMAKE_C_COMPILER=gcc-6 -DCMAKE_CXX_COMPILER=g++-6
-```
-You may need to set CUDA_TOOLKIT_ROOT_DIR:
-```bash
-  cmake .. -DCMAKE_C_COMPILER=gcc-6 -DCMAKE_CXX_COMPILER=g++-6 -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-9.0
-```
-
 ----
 
 ## Runtime Providers Recommendations
