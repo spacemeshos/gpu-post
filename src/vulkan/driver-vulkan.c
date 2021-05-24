@@ -518,32 +518,34 @@ static int vulkan_scrypt_positions(
 	return SPACEMESH_API_ERROR;
 }
 
-static int64_t vulkan_hash(struct cgpu_info *cgpu, uint8_t *pdata, uint8_t *output)
+static int64_t vulkan_hash(struct cgpu_info *cgpu, uint8_t *preimage, uint8_t *output)
 {
 	cgpu->busy = 1;
 
 	if (vulkan_prepare(cgpu, 512, 1, 1, 256, false, false))
 	{
 		_vulkanState *state = (_vulkanState *)cgpu->device_data;
+		int status = SPACEMESH_API_ERROR_NONE;
 		AlgorithmParams params;
 
-		cgpu->thread_concurrency = 128;
-
-		uint64_t chunkSize = 32 * cgpu->thread_concurrency;
-		uint64_t outLength = chunkSize;
-		uint8_t *out = output;
+		uint32_t pdata[32];
+		memcpy(pdata, preimage, PREIMAGE_SIZE);
+		for (int i = 20; i < 28; i++) {
+			pdata[i] = swab32(pdata[i]);
+		}
 
 		// transfer input to GPU
 		char *ptr = NULL;
 		uint64_t tfxOrigin = state->memParamsSize + state->memConstantSize;
 		CHECK_RESULT(gVulkan.vkMapMemory(state->vkDevice, state->gpuSharedMemory, tfxOrigin, state->memInputSize, 0, (void **)&ptr), "vkMapMemory", 0);
-		memcpy(ptr, (const void*)pdata, 72);
+		memcpy(ptr, (const void*)pdata, PREIMAGE_SIZE);
 		gVulkan.vkUnmapMemory(state->vkDevice, state->gpuSharedMemory);
 
 		params.N = 512;
 		params.hash_len_bits = 256;
-		params.global_work_offset = 0;
 		params.concurrent_threads = cgpu->thread_concurrency;
+		params.global_work_offset = 0;
+		params.idx_solution[0] = 0xffffffffffffffff;
 
 		const uint64_t delay = 5ULL * 1000ULL * 1000ULL * 1000ULL;
 
@@ -553,11 +555,6 @@ static int64_t vulkan_hash(struct cgpu_info *cgpu, uint8_t *pdata, uint8_t *outp
 		memcpy(ptr, (const void*)&params, sizeof(params));
 		gVulkan.vkUnmapMemory(state->vkDevice, state->gpuSharedMemory);
 
-#if 0
-		VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO, 0, 0, 0, 0, 1, &state->commandBuffer, 1, &state->semaphore };
-		CHECK_RESULT(gVulkan.vkQueueSubmit(state->queue, 1, &submitInfo, VK_NULL_HANDLE), "vkQueueSubmit", 0);
-		CHECK_RESULT(gVulkan.vkQueueWaitIdle(state->queue), "vkQueueWaitIdle", 0);
-#else
 		CHECK_RESULT(gVulkan.vkResetFences(state->vkDevice, 1, &state->fence), "vkResetFences", 0);
 		VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO, 0, 0, 0, 0, 1, &state->commandBuffer, 0, 0 };
 		CHECK_RESULT(gVulkan.vkQueueSubmit(state->queue, 1, &submitInfo, state->fence), "vkQueueSubmit", 0);
@@ -567,12 +564,9 @@ static int64_t vulkan_hash(struct cgpu_info *cgpu, uint8_t *pdata, uint8_t *outp
 			res = gVulkan.vkWaitForFences(state->vkDevice, 1, &state->fence, VK_TRUE, delay);
 		} while (res == VK_TIMEOUT);
 		gVulkan.vkResetFences(state->vkDevice, 1, &state->fence);
-#endif
-
-		uint32_t length = (uint32_t)min(chunkSize, outLength);
 
 		CHECK_RESULT(gVulkan.vkMapMemory(state->vkDevice, state->gpuSharedMemory, tfxOrigin, state->memOutputSize, 0, (void **)&ptr), "vkMapMemory", 0);
-		memcpy(out, ptr, length);
+		memcpy(output, ptr, 32 * 128);
 		gVulkan.vkUnmapMemory(state->vkDevice, state->gpuSharedMemory);
 
 		cgpu->busy = 0;
@@ -610,6 +604,7 @@ static int64_t vulkan_bit_stream(struct cgpu_info *cgpu, uint8_t *hashes, uint64
 		params.N = 512;
 		params.hash_len_bits = hash_len_bits;
 		params.global_work_offset = 0;
+		params.concurrent_threads = cgpu->thread_concurrency;
 
 		const uint64_t delay = 5ULL * 1000ULL * 1000ULL * 1000ULL;
 

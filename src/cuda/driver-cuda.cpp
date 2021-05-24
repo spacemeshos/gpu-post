@@ -260,7 +260,7 @@ static int cuda_scrypt_positions(
 	return SPACEMESH_API_ERROR;
 }
 
-static int64_t cuda_hash(struct cgpu_info *cgpu, uint8_t *pdata, uint8_t *output)
+static int64_t cuda_hash(struct cgpu_info *cgpu, uint8_t *preimage, uint8_t *output)
 {
 	cgpu->busy = 1;
 
@@ -271,6 +271,12 @@ static int64_t cuda_hash(struct cgpu_info *cgpu, uint8_t *pdata, uint8_t *output
 		if (cgpu->thread_concurrency == 0) {
 			cgpu->busy = 0;
 			return -1;
+		}
+
+		uint32_t pdata[32];
+		memcpy(pdata, preimage, PREIMAGE_SIZE);
+		for (int i = 20; i < 28; i++) {
+			pdata[i] = swab32(pdata[i]);
 		}
 
 		cgpu->thread_concurrency = 128;
@@ -284,12 +290,10 @@ static int64_t cuda_hash(struct cgpu_info *cgpu, uint8_t *pdata, uint8_t *output
 			memcpy(&cudaState->data[0][(PREIMAGE_SIZE / 4)*i], pdata, PREIMAGE_SIZE);
 		}
 
-		prepare_keccak512(cudaState, pdata, PREIMAGE_SIZE);
+		prepare_keccak512(cudaState, (uint8_t*)pdata, PREIMAGE_SIZE);
 
 		int iteration = 0;
-		uint8_t *out = output;
-		uint64_t chunkSize = 32 * cgpu->thread_concurrency;
-		uint64_t outLength = chunkSize;
+		uint64_t chunkSize = 32 * 128;
 
 		cuda_scrypt_serialize(cgpu, cudaState, 0);
 		pre_keccak512_1_1(cudaState, 0, 0, cgpu->thread_concurrency);
@@ -301,7 +305,7 @@ static int64_t cuda_hash(struct cgpu_info *cgpu, uint8_t *pdata, uint8_t *output
 		cuda_scrypt_DtoH(cudaState, hash, 0, chunkSize);
 		cuda_scrypt_sync(cgpu, cudaState, 0);
 
-		memcpy(out, hash, min(chunkSize, outLength));
+		memcpy(output, hash, chunkSize);
 
 		cgpu->busy = 0;
 
