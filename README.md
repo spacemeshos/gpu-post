@@ -1,5 +1,7 @@
 # GPU Proof of Spacemesh Time Init (aka Smeshing Setup) Library
 
+[![Build](https://github.com/spacemeshos/gpu-post/actions/workflows/build.yml/badge.svg)](https://github.com/spacemeshos/gpu-post/actions/workflows/build.yml)
+
 ## Current functionality
 A c libraray implementing the POST API setup method for general-purpose CPUs and for CUDA and Vulkan compute processors.
 
