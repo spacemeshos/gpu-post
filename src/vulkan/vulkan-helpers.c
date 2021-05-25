@@ -35,6 +35,9 @@ int initVulkanLibrary()
 			setenv("VK_ICD_FILENAMES", "./MoltenVK_icd.json", 1);
 		}
 		gVulkan.library = dlopen("libvulkan.dylib", RTLD_NOW | RTLD_LOCAL);
+		if (gVulkan.library == 0) {
+			gVulkan.library = dlopen("libvulkan.1.dylib", RTLD_NOW | RTLD_LOCAL);
+		}
 #elif defined( _WIN32 )
 		gVulkan.library = LoadLibraryA("vulkan-1.dll");
 #else

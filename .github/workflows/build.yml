@@ -178,7 +178,7 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: macos
-        path: ${{ env.VULKAN_ROOT_LOCATION }}/macOS/lib/libvulkan.*.dylib
+        path: ${{ env.VULKAN_ROOT_LOCATION }}/macOS/lib/libvulkan.1.dylib
 
   release:
     runs-on: ubuntu-latest
