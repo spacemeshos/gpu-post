@@ -4,6 +4,26 @@
 
 extern void spacemesh_api_init();
 
+static const uint8_t zeros[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+
+static void * memstr(const void *src, size_t length, const uint8_t *token, int token_length)
+{
+	for (const uint8_t *cp = (const uint8_t *)src; length >= token_length; cp++, length--) {
+		if (0 == memcmp(cp, token, token_length)) {
+			return (void*)cp;
+		}
+	}
+	return 0;
+}
+
+static void print_hex32(const uint8_t *aSrc)
+{
+	printf("0x");
+	for (int i = 0; i < 32; i++) {
+		printf("%02x", aSrc[i]);
+	}
+}
+
 int scryptPositions(
 	uint32_t provider_id, // POST compute provider ID
 	const uint8_t *id, // 32 bytes
@@ -72,15 +92,28 @@ int scryptPositions(
 	status = cgpu->drv->scrypt_positions(cgpu, (uint8_t*)data, start_position, end_position, hash_len_bits, options, out, N, R, P, idx_solution, &tv_start, &tv_end, hashes_computed);
 
 	t = 1e-6 * (tv_end.tv_usec - tv_start.tv_usec) + (tv_end.tv_sec - tv_start.tv_sec);
-#if 0
-	printf("--------------------------------\n");
-	printf("Performance: %.0f (%u positions in %.2fs)\n", *hashes_computed / t, (unsigned)*hashes_computed, t);
-	printf("--------------------------------\n");
+#if 1
+	printf("id:   "); print_hex32(id); printf("\n");
+	printf("salt: "); print_hex32(salt); printf("\n");
+	if (NULL != D) {
+		printf("D:    "); print_hex32(D); printf("\n");
+}
+	printf("from %lu to %lu, length %u, options: %u\n", start_position, end_position, hash_len_bits, options);
+	printf("[%d]: status %d, solution %lu,, %.0f (%u positions in %.2fs)\n", provider_id, status, *idx_solution, *hashes_computed / t, (unsigned)*hashes_computed, t);
 #endif
 	if (hashes_per_sec) {
 		*hashes_per_sec = (uint64_t)(*hashes_computed / t);
 	}
-
+#if 1
+	if (out) {
+		size_t labelsBufferSize = ((end_position - start_position + 1ull) * ((size_t)hash_len_bits) + 7ull) / 8ull;
+		if (memstr(out, labelsBufferSize, zeros, 8)) {
+			printf("--------------------------------\n");
+			printf("[%d]: ZEROS result\n", provider_id);
+			printf("--------------------------------\n");
+		}
+	}
+#endif
 	return status;
 }
 

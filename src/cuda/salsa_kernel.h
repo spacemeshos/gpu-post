@@ -62,16 +62,14 @@ typedef struct {
 	bool		context_concurrent;
 	bool		keccak_inited;
 	KernelInterface * context_kernel;
-	uint32_t	*context_idata[2];
-	uint32_t	*context_odata[2];
-	cudaStream_t context_streams[2];
-	uint64_t	*context_X[2];
-	uint8_t		*context_L[2];
-	cudaEvent_t context_serialize[2];
-	uint8_t		*context_labels[2];
-	uint64_t	*context_solutions[2];
+	uint32_t	*context_idata;
+	uint32_t	*context_odata;
+	uint64_t	*context_X;
+	uint8_t		*context_L;
+	uint8_t		*context_labels;
+	uint64_t	*context_solutions;
 
-	uint32_t	*data[2];
+	uint32_t	*data;
 
 	// some globals containing pointers to device memory (for chunked allocation)
 	int			max_warps;
