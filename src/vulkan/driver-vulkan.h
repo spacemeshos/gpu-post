@@ -9,6 +9,8 @@ extern "C" {
 
 extern struct device_drv vulkan_drv;
 
+extern void vulkan_library_shutdown();
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

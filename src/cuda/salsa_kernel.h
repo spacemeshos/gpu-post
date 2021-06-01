@@ -79,16 +79,14 @@ typedef struct {
 
 // CUDA externals
 extern _cudaState *initCuda(struct cgpu_info *cgpu, uint32_t N, uint32_t r, uint32_t p, uint32_t hash_len_bits, bool throttled);
+extern void setCudaDevice(struct cgpu_info *cgpu);
 extern uint64_t *cuda_transferbuffer(_cudaState *cudaState, int stream);
 extern uint8_t *cuda_hashbuffer(_cudaState *cudaState, int stream);
 
-extern void cuda_scrypt_serialize(struct cgpu_info *cgpu, _cudaState *cudaState, int stream);
 extern void cuda_scrypt_core(_cudaState *cudaState, int stream, unsigned int N, unsigned int r, unsigned int p, unsigned int LOOKUP_GAP, unsigned int BATCHSIZE);
-extern void cuda_scrypt_done(_cudaState *cudaState, int stream);
 extern void cuda_scrypt_DtoH(_cudaState *cudaState, uint8_t *X, int stream, uint32_t size);
 extern void cuda_solutions_DtoH(_cudaState *cudaState, int stream);
 extern void cuda_solutions_HtoD(_cudaState *cudaState, int stream);
 extern bool cuda_scrypt_sync(struct cgpu_info *cgpu, _cudaState *cudaState, int stream);
-extern void cuda_scrypt_flush(_cudaState *cudaState, int stream);
 
 #endif // #ifndef SALSA_KERNEL_H

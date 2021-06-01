@@ -43,6 +43,11 @@ do { \
 
 int find_optimal_concurency(struct cgpu_info *cgpu, _cudaState *cudaState, KernelInterface* &kernel, uint32_t N, uint32_t r, uint32_t p, bool &concurrent, int &wpb);
 
+void setCudaDevice(struct cgpu_info *cgpu)
+{
+	checkCudaErrors(cgpu->driver_id, cudaSetDevice(cgpu->driver_id));
+}
+
 _cudaState *initCuda(struct cgpu_info *cgpu, uint32_t N, uint32_t r, uint32_t p, uint32_t hash_len_bits, bool throttled)
 {
 	_cudaState *cudaState = (_cudaState *)calloc(1, sizeof(_cudaState));
@@ -212,6 +217,8 @@ int find_optimal_concurency(struct cgpu_info *cgpu, _cudaState *cudaState, Kerne
 		optimal_blocks--;
 	}
 
+	optimal_blocks &= 0xfffffffc;
+
 	applog(LOG_INFO, "GPU #%d: using launch configuration %c%dx%d", cgpu->driver_id, kernel->get_identifier(), optimal_blocks, WARPS_PER_BLOCK);
 
 	if (cudaState->max_warps != optimal_blocks * WARPS_PER_BLOCK)
@@ -235,36 +242,6 @@ int find_optimal_concurency(struct cgpu_info *cgpu, _cudaState *cudaState, Kerne
 	}
 
 	return optimal_blocks;
-}
-
-void cuda_scrypt_serialize(struct cgpu_info *cgpu, _cudaState *cudaState, int stream)
-{
-	cudaError_t err = cudaStreamSynchronize(0);
-	if (err != cudaSuccess) {
-		if (!g_spacemesh_api_abort_flag) {
-			applog(LOG_ERR, "GPU #%d: CUDA error `%s` while waiting the kernel.", cudaState->cuda_id, cudaGetErrorString(err));
-		}
-	}
-}
-
-void cuda_scrypt_done(_cudaState *cudaState, int stream)
-{
-	cudaError_t err = cudaStreamSynchronize(0);
-	if (err != cudaSuccess) {
-		if (!g_spacemesh_api_abort_flag) {
-			applog(LOG_ERR, "GPU #%d: CUDA error `%s` while waiting the kernel.", cudaState->cuda_id, cudaGetErrorString(err));
-		}
-	}
-}
-
-void cuda_scrypt_flush(_cudaState *cudaState, int stream)
-{
-	cudaError_t err = cudaStreamSynchronize(0);
-	if (err != cudaSuccess) {
-		if (!g_spacemesh_api_abort_flag) {
-			applog(LOG_ERR, "GPU #%d: CUDA error `%s` while waiting the kernel.", cudaState->cuda_id, cudaGetErrorString(err));
-		}
-	}
 }
 
 void cuda_scrypt_core(_cudaState *cudaState, int stream, unsigned int N, unsigned int r, unsigned int p, unsigned int LOOKUP_GAP, unsigned int BATCHSIZE)
@@ -292,13 +269,13 @@ void cuda_scrypt_DtoH(_cudaState *cudaState, uint8_t *X, int stream, uint32_t si
 void cuda_solutions_DtoH(_cudaState *cudaState, int stream)
 {
 	// copy result from device to host (asynchronously)
-	checkCudaErrors(cudaState->cuda_id, cudaMemcpyAsync(cudaState->context_X, cudaState->context_solutions, 32, cudaMemcpyDeviceToHost));
+	checkCudaErrors(cudaState->cuda_id, cudaMemcpy(cudaState->context_X, cudaState->context_solutions, 32, cudaMemcpyDeviceToHost));
 }
 
 void cuda_solutions_HtoD(_cudaState *cudaState, int stream)
 {
 	// copy result from device to host (asynchronously)
-	checkCudaErrors(cudaState->cuda_id, cudaMemcpyAsync(cudaState->context_solutions, cudaState->context_X, 32, cudaMemcpyHostToDevice));
+	checkCudaErrors(cudaState->cuda_id, cudaMemcpy(cudaState->context_solutions, cudaState->context_X, 32, cudaMemcpyHostToDevice));
 }
 
 bool cuda_scrypt_sync(struct cgpu_info *cgpu, _cudaState *cudaState, int stream)
@@ -306,7 +283,7 @@ bool cuda_scrypt_sync(struct cgpu_info *cgpu, _cudaState *cudaState, int stream)
 	cudaError_t err = cudaStreamSynchronize(0);
 	if (err != cudaSuccess) {
 		if (!g_spacemesh_api_abort_flag) {
-			applog(LOG_ERR, "GPU #%d: CUDA error `%s` while waiting the kernel.", cudaState->cuda_id, cudaGetErrorString(err));
+			applog(LOG_ERR, "GPU #%d: CUDA error `%s` at cuda_scrypt_sync.", cudaState->cuda_id, cudaGetErrorString(err));
 		}
 		return false;
 	}

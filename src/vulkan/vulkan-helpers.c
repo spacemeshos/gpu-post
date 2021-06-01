@@ -49,6 +49,7 @@ int initVulkanLibrary()
 	}
 
 	LOAD_VULKAN_FUNCTION(vkCreateInstance);
+	LOAD_VULKAN_FUNCTION(vkDestroyInstance);
 	LOAD_VULKAN_FUNCTION(vkGetPhysicalDeviceQueueFamilyProperties);
 	LOAD_VULKAN_FUNCTION(vkCreateDevice);
 	LOAD_VULKAN_FUNCTION(vkGetPhysicalDeviceMemoryProperties);
@@ -95,7 +96,30 @@ int initVulkanLibrary()
 	LOAD_VULKAN_FUNCTION(vkFreeCommandBuffers);
 	LOAD_VULKAN_FUNCTION(vkDestroyDevice);
 
+	applog(LOG_INFO, "Vulkan library LOADED.");
+
 	return 0;
+}
+
+void vulkan_library_shutdown()
+{
+	if (gVulkan.library) {
+#if defined( __linux__ )
+		dlclose(gVulkan.library);
+#elif defined( __APPLE__ )
+		dlclose(gVulkan.library);
+#elif defined( _WIN32 )
+		FreeLibraryA(gVulkan.library);
+#else
+#error unsupported platform
+#endif
+		if (NULL != gPhysicalDevices) {
+			free(gPhysicalDevices);
+			gPhysicalDevices = NULL;
+		}
+
+		gVulkan.library = 0;
+	}
 }
 
 int getComputeQueueFamillyIndex(uint32_t index)

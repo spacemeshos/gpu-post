@@ -58,6 +58,7 @@ extern "C" void spacemesh_api_init()
 		for (int i = 0; i < s_total_devices; ++i) {
 			struct cgpu_info *cgpu = &s_gpus[i];
 			cgpu->status = LIFE_INIT;
+			cgpu->id = i;
 
 			if (!cgpu->drv->init(cgpu)) {
 				continue;
@@ -182,11 +183,31 @@ extern "C" int spacemesh_api_get_providers(
 	return current_providers;
 }
 
-extern "C" int opt_logs = 0;
+extern "C" int opt_logs = 1;
 
 extern "C" void spacemesh_api_logging(int enable)
 {
 	opt_logs = enable;
+}
+
+extern "C" void spacemesh_api_shutdown(void)
+{
+	if (api_inited) {
+		int i;
+		for (i = 0; i < s_total_devices; i++) {
+			if (NULL != s_gpus[i].drv && 0 != (s_gpus[i].drv->type & (SPACEMESH_API_CUDA | SPACEMESH_API_VULKAN))) {
+				if (s_gpus[i].drv->shutdown) {
+					s_gpus[i].drv->shutdown(&s_gpus[i]);
+				}
+			}
+		}
+#ifdef HAVE_VULKAN
+		vulkan_library_shutdown();
+#endif
+		memset(s_gpus, 0, sizeof(s_gpus));
+		memset(&s_cpu, 0, sizeof(s_cpu));
+		api_inited = 0;
+	}
 }
 
 void applog(int prio, const char *fmt, ...)

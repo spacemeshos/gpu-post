@@ -82,7 +82,7 @@ static void reinit_cuda_device(struct cgpu_info *gpu)
 static bool cuda_prepare(struct cgpu_info *cgpu, unsigned N, uint32_t r, uint32_t p, uint32_t hash_len_bits, bool throttled)
 {
 	if (N != cgpu->N || r != cgpu->r || p != cgpu->p || hash_len_bits != cgpu->hash_len_bits) {
-		applog(LOG_INFO, "Init GPU thread for GPU %i, platform GPU %i, pci [%d:%d]", cgpu->id, cgpu->driver_id, cgpu->pci_bus_id, cgpu->pci_device_id);
+		applog(LOG_INFO, "Init GPU %i, platform GPU %i, pci [%d:%d]", cgpu->id, cgpu->driver_id, cgpu->pci_bus_id, cgpu->pci_device_id);
 		if (cgpu->device_data) {
 			cuda_shutdown(cgpu);
 		}
@@ -100,7 +100,9 @@ static bool cuda_prepare(struct cgpu_info *cgpu, unsigned N, uint32_t r, uint32_
 		if (_cudaState *cudaState = (_cudaState *)cgpu->device_data) {
 			cudaState->data = new uint32_t[(PREIMAGE_SIZE / 4) * cgpu->thread_concurrency];
 		}
-		applog(LOG_INFO, "initCuda() finished.");
+		applog(LOG_INFO, "initCuda() finished: thread concurrency = %u", cgpu->thread_concurrency);
+	} else {
+		setCudaDevice(cgpu);
 	}
 
 	return true;
@@ -179,29 +181,21 @@ static int cuda_scrypt_positions(
 
 			n += cgpu->thread_concurrency;
 			positions += cgpu->thread_concurrency;
-			if (g_spacemesh_api_opt_debug && (iteration % 64 == 0)) {
-				applog(LOG_DEBUG, "GPU #%d: n=%x", cgpu->driver_id, n);
-			}
 
 			cuda_solutions_HtoD(cudaState, 0);
-			cuda_scrypt_serialize(cgpu, cudaState, 0);
 
 			pre_keccak512_1_1(cudaState, 0, nonce, cgpu->thread_concurrency);
+
 			cuda_scrypt_core(cudaState, 0, N, 1, 1, cgpu->lookup_gap, cgpu->batchsize);
 
-			if (!cuda_scrypt_sync(cgpu, cudaState, 0)) {
-				status = SPACEMESH_API_ERROR;
-				break;
-			}
-
 			post_keccak512(cudaState, 0, nonce, cgpu->thread_concurrency, hash_len_bits);
-			cuda_scrypt_done(cudaState, 0);
 
 			if (computeLeafs) {
 				cuda_scrypt_DtoH(cudaState, hash, 0, chunkSize);
 			}
 			cuda_solutions_DtoH(cudaState, 0);
 			if (!cuda_scrypt_sync(cgpu, cudaState, 0)) {
+				applog(LOG_DEBUG, "cuda_scrypt_DtoH");
 				status = SPACEMESH_API_ERROR;
 				break;
 			}
@@ -289,12 +283,10 @@ static int64_t cuda_hash(struct cgpu_info *cgpu, uint8_t *preimage, uint8_t *out
 		int iteration = 0;
 		uint64_t chunkSize = 32 * 128;
 
-		cuda_scrypt_serialize(cgpu, cudaState, 0);
 		pre_keccak512_1_1(cudaState, 0, 0, cgpu->thread_concurrency);
 		cuda_scrypt_core(cudaState, 0, 512, 1, 1, cgpu->lookup_gap, cgpu->batchsize);
 
 		post_keccak512(cudaState, 0, 0, cgpu->thread_concurrency, 256);
-		cuda_scrypt_done(cudaState, 0);
 
 		cuda_scrypt_DtoH(cudaState, hash, 0, chunkSize);
 		cuda_scrypt_sync(cgpu, cudaState, 0);

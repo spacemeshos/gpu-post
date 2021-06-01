@@ -11,6 +11,13 @@
 	return (errorRet);\
   }
 
+#define CHECK_RESULT_WITH_ACTION(result,msg,errorRet,action) \
+  if (VK_SUCCESS != (result)) {\
+	applog(LOG_ERR, "Failure in %s at %u %s  ErrCode=%d\n", msg, __LINE__, __FILE__, result); \
+	action; \
+	return (errorRet);\
+  }
+
 #define CHECK_RESULT_NORET(result,msg) \
   if (VK_SUCCESS != (result)) {\
 	applog(LOG_ERR, "Failure in %s at %u %s  ErrCode=%d\n", msg,__LINE__, __FILE__, result); \
@@ -23,6 +30,7 @@ typedef struct _Vulkan {
 	void *library;
 
 	DECLARE_VULKAN_FUNCTION(vkCreateInstance);
+	DECLARE_VULKAN_FUNCTION(vkDestroyInstance);
 	DECLARE_VULKAN_FUNCTION(vkGetPhysicalDeviceQueueFamilyProperties);
 	DECLARE_VULKAN_FUNCTION(vkCreateDevice);
 	DECLARE_VULKAN_FUNCTION(vkGetPhysicalDeviceMemoryProperties);
@@ -82,6 +90,7 @@ extern VkPhysicalDevice* gPhysicalDevices;
 extern uint32_t gPhysicalDeviceCount;
 
 int initVulkanLibrary();
+void doneVulkanLibrary();
 int getComputeQueueFamillyIndex(uint32_t index);
 VkDevice createDevice(int index, uint32_t computeQueueFamillyIndex);
 VkDeviceMemory allocateGPUMemory(int index,  VkDevice vkDevice, const VkDeviceSize memorySize, char isLocal, bool isFatal);

@@ -93,13 +93,15 @@ int scryptPositions(
 
 	t = 1e-6 * (tv_end.tv_usec - tv_start.tv_usec) + (tv_end.tv_sec - tv_start.tv_sec);
 #if 1
+	printf("--------------------------------\n");
 	printf("id:   "); print_hex32(id); printf("\n");
 	printf("salt: "); print_hex32(salt); printf("\n");
 	if (NULL != D) {
 		printf("D:    "); print_hex32(D); printf("\n");
-}
+        }
 	printf("from %lu to %lu, length %u, options: %u\n", start_position, end_position, hash_len_bits, options);
-	printf("[%d]: status %d, solution %lu,, %.0f (%u positions in %.2fs)\n", provider_id, status, *idx_solution, *hashes_computed / t, (unsigned)*hashes_computed, t);
+	printf("[%d]: status %d, solution %llu, %.0f (%u positions in %.2fs)\n", provider_id, status, idx_solution ? *idx_solution : -1ull, *hashes_computed / t, (unsigned)*hashes_computed, t);
+	printf("--------------------------------\n");
 #endif
 	if (hashes_per_sec) {
 		*hashes_per_sec = (uint64_t)(*hashes_computed / t);
