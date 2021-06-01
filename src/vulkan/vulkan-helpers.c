@@ -109,7 +109,7 @@ void vulkan_library_shutdown()
 #elif defined( __APPLE__ )
 		dlclose(gVulkan.library);
 #elif defined( _WIN32 )
-		FreeLibraryA(gVulkan.library);
+		FreeLibrary(gVulkan.library);
 #else
 #error unsupported platform
 #endif
