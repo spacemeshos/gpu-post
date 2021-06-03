@@ -104,10 +104,14 @@ int initVulkanLibrary()
 void vulkan_library_shutdown()
 {
 	if (gVulkan.library) {
+	applog(LOG_INFO, "vulkan_library_shutdown: 1");
 		if (gInstance) {
+	applog(LOG_INFO, "vulkan_library_shutdown: 2");
 			gVulkan.vkDestroyInstance(gInstance, NULL);
+	applog(LOG_INFO, "vulkan_library_shutdown: 3");
 			gInstance = NULL;
 		}
+	applog(LOG_INFO, "vulkan_library_shutdown: 4");
 #if defined( __linux__ )
 		dlclose(gVulkan.library);
 #elif defined( __APPLE__ )
@@ -117,12 +121,16 @@ void vulkan_library_shutdown()
 #else
 #error unsupported platform
 #endif
+	applog(LOG_INFO, "vulkan_library_shutdown: 5");
 		if (NULL != gPhysicalDevices) {
+	applog(LOG_INFO, "vulkan_library_shutdown: 6");
 			free(gPhysicalDevices);
 			gPhysicalDevices = NULL;
+	applog(LOG_INFO, "vulkan_library_shutdown: 7");
 		}
 
 		gVulkan.library = 0;
+	applog(LOG_INFO, "vulkan_library_shutdown: 8");
 	}
 }
 
