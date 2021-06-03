@@ -188,7 +188,7 @@ extern "C" int spacemesh_api_get_providers(
 	return current_providers;
 }
 
-int opt_logs = 1;
+int opt_logs = 0;
 
 extern "C" void spacemesh_api_logging(int enable)
 {
