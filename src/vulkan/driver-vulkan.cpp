@@ -336,10 +336,6 @@ static int vulkan_detect(struct cgpu_info *gpus, int *active)
 	memcpy(gpuConstants.keccakf_piln, keccak_piln, sizeof(keccak_piln));
 
 	if (0 == most_devices) {
-		if (gInstance) {
-			gVulkan.vkDestroyInstance(gInstance, NULL);
-			gInstance = NULL;
-		}
 		vulkan_library_shutdown();
 	}
 

@@ -104,6 +104,10 @@ int initVulkanLibrary()
 void vulkan_library_shutdown()
 {
 	if (gVulkan.library) {
+		if (gInstance) {
+			gVulkan.vkDestroyInstance(gInstance, NULL);
+			gInstance = NULL;
+		}
 #if defined( __linux__ )
 		dlclose(gVulkan.library);
 #elif defined( __APPLE__ )
