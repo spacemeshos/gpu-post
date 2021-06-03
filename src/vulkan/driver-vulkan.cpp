@@ -252,14 +252,6 @@ static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameS
 	return state;
 }
 
-#include <signal.h>
-#include <exception>
-
-void posix_seg_signal(int signum)
-{
-	throw std::exception();
-}
-
 static int vulkan_detect(struct cgpu_info *gpus, int *active)
 {
 	int most_devices = 0;
@@ -289,21 +281,11 @@ static int vulkan_detect(struct cgpu_info *gpus, int *active)
 		return 0;
 	}
 
-	applog(LOG_DEBUG, "vkCreateInstance enter");
 	CHECK_RESULT(gVulkan.vkCreateInstance(&instanceCreateInfo, 0, &gInstance), "vkCreateInstance", 0);
-	applog(LOG_DEBUG, "vkCreateInstance leave (%p)", gInstance);
 
 	gPhysicalDeviceCount = 0;
 	if (gInstance) {
-		applog(LOG_DEBUG, "vkEnumeratePhysicalDevices enter (%p)", gVulkan.vkEnumeratePhysicalDevices);
-		signal(SIGSEGV, posix_seg_signal);
-		try {
-			CHECK_RESULT(gVulkan.vkEnumeratePhysicalDevices(gInstance, &gPhysicalDeviceCount, 0), "vkEnumeratePhysicalDevices", 0);
-		} catch (std::exception&) {
-			gPhysicalDeviceCount = 0;
-		}
-		signal(SIGSEGV, SIG_DFL);
-		applog(LOG_DEBUG, "vkEnumeratePhysicalDevices leave (%u)", gPhysicalDeviceCount);
+		CHECK_RESULT(gVulkan.vkEnumeratePhysicalDevices(gInstance, &gPhysicalDeviceCount, 0), "vkEnumeratePhysicalDevices", 0);
 		if (gPhysicalDeviceCount > 0) {
 			gPhysicalDevices = (VkPhysicalDevice*)malloc(sizeof(VkPhysicalDevice) * gPhysicalDeviceCount);
 			memset(gPhysicalDevices, 0, sizeof(VkPhysicalDevice) * gPhysicalDeviceCount);

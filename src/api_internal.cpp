@@ -33,6 +33,7 @@ extern "C" void spacemesh_api_init()
 {
 	if (0 == api_inited) {
 		api_inited = 1;
+		const char *disabled = getenv("SPACEMESH_PROVIDERS_DISABLED");
 #ifdef WIN32
 		InitializeCriticalSection(&g_spacemesh_api_applog_lock);
 #else
@@ -43,11 +44,15 @@ extern "C" void spacemesh_api_init()
 		memset(&s_cpu, 0, sizeof(s_cpu));
 
 #ifdef HAVE_VULKAN
-		g_spacemesh_api_have_vulkan = vulkan_drv.drv_detect(s_gpus, &s_total_devices) > 0;
+		if (nullptr == disabled || nullptr == strstr(disabled, "vulkan")) {
+			g_spacemesh_api_have_vulkan = vulkan_drv.drv_detect(s_gpus, &s_total_devices) > 0;
+		}
 #endif
 
 #ifdef HAVE_CUDA
-		g_spacemesh_api_have_cuda = cuda_drv.drv_detect(s_gpus, &s_total_devices) > 0;
+		if (nullptr == disabled || nullptr == strstr(disabled, "cuda")) {
+			g_spacemesh_api_have_cuda = cuda_drv.drv_detect(s_gpus, &s_total_devices) > 0;
+		}
 #endif
 
 		if (cpu_drv.drv_detect(&s_cpu, NULL) > 0) {
