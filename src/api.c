@@ -92,7 +92,7 @@ int scryptPositions(
 	status = cgpu->drv->scrypt_positions(cgpu, (uint8_t*)data, start_position, end_position, hash_len_bits, options, out, N, R, P, idx_solution, &tv_start, &tv_end, hashes_computed);
 
 	t = 1e-6 * (tv_end.tv_usec - tv_start.tv_usec) + (tv_end.tv_sec - tv_start.tv_sec);
-#if 1
+#if 0
 	printf("--------------------------------\n");
 	printf("id:   "); print_hex32(id); printf("\n");
 	printf("salt: "); print_hex32(salt); printf("\n");
@@ -106,7 +106,7 @@ int scryptPositions(
 	if (hashes_per_sec) {
 		*hashes_per_sec = (uint64_t)(*hashes_computed / t);
 	}
-#if 1
+#if 0
 	if (out) {
 		size_t labelsBufferSize = ((end_position - start_position + 1ull) * ((size_t)hash_len_bits) + 7ull) / 8ull;
 		if (memstr(out, labelsBufferSize, zeros, 8)) {
