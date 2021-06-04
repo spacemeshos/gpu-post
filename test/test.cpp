@@ -11,8 +11,23 @@ int test_variable_labels_count();
 int test_of_concurrency();
 int test_of_cancelation();
 
-#define	MAX_CPU_LABELS_COUNT	(9 * 128 * 1024)
+#define	MAX_CPU_LABELS_COUNT	(1 * 128 * 1024)
 #define MAX_LABELS_COUNT_API_CALL (32 * 1024 * 1024)
+
+static uint8_t s_id[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+static uint8_t s_salt[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
+static const uint8_t zeros[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+
+void * memstr(const void *src, size_t length, const uint8_t *token, int token_length)
+{
+	for (const uint8_t *cp = (const uint8_t *)src; length >= token_length; cp++, length--) {
+		if (0 == memcmp(cp, token, token_length)) {
+			return (void*)cp;
+		}
+	}
+	return 0;
+}
 
 void print_hex32(const uint8_t *aSrc)
 {
@@ -22,6 +37,49 @@ void print_hex32(const uint8_t *aSrc)
 	}
 }
 
+inline bool isHexDigits(char aChar)
+{
+	return (aChar >= '0' && aChar <= '9') || (aChar >= 'a' && aChar <= 'f') || (aChar >= 'A' && aChar <= 'F');
+}
+
+inline char hexToInt(char aChar)
+{
+	if (aChar >= '0' && aChar <= '9') {
+		return aChar - '0';
+	}
+	else if (aChar >= 'a' && aChar <= 'f') {
+		return 10 + (aChar - 'a');
+	}
+	else if (aChar >= 'A' && aChar <= 'F') {
+		return 10 + (aChar - 'A');
+	}
+	return 0;
+}
+
+int hex2bin(const char *aSrc, unsigned char *aDst, size_t aDstLen)
+{
+	if (aSrc[0] == '0' && aSrc[1] == 'x') {
+		aSrc += 2;
+	}
+	if (aDstLen >= strlen(aSrc) / 2) {
+		if (0 == aSrc[0]) {
+			return 0;
+		}
+		aDstLen = 0;
+		const char *cp = aSrc;
+		while (*cp) {
+			if (!isHexDigits(cp[0]) || !isHexDigits(cp[1])) {
+				return -2;
+			}
+			*aDst = (hexToInt(cp[0]) << 4) | hexToInt(cp[1]);
+			aDst++;
+			cp += 2;
+			aDstLen++;
+		}
+		return (int)aDstLen;
+	}
+	return -1;
+}
 void do_benchmark(int aLabelSize, int aLabelsCount)
 {
 	uint8_t id[32];
@@ -126,6 +184,9 @@ void do_test(int aLabelSize, int aLabelsCount, int aReferenceProvider, bool aPri
 					memset(labels, 0, labelsBufferSize);
 					scryptPositions(providers[i].id, id, 0, aLabelsCount - 1, aLabelSize, salt, SPACEMESH_API_COMPUTE_LEAFS, labels, 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
 					printf("%s: %u hashes, %u h/s\n", providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
+					if (memstr(labels, labelsBufferSize, zeros, 8)) {
+						printf("ZEROS result\n");
+					}
 					if (checkOuitput) {
 						size_t referencelabelsBufferSize = (size_t(referenceLabelsCount) * size_t(aLabelSize)) / 8ull;
 						if (0 != memcmp(referenceLabels, labels, referencelabelsBufferSize)) {
@@ -220,7 +281,7 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 						labels_per_iter = MAX_LABELS_COUNT_API_CALL;
 						iters = aLabelsCount / MAX_LABELS_COUNT_API_CALL;
 					}
-					printf("Labels+Pow Task. Iters: %u, Total labels: %d, Labels per iter: %llu. Label size (bits): %u\n", iters,  aLabelsCount, labels_per_iter, labelSize);
+					printf("Labels+Pow Task. Iters: %u, Total labels: %d, Labels per iter: %lu. Label size (bits): %u\n", iters,  aLabelsCount, labels_per_iter, labelSize);
 
 					const uint64_t labelsBufferSize = (uint64_t(labels_per_iter) * uint64_t(labelSize) + 7ull) / 8ull;
 					uint8_t *out = (uint8_t *)malloc(labelsBufferSize);
@@ -246,13 +307,13 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 							}
 
 							if (hashes_computed != labels_per_iter) {
-								printf ("Compute error: hashes computed: %llu, hashes expected: %llu\n", hashes_computed, labels_per_iter);
+								printf ("Compute error: hashes computed: %lu, hashes expected: %lu\n", hashes_computed, labels_per_iter);
 							}
 
-							printf("Labels + pow: requested %llu labels at index %llu. Computed hashes: %llu, (%llu h/s)\n", labels_per_iter, idx, hashes_computed, hashes_per_sec);
+							printf("Labels + pow: requested %lu labels at index %lu. Computed hashes: %lu, (%lu h/s)\n", labels_per_iter, idx, hashes_computed, hashes_per_sec);
 
 							if (idx_solution != -1ull) {
-								printf("Found pow solution at index %llu\n", idx_solution);
+								printf("Found pow solution at index %lu\n", idx_solution);
 							} else {
 								printf("Pow solution not found in this iteration.\n");
 							}
@@ -267,7 +328,7 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 								printf("Compute returned an error: %u", status);
 							}
 
-							printf("Compute labels only. Requested: %llu labels at index %llu. hHshes computed: %llu. (%llu h/s). Solution index:  %llu\n", labels_per_iter, idx, hashes_computed, hashes_per_sec, idx_solution);
+							printf("Compute labels only. Requested: %lu labels at index %lu. hHshes computed: %lu. (%lu h/s). Solution index:  %lu\n", labels_per_iter, idx, hashes_computed, hashes_per_sec, idx_solution);
 						}
 
 						// start index of next iteration
@@ -283,7 +344,7 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 
 						int status = scryptPositions(providers[i].id, id, idx, idx + labels_per_iter - 1, labelSize, salt, SPACEMESH_API_COMPUTE_POW, out, 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
 
-						printf("Compute pow only at index: %llu. hashes computed: %llu (%llu h/s)\n", idx, hashes_computed, hashes_per_sec);
+						printf("Compute pow only at index: %lu. hashes computed: %lu (%lu h/s)\n", idx, hashes_computed, hashes_per_sec);
 
 						switch(status) {
 							case SPACEMESH_API_POW_SOLUTION_FOUND:
@@ -291,11 +352,11 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 
 							case SPACEMESH_API_ERROR_NONE:
 								if (hashes_computed != labels_per_iter) {
-									printf("Error: compute diff than expected: hashes computed: %llu, labels requested: %llu\n", hashes_computed, labels_per_iter);
+									printf("Error: compute diff than expected: hashes computed: %lu, labels requested: %lu\n", hashes_computed, labels_per_iter);
 								}
 								break;
 							default:
-								printf("Error %d. Hashes computed: %llu, (%llu h/s)\n", status, hashes_computed, hashes_per_sec);
+								printf("Error %d. Hashes computed: %lu, (%lu h/s)\n", status, hashes_computed, hashes_per_sec);
 								break;
 						}
 
@@ -328,11 +389,8 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 	}
 }
 
-void do_test_pow(int aLabelsCount, unsigned aDiff, unsigned aSeed)
+void do_test_pow(uint64_t aStartPos, int aLabelsCount, unsigned aDiff, unsigned aSeed, int aProviderId)
 {
-	uint8_t id[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-	uint8_t salt[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-
 	int providersCount = spacemesh_api_get_providers(NULL, 0);
 
 	if (aSeed) {
@@ -343,11 +401,11 @@ void do_test_pow(int aLabelsCount, unsigned aDiff, unsigned aSeed)
 			srand(aSeed);
 		}
 
-		for (int i = 0; i < sizeof(id); i++) {
-			id[i] = rand();
+		for (int i = 0; i < sizeof(s_id); i++) {
+			s_id[i] = rand();
 		}
-		for (int i = 0; i < sizeof(salt); i++) {
-			salt[i] = rand();
+		for (int i = 0; i < sizeof(s_salt); i++) {
+			s_salt[i] = rand();
 		}
 	}
 
@@ -381,15 +439,19 @@ void do_test_pow(int aLabelsCount, unsigned aDiff, unsigned aSeed)
 			for (int i = 0; i < providersCount; i++) {
 				if (providers[i].compute_api != COMPUTE_API_CLASS_CPU)
 				{
+					if (-1 != aProviderId && aProviderId != providers[i].id) {
+						continue;
+					}
 					uint64_t hashes_computed;
 					uint64_t hashes_per_sec;
-					int status = scryptPositions(providers[i].id, id, 0, aLabelsCount - 1, 8, salt, SPACEMESH_API_COMPUTE_POW, NULL, 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
+					printf("%s: ", providers[i].model);
+					int status = scryptPositions(providers[i].id, s_id, aStartPos, aStartPos + aLabelsCount - 1, 8, s_salt, SPACEMESH_API_COMPUTE_POW, NULL, 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
 					switch (status) {
 					case SPACEMESH_API_POW_SOLUTION_FOUND:
-						printf("%s: %u hashes, %u h/s, solution at %u\n", providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec, (uint32_t)idx_solution);
+						printf("%u hashes, %u h/s, solution at %u\n", (uint32_t)hashes_computed, (uint32_t)hashes_per_sec, (uint32_t)idx_solution);
 						if (-1 != cpu_id) {
 							uint8_t hash[32];
-							scryptPositions(cpu_id, id, idx_solution, idx_solution, 256, salt, SPACEMESH_API_COMPUTE_LEAFS, hash, 512, 1, 1, NULL, NULL, &hashes_computed, &hashes_per_sec);
+							scryptPositions(cpu_id, s_id, idx_solution, idx_solution, 256, s_salt, SPACEMESH_API_COMPUTE_LEAFS, hash, 512, 1, 1, NULL, NULL, &hashes_computed, &hashes_per_sec);
 							printf("D: ");
 							print_hex32(D);
 							printf("\n");
@@ -399,10 +461,10 @@ void do_test_pow(int aLabelsCount, unsigned aDiff, unsigned aSeed)
 						}
 						break;
 					case SPACEMESH_API_ERROR_NONE:
-						printf("%s: %u hashes, %u h/s, solution not found\n", providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
+						printf("%u hashes, %u h/s, solution not found\n", (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
 						break;
 					default:
-						printf("%s: error %d, %u hashes, %u h/s\n", providers[i].model, status, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
+						printf("error %d, %u hashes, %u h/s\n", status, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
 					}
 				}
 			}
@@ -594,6 +656,7 @@ int main(int argc, char **argv)
 	int referenceProvider = -1;
 	unsigned srand_seed = 0;
 	bool printDataCompare = false;
+	uint64_t startPos = 0;
 
 	if (argc == 1) {
 		print_usage();
@@ -620,6 +683,7 @@ int main(int argc, char **argv)
 		}
 		else if (0 == strcmp(argv[i], "--list") || 0 == strcmp(argv[i], "-l")) {
 			do_providers_list();
+			spacemesh_api_shutdown();
 			return 0;
 		}
 		else if (0 == strcmp(argv[i], "--unit-tests") || 0 == strcmp(argv[i], "-u")) {
@@ -687,6 +751,30 @@ int main(int argc, char **argv)
 				srand_seed = strtoul(argv[i], NULL, 10);
 			}
 		}
+		else if (0 == strcmp(argv[i], "--start-pos") || 0 == strcmp(argv[i], "-sp")) {
+			i++;
+			if (i < argc) {
+				startPos = strtoull(argv[i], NULL, 10);
+			}
+		}
+		else if (0 == strcmp(argv[i], "-id")) {
+			i++;
+			if (i < argc) {
+				uint8_t buffer[32];
+				if (32 == hex2bin(argv[i], buffer, sizeof(buffer))) {
+					memcpy(s_id, buffer, 32);
+				}
+			}
+		}
+		else if (0 == strcmp(argv[i], "--salt")) {
+			i++;
+			if (i < argc) {
+				uint8_t buffer[32];
+				if (32 == hex2bin(argv[i], buffer, sizeof(buffer))) {
+					memcpy(s_salt, buffer, 32);
+				}
+			}
+		}
 		else if (0 == strcmp(argv[i], "--print") || 0 == strcmp(argv[i], "-p")) {
 			printDataCompare = true;
 		}
@@ -716,7 +804,7 @@ int main(int argc, char **argv)
 	}
 	if (runTestPow) {
 		printf("Test POW: count %u\n", labelsCount);
-		do_test_pow(labelsCount, powDiff, srand_seed);
+		do_test_pow(startPos, labelsCount, powDiff, srand_seed, referenceProvider);
 		return 0;
 	}
 	if (runTestCore) {

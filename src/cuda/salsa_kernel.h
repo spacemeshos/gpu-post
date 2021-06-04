@@ -62,16 +62,14 @@ typedef struct {
 	bool		context_concurrent;
 	bool		keccak_inited;
 	KernelInterface * context_kernel;
-	uint32_t	*context_idata[2];
-	uint32_t	*context_odata[2];
-	cudaStream_t context_streams[2];
-	uint64_t	*context_X[2];
-	uint8_t		*context_L[2];
-	cudaEvent_t context_serialize[2];
-	uint8_t		*context_labels[2];
-	uint64_t	*context_solutions[2];
+	uint32_t	*context_idata;
+	uint32_t	*context_odata;
+	uint64_t	*context_X;
+	uint8_t		*context_L;
+	uint8_t		*context_labels;
+	uint64_t	*context_solutions;
 
-	uint32_t	*data[2];
+	uint32_t	*data;
 
 	// some globals containing pointers to device memory (for chunked allocation)
 	int			max_warps;
@@ -81,16 +79,14 @@ typedef struct {
 
 // CUDA externals
 extern _cudaState *initCuda(struct cgpu_info *cgpu, uint32_t N, uint32_t r, uint32_t p, uint32_t hash_len_bits, bool throttled);
+extern void setCudaDevice(struct cgpu_info *cgpu);
 extern uint64_t *cuda_transferbuffer(_cudaState *cudaState, int stream);
 extern uint8_t *cuda_hashbuffer(_cudaState *cudaState, int stream);
 
-extern void cuda_scrypt_serialize(struct cgpu_info *cgpu, _cudaState *cudaState, int stream);
 extern void cuda_scrypt_core(_cudaState *cudaState, int stream, unsigned int N, unsigned int r, unsigned int p, unsigned int LOOKUP_GAP, unsigned int BATCHSIZE);
-extern void cuda_scrypt_done(_cudaState *cudaState, int stream);
 extern void cuda_scrypt_DtoH(_cudaState *cudaState, uint8_t *X, int stream, uint32_t size);
 extern void cuda_solutions_DtoH(_cudaState *cudaState, int stream);
 extern void cuda_solutions_HtoD(_cudaState *cudaState, int stream);
 extern bool cuda_scrypt_sync(struct cgpu_info *cgpu, _cudaState *cudaState, int stream);
-extern void cuda_scrypt_flush(_cudaState *cudaState, int stream);
 
 #endif // #ifndef SALSA_KERNEL_H

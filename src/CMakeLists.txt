@@ -125,7 +125,7 @@ if (SPACEMESHVULKAN)
 
     set(SOURCES
         ${SOURCES}
-        vulkan/driver-vulkan.c
+        vulkan/driver-vulkan.cpp
         vulkan/driver-vulkan.h
         vulkan/vulkan-helpers.c
         vulkan/vulkan-helpers.h

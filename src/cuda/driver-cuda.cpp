@@ -82,7 +82,7 @@ static void reinit_cuda_device(struct cgpu_info *gpu)
 static bool cuda_prepare(struct cgpu_info *cgpu, unsigned N, uint32_t r, uint32_t p, uint32_t hash_len_bits, bool throttled)
 {
 	if (N != cgpu->N || r != cgpu->r || p != cgpu->p || hash_len_bits != cgpu->hash_len_bits) {
-		applog(LOG_INFO, "Init GPU thread for GPU %i, platform GPU %i, pci [%d:%d]", cgpu->id, cgpu->driver_id, cgpu->pci_bus_id, cgpu->pci_device_id);
+		applog(LOG_INFO, "Init GPU %i, platform GPU %i, pci [%d:%d]", cgpu->id, cgpu->driver_id, cgpu->pci_bus_id, cgpu->pci_device_id);
 		if (cgpu->device_data) {
 			cuda_shutdown(cgpu);
 		}
@@ -98,10 +98,11 @@ static bool cuda_prepare(struct cgpu_info *cgpu, unsigned N, uint32_t r, uint32_
 			return false;
 		}
 		if (_cudaState *cudaState = (_cudaState *)cgpu->device_data) {
-			cudaState->data[0] = new uint32_t[(PREIMAGE_SIZE / 4) * cgpu->thread_concurrency];
-			cudaState->data[1] = new uint32_t[(PREIMAGE_SIZE / 4) * cgpu->thread_concurrency];
+			cudaState->data = new uint32_t[(PREIMAGE_SIZE / 4) * cgpu->thread_concurrency];
 		}
-		applog(LOG_INFO, "initCuda() finished.");
+		applog(LOG_INFO, "initCuda() finished: thread concurrency = %u", cgpu->thread_concurrency);
+	} else {
+		setCudaDevice(cgpu);
 	}
 
 	return true;
@@ -147,7 +148,7 @@ static int cuda_scrypt_positions(
 
 		gettimeofday(tv_start, NULL);
 
-		uint8_t *hash[2] = { cuda_hashbuffer(cudaState, 0), cuda_hashbuffer(cudaState, 1) };
+		uint8_t *hash = cuda_hashbuffer(cudaState, 0);
 
 		uint64_t n = start_position;
 		bool computeLeafs = 0 != (options & SPACEMESH_API_COMPUTE_LEAFS);
@@ -160,15 +161,12 @@ static int cuda_scrypt_positions(
 		}
 
 		/* byte swap pdata into data[0]/[1] arrays */
-		for (int k = 0; k < 2; ++k) {
-			for (unsigned i = 0; i < cgpu->thread_concurrency; ++i) memcpy(&cudaState->data[k][(PREIMAGE_SIZE / 4)*i], pdata, PREIMAGE_SIZE);
-		}
+		for (unsigned i = 0; i < cgpu->thread_concurrency; ++i) memcpy(&cudaState->data[(PREIMAGE_SIZE / 4)*i], pdata, PREIMAGE_SIZE);
 		prepare_keccak512(cudaState, (uint8_t*)pdata, PREIMAGE_SIZE);
 
-		uint64_t nonce[2];
-		uint64_t* cuda_X[2] = { cuda_transferbuffer(cudaState, 0), cuda_transferbuffer(cudaState, 1) };
+		uint64_t nonce;
+		uint64_t* cuda_X = cuda_transferbuffer(cudaState, 0);
 
-		int cur = 0, nxt = 1; // streams
 		int iteration = 0;
 		uint8_t *out = output;
 		uint64_t chunkSize = (cgpu->thread_concurrency * hash_len_bits) / 8;
@@ -176,43 +174,35 @@ static int cuda_scrypt_positions(
 		uint64_t positions = 0;
 
 		do {
-			nonce[nxt] = n;
-			cuda_X[nxt][0] = 0xffffffffffffffff;
+			nonce = n;
+			cuda_X[0] = 0xffffffffffffffff;
 
 			// all on gpu
 
 			n += cgpu->thread_concurrency;
 			positions += cgpu->thread_concurrency;
-			if (g_spacemesh_api_opt_debug && (iteration % 64 == 0)) {
-				applog(LOG_DEBUG, "GPU #%d: n=%x", cgpu->driver_id, n);
-			}
 
-			cuda_solutions_HtoD(cudaState, nxt);
-			cuda_scrypt_serialize(cgpu, cudaState, nxt);
+			cuda_solutions_HtoD(cudaState, 0);
 
-			pre_keccak512_1_1(cudaState, nxt, nonce[nxt], cgpu->thread_concurrency);
-			cuda_scrypt_core(cudaState, nxt, N, 1, 1, cgpu->lookup_gap, cgpu->batchsize);
+			pre_keccak512_1_1(cudaState, 0, nonce, cgpu->thread_concurrency);
 
-			if (!cuda_scrypt_sync(cgpu, cudaState, nxt)) {
-				status = SPACEMESH_API_ERROR;
-				break;
-			}
+			cuda_scrypt_core(cudaState, 0, N, 1, 1, cgpu->lookup_gap, cgpu->batchsize);
 
-			post_keccak512(cudaState, nxt, nonce[nxt], cgpu->thread_concurrency, hash_len_bits);
-			cuda_scrypt_done(cudaState, nxt);
+			post_keccak512(cudaState, 0, nonce, cgpu->thread_concurrency, hash_len_bits);
 
 			if (computeLeafs) {
-				cuda_scrypt_DtoH(cudaState, hash[nxt], nxt, chunkSize);
+				cuda_scrypt_DtoH(cudaState, hash, 0, chunkSize);
 			}
-			cuda_solutions_DtoH(cudaState, nxt);
-			if (!cuda_scrypt_sync(cgpu, cudaState, nxt)) {
+			cuda_solutions_DtoH(cudaState, 0);
+			if (!cuda_scrypt_sync(cgpu, cudaState, 0)) {
+				applog(LOG_DEBUG, "cuda_scrypt_DtoH");
 				status = SPACEMESH_API_ERROR;
 				break;
 			}
 
-			if (computePow && (cuda_X[nxt][0] != 0xffffffffffffffff)) {
+			if (computePow && (cuda_X[0] != 0xffffffffffffffff)) {
 				if (idx_solution) {
-					*idx_solution = cuda_X[nxt][0];
+					*idx_solution = cuda_X[0];
 				}
 				status = SPACEMESH_API_POW_SOLUTION_FOUND;
 				if (!computeLeafs) {
@@ -221,13 +211,11 @@ static int cuda_scrypt_positions(
 			}
 
 			if (computeLeafs) {
-				memcpy(out, hash[nxt], min(chunkSize, outLength));
+				memcpy(out, hash, min(chunkSize, outLength));
 				out += chunkSize;
 				outLength -= chunkSize;
 			}
 
-			cur = (cur + 1) & 1;
-			nxt = (nxt + 1) & 1;
 			++iteration;
 		} while (n <= end_position && !g_spacemesh_api_abort_flag);
 
@@ -287,7 +275,7 @@ static int64_t cuda_hash(struct cgpu_info *cgpu, uint8_t *preimage, uint8_t *out
 
 		/* byte swap pdata into data[0]/[1] arrays */
 		for (unsigned i = 0; i < cgpu->thread_concurrency; ++i) {
-			memcpy(&cudaState->data[0][(PREIMAGE_SIZE / 4)*i], pdata, PREIMAGE_SIZE);
+			memcpy(&cudaState->data[(PREIMAGE_SIZE / 4)*i], pdata, PREIMAGE_SIZE);
 		}
 
 		prepare_keccak512(cudaState, (uint8_t*)pdata, PREIMAGE_SIZE);
@@ -295,12 +283,10 @@ static int64_t cuda_hash(struct cgpu_info *cgpu, uint8_t *preimage, uint8_t *out
 		int iteration = 0;
 		uint64_t chunkSize = 32 * 128;
 
-		cuda_scrypt_serialize(cgpu, cudaState, 0);
 		pre_keccak512_1_1(cudaState, 0, 0, cgpu->thread_concurrency);
 		cuda_scrypt_core(cudaState, 0, 512, 1, 1, cgpu->lookup_gap, cgpu->batchsize);
 
 		post_keccak512(cudaState, 0, 0, cgpu->thread_concurrency, 256);
-		cuda_scrypt_done(cudaState, 0);
 
 		cuda_scrypt_DtoH(cudaState, hash, 0, chunkSize);
 		cuda_scrypt_sync(cgpu, cudaState, 0);
@@ -335,7 +321,7 @@ static int64_t cuda_bit_stream(struct cgpu_info *cgpu, uint8_t *hashes, uint64_t
 		uint8_t *hash = cuda_hashbuffer(cudaState, 0);
 
 		memcpy(hash, hashes, 32 * 128);
-		cudaMemcpyAsync(cudaState->context_odata[0], hash, 32 * 128, cudaMemcpyHostToDevice, cudaState->context_streams[0]);
+		cudaMemcpyAsync(cudaState->context_odata, hash, 32 * 128, cudaMemcpyHostToDevice);
 
 		uint8_t *out = output;
 		uint64_t chunkSize = (cgpu->thread_concurrency * hash_len_bits) / 8;
@@ -367,8 +353,7 @@ static void cuda_shutdown(struct cgpu_info *cgpu)
 		cgpu->deven = DEV_DISABLED;
 		cgpu->status = LIFE_NOSTART;
 		if (_cudaState *cudaState = (_cudaState *)cgpu->device_data) {
-			delete[] cudaState->data[0];
-			delete[] cudaState->data[1];
+			delete[] cudaState->data;
 		}
 		free(cgpu->device_data);
 		cgpu->device_data = NULL;

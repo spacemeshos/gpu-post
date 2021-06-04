@@ -97,7 +97,7 @@ typedef struct AlgorithmParams {
 	uint64_t idx_solution[2];
 } AlgorithmParams;
 
-struct device_drv vulkan_drv;
+//struct device_drv vulkan_drv;
 
 static uint64_t alignBuffer(uint64_t size, uint64_t align)
 {
@@ -111,7 +111,7 @@ static uint64_t alignBuffer(uint64_t size, uint64_t align)
 
 static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameSize, uint32_t hash_len_bits, bool throttled, bool copy_only)
 {
-	_vulkanState *state = calloc(1, sizeof(_vulkanState));
+	_vulkanState *state = (_vulkanState *)calloc(1, sizeof(_vulkanState));
 
 	uint32_t scrypt_mem = 128 * cgpu->r;
 
@@ -263,7 +263,7 @@ static int vulkan_detect(struct cgpu_info *gpus, int *active)
 		0,
 		"",
 		0,
-		VK_API_VERSION_1_0
+		VK_API_VERSION_1_2
 	};
 
 	const VkInstanceCreateInfo instanceCreateInfo = {
@@ -284,54 +284,60 @@ static int vulkan_detect(struct cgpu_info *gpus, int *active)
 	CHECK_RESULT(gVulkan.vkCreateInstance(&instanceCreateInfo, 0, &gInstance), "vkCreateInstance", 0);
 
 	gPhysicalDeviceCount = 0;
-	CHECK_RESULT(gVulkan.vkEnumeratePhysicalDevices(gInstance, &gPhysicalDeviceCount, 0), "vkEnumeratePhysicalDevices", 0);
-	if (gPhysicalDeviceCount > 0) {
-		gPhysicalDevices = (VkPhysicalDevice*)malloc(sizeof(VkPhysicalDevice) * gPhysicalDeviceCount);
-		memset(gPhysicalDevices, 0, sizeof(VkPhysicalDevice) * gPhysicalDeviceCount);
-		CHECK_RESULT(gVulkan.vkEnumeratePhysicalDevices(gInstance, &gPhysicalDeviceCount, gPhysicalDevices), "vkEnumeratePhysicalDevices", 0);
-		for (unsigned i = 0; i < gPhysicalDeviceCount; i++) {
-			struct cgpu_info *cgpu = &gpus[*active];
+	if (gInstance) {
+		CHECK_RESULT(gVulkan.vkEnumeratePhysicalDevices(gInstance, &gPhysicalDeviceCount, 0), "vkEnumeratePhysicalDevices", 0);
+		if (gPhysicalDeviceCount > 0) {
+			gPhysicalDevices = (VkPhysicalDevice*)malloc(sizeof(VkPhysicalDevice) * gPhysicalDeviceCount);
+			memset(gPhysicalDevices, 0, sizeof(VkPhysicalDevice) * gPhysicalDeviceCount);
+			CHECK_RESULT(gVulkan.vkEnumeratePhysicalDevices(gInstance, &gPhysicalDeviceCount, gPhysicalDevices), "vkEnumeratePhysicalDevices", 0);
+			for (unsigned i = 0; i < gPhysicalDeviceCount; i++) {
+				struct cgpu_info *cgpu = &gpus[*active];
 
-			VkPhysicalDeviceProperties physicalDeviceProperties;
-			gVulkan.vkGetPhysicalDeviceProperties(gPhysicalDevices[i], &physicalDeviceProperties);
+				VkPhysicalDeviceProperties physicalDeviceProperties;
+				gVulkan.vkGetPhysicalDeviceProperties(gPhysicalDevices[i], &physicalDeviceProperties);
 
-			if (0x10DE == physicalDeviceProperties.vendorID) {
-				continue;
-			}
+				if (0x10DE == physicalDeviceProperties.vendorID) {
+					continue;
+				}
 
-			memcpy(cgpu->name, physicalDeviceProperties.deviceName, min(sizeof(cgpu->name),sizeof(physicalDeviceProperties.deviceName)));
-			cgpu->name[sizeof(cgpu->name) - 1] = 0;
+				memcpy(cgpu->name, physicalDeviceProperties.deviceName, min(sizeof(cgpu->name),sizeof(physicalDeviceProperties.deviceName)));
+				cgpu->name[sizeof(cgpu->name) - 1] = 0;
 
-			VkPhysicalDeviceMemoryProperties memoryProperties;
-			gVulkan.vkGetPhysicalDeviceMemoryProperties(gPhysicalDevices[i], &memoryProperties);
+				VkPhysicalDeviceMemoryProperties memoryProperties;
+				gVulkan.vkGetPhysicalDeviceMemoryProperties(gPhysicalDevices[i], &memoryProperties);
 
-			cgpu->id = *active;
-			cgpu->pci_bus_id = 0;
-			cgpu->pci_device_id = 0;
-			cgpu->deven = DEV_ENABLED;
-			cgpu->drv = &vulkan_drv;
-			cgpu->driver_id = i;
+				cgpu->id = *active;
+				cgpu->pci_bus_id = 0;
+				cgpu->pci_device_id = 0;
+				cgpu->deven = DEV_ENABLED;
+        			cgpu->drv = &vulkan_drv;
+				cgpu->driver_id = i;
 
-			for (unsigned j = 0; j < memoryProperties.memoryTypeCount; j++) {
-				VkMemoryType t = memoryProperties.memoryTypes[j];
-				if ((t.propertyFlags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) != 0) {
-					if (t.heapIndex < memoryProperties.memoryHeapCount) {
-						cgpu->gpu_max_alloc = memoryProperties.memoryHeaps[t.heapIndex].size;
-						break;
+				for (unsigned j = 0; j < memoryProperties.memoryTypeCount; j++) {
+					VkMemoryType t = memoryProperties.memoryTypes[j];
+					if ((t.propertyFlags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) != 0) {
+						if (t.heapIndex < memoryProperties.memoryHeapCount) {
+							cgpu->gpu_max_alloc = memoryProperties.memoryHeaps[t.heapIndex].size;
+							break;
+						}
 					}
 				}
-			}
 
-			*active += 1;
-			most_devices++;
+				*active += 1;
+				most_devices++;
+			}
+		} else {
+			applog(LOG_ERR, "No graphic cards were found by Vulkan. Use Adrenalin not Crimson and check your drivers with VulkanInfo.");
 		}
-	} else {
-		applog(LOG_ERR, "No graphic cards were found by Vulkan. Use Adrenalin not Crimson and check your drivers with VulkanInfo.");
 	}
 
 	memcpy(gpuConstants.keccakf_rndc, keccak_round_constants, sizeof(keccak_round_constants));
 	memcpy(gpuConstants.keccakf_rotc, keccak_rotc, sizeof(keccak_rotc));
 	memcpy(gpuConstants.keccakf_piln, keccak_piln, sizeof(keccak_piln));
+
+	if (0 == most_devices) {
+		vulkan_library_shutdown();
+	}
 
 	return most_devices;
 }
@@ -649,7 +655,7 @@ static int64_t vulkan_bit_stream(struct cgpu_info *cgpu, uint8_t *hashes, uint64
 static void vulkan_shutdown(struct cgpu_info *cgpu)
 {
 	_vulkanState *vulkanState = (_vulkanState *)cgpu->device_data;
-	if (!vulkanState) {
+	if (vulkanState) {
 		gVulkan.vkDestroyPipelineLayout(vulkanState->vkDevice, vulkanState->pipelineLayout, NULL);
 		gVulkan.vkDestroyDescriptorSetLayout(vulkanState->vkDevice, vulkanState->descriptorSetLayout, NULL);
 		gVulkan.vkDestroyPipeline(vulkanState->vkDevice, vulkanState->pipeline, NULL);

@@ -43,6 +43,11 @@ do { \
 
 int find_optimal_concurency(struct cgpu_info *cgpu, _cudaState *cudaState, KernelInterface* &kernel, uint32_t N, uint32_t r, uint32_t p, bool &concurrent, int &wpb);
 
+void setCudaDevice(struct cgpu_info *cgpu)
+{
+	checkCudaErrors(cgpu->driver_id, cudaSetDevice(cgpu->driver_id));
+}
+
 _cudaState *initCuda(struct cgpu_info *cgpu, uint32_t N, uint32_t r, uint32_t p, uint32_t hash_len_bits, bool throttled)
 {
 	_cudaState *cudaState = (_cudaState *)calloc(1, sizeof(_cudaState));
@@ -72,35 +77,18 @@ _cudaState *initCuda(struct cgpu_info *cgpu, uint32_t N, uint32_t r, uint32_t p,
 
 	// allocate device memory for scrypt_core inputs and outputs
 	uint32_t *tmp;
-	checkCudaErrors(cgpu->driver_id, cudaMalloc((void **) &tmp, mem_size)); cudaState->context_idata[0] = tmp;
-	checkCudaErrors(cgpu->driver_id, cudaMalloc((void **) &tmp, mem_size)); cudaState->context_idata[1] = tmp;
-	checkCudaErrors(cgpu->driver_id, cudaMalloc((void **) &tmp, mem_size)); cudaState->context_odata[0] = tmp;
-	checkCudaErrors(cgpu->driver_id, cudaMalloc((void **) &tmp, mem_size)); cudaState->context_odata[1] = tmp;
+	checkCudaErrors(cgpu->driver_id, cudaMalloc((void **) &tmp, mem_size)); cudaState->context_idata = tmp;
+	checkCudaErrors(cgpu->driver_id, cudaMalloc((void **) &tmp, mem_size)); cudaState->context_odata = tmp;
 
 	// allocate pinned host memory for scrypt hashes
-	checkCudaErrors(cgpu->driver_id, cudaHostAlloc((void **) &tmp, labels_size, cudaHostAllocDefault)); cudaState->context_L[0] = (uint8_t*)tmp;
-	checkCudaErrors(cgpu->driver_id, cudaHostAlloc((void **) &tmp, labels_size, cudaHostAllocDefault)); cudaState->context_L[1] = (uint8_t*)tmp;
+	checkCudaErrors(cgpu->driver_id, cudaHostAlloc((void **) &tmp, labels_size, cudaHostAllocDefault)); cudaState->context_L = (uint8_t*)tmp;
 
 	// allocate pinned host memory for scrypt_core input/output
-	checkCudaErrors(cgpu->driver_id, cudaHostAlloc((void **) &tmp, 32, cudaHostAllocDefault)); cudaState->context_X[0] = (uint64_t*)tmp;
-	checkCudaErrors(cgpu->driver_id, cudaHostAlloc((void **) &tmp, 32, cudaHostAllocDefault)); cudaState->context_X[1] = (uint64_t*)tmp;
+	checkCudaErrors(cgpu->driver_id, cudaHostAlloc((void **) &tmp, 32, cudaHostAllocDefault)); cudaState->context_X = (uint64_t*)tmp;
 
-	checkCudaErrors(cgpu->driver_id, cudaMalloc((void **) &tmp, labels_size)); cudaState->context_labels[0] = (uint8_t*)tmp;
-	checkCudaErrors(cgpu->driver_id, cudaMalloc((void **) &tmp, labels_size)); cudaState->context_labels[1] = (uint8_t*)tmp;
+	checkCudaErrors(cgpu->driver_id, cudaMalloc((void **) &tmp, labels_size)); cudaState->context_labels = (uint8_t*)tmp;
 
-	checkCudaErrors(cgpu->driver_id, cudaMalloc((void **)&tmp, 32)); cudaState->context_solutions[0] = (uint64_t*)tmp;
-	checkCudaErrors(cgpu->driver_id, cudaMalloc((void **)&tmp, 32)); cudaState->context_solutions[1] = (uint64_t*)tmp;
-
-	// create two CUDA streams
-	cudaStream_t tmp2;
-	checkCudaErrors(cgpu->driver_id, cudaStreamCreate(&tmp2)); cudaState->context_streams[0] = tmp2;
-	checkCudaErrors(cgpu->driver_id, cudaStreamCreate(&tmp2)); cudaState->context_streams[1] = tmp2;
-
-	// events used to serialize the kernel launches (we don't want any overlapping of kernels)
-	cudaEvent_t tmp4;
-	checkCudaErrors(cgpu->driver_id, cudaEventCreateWithFlags(&tmp4, cudaEventDisableTiming)); cudaState->context_serialize[0] = tmp4;
-	checkCudaErrors(cgpu->driver_id, cudaEventCreateWithFlags(&tmp4, cudaEventDisableTiming)); cudaState->context_serialize[1] = tmp4;
-	checkCudaErrors(cgpu->driver_id, cudaEventRecord(cudaState->context_serialize[1]));
+	checkCudaErrors(cgpu->driver_id, cudaMalloc((void **)&tmp, 32)); cudaState->context_solutions = (uint64_t*)tmp;
 
 	cudaState->cuda_id = cgpu->driver_id;
 	cudaState->context_kernel = kernel;
@@ -229,6 +217,8 @@ int find_optimal_concurency(struct cgpu_info *cgpu, _cudaState *cudaState, Kerne
 		optimal_blocks--;
 	}
 
+	optimal_blocks &= 0xfffffffc;
+
 	applog(LOG_INFO, "GPU #%d: using launch configuration %c%dx%d", cgpu->driver_id, kernel->get_identifier(), optimal_blocks, WARPS_PER_BLOCK);
 
 	if (cudaState->max_warps != optimal_blocks * WARPS_PER_BLOCK)
@@ -254,27 +244,6 @@ int find_optimal_concurency(struct cgpu_info *cgpu, _cudaState *cudaState, Kerne
 	return optimal_blocks;
 }
 
-void cuda_scrypt_serialize(struct cgpu_info *cgpu, _cudaState *cudaState, int stream)
-{
-	// if the device can concurrently execute multiple kernels, then we must
-	// wait for the serialization event recorded by the other stream
-	if (cudaState->context_concurrent) {
-		cudaStreamWaitEvent(cudaState->context_streams[stream], cudaState->context_serialize[(stream + 1) & 1], 0);
-	}
-}
-
-void cuda_scrypt_done(_cudaState *cudaState, int stream)
-{
-	// record the serialization event in the current stream
-	cudaEventRecord(cudaState->context_serialize[stream], cudaState->context_streams[stream]);
-}
-
-void cuda_scrypt_flush(_cudaState *cudaState, int stream)
-{
-	// flush the work queue (required for WDDM drivers)
-	cudaStreamSynchronize(cudaState->context_streams[stream]);
-}
-
 void cuda_scrypt_core(_cudaState *cudaState, int stream, unsigned int N, unsigned int r, unsigned int p, unsigned int LOOKUP_GAP, unsigned int BATCHSIZE)
 {
 	unsigned int GRID_BLOCKS = cudaState->context_blocks;
@@ -286,7 +255,7 @@ void cuda_scrypt_core(_cudaState *cudaState, int stream, unsigned int N, unsigne
 	dim3 threads(THREADS_PER_WU*WU_PER_BLOCK, 1, 1);
 
 	cudaState->context_kernel->run_kernel(grid, threads, WARPS_PER_BLOCK, cudaState->cuda_id,
-		cudaState->context_streams[stream], cudaState->context_idata[stream], cudaState->context_odata[stream],
+		0, cudaState->context_idata, cudaState->context_odata,
 		N, r, p, BATCHSIZE, LOOKUP_GAP
 	);
 }
@@ -294,49 +263,39 @@ void cuda_scrypt_core(_cudaState *cudaState, int stream, unsigned int N, unsigne
 void cuda_scrypt_DtoH(_cudaState *cudaState, uint8_t *X, int stream, uint32_t size)
 {
 	// copy result from device to host (asynchronously)
-	checkCudaErrors(cudaState->cuda_id, cudaMemcpyAsync(X, cudaState->context_labels[stream], size, cudaMemcpyDeviceToHost, cudaState->context_streams[stream]));
+	checkCudaErrors(cudaState->cuda_id, cudaMemcpyAsync(X, cudaState->context_labels, size, cudaMemcpyDeviceToHost));
 }
 
 void cuda_solutions_DtoH(_cudaState *cudaState, int stream)
 {
 	// copy result from device to host (asynchronously)
-	checkCudaErrors(cudaState->cuda_id, cudaMemcpyAsync(cudaState->context_X[stream], cudaState->context_solutions[stream], 32, cudaMemcpyDeviceToHost, cudaState->context_streams[stream]));
+	checkCudaErrors(cudaState->cuda_id, cudaMemcpy(cudaState->context_X, cudaState->context_solutions, 32, cudaMemcpyDeviceToHost));
 }
 
 void cuda_solutions_HtoD(_cudaState *cudaState, int stream)
 {
 	// copy result from device to host (asynchronously)
-	checkCudaErrors(cudaState->cuda_id, cudaMemcpyAsync(cudaState->context_solutions[stream], cudaState->context_X[stream], 32, cudaMemcpyHostToDevice, cudaState->context_streams[stream]));
+	checkCudaErrors(cudaState->cuda_id, cudaMemcpy(cudaState->context_solutions, cudaState->context_X, 32, cudaMemcpyHostToDevice));
 }
 
 bool cuda_scrypt_sync(struct cgpu_info *cgpu, _cudaState *cudaState, int stream)
 {
-	cudaError_t err;
-	uint32_t wait_us = 0;
-
-	// this call was replaced by the loop below to workaround the high CPU usage issue
-	//err = cudaStreamSynchronize(context_streams[stream][thr_id]);
-
-	while((err = cudaStreamQuery(cudaState->context_streams[stream])) == cudaErrorNotReady) {
-		usleep(50); wait_us+=50;
-	}
-
+	cudaError_t err = cudaStreamSynchronize(0);
 	if (err != cudaSuccess) {
 		if (!g_spacemesh_api_abort_flag) {
-			applog(LOG_ERR, "GPU #%d: CUDA error `%s` while waiting the kernel.", cudaState->cuda_id, cudaGetErrorString(err));
+			applog(LOG_ERR, "GPU #%d: CUDA error `%s` at cuda_scrypt_sync.", cudaState->cuda_id, cudaGetErrorString(err));
 		}
 		return false;
 	}
-
 	return true;
 }
 
 uint64_t* cuda_transferbuffer(_cudaState *cudaState, int stream)
 {
-	return cudaState->context_X[stream];
+	return cudaState->context_X;
 }
 
 uint8_t* cuda_hashbuffer(_cudaState *cudaState, int stream)
 {
-	return cudaState->context_L[stream];
+	return cudaState->context_L;
 }

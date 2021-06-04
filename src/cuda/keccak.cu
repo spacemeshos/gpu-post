@@ -1307,7 +1307,7 @@ extern "C" void pre_keccak512(_cudaState *cudaState, int stream, uint64_t nonce,
 	dim3 block(128);
 	dim3 grid((throughput + 127) / 128);
 
-	cuda_pre_keccak512 << <grid, block, 0, cudaState->context_streams[stream] >> >(cudaState->context_idata[stream], nonce, r);
+	cuda_pre_keccak512 << <grid, block >> >(cudaState->context_idata, nonce, r);
 }
 
 extern "C" void pre_keccak512_1_1(_cudaState *cudaState, int stream, uint64_t nonce, int throughput)
@@ -1315,7 +1315,7 @@ extern "C" void pre_keccak512_1_1(_cudaState *cudaState, int stream, uint64_t no
 	dim3 block(128);
 	dim3 grid((throughput + 127) / 128);
 
-	cuda_pre_keccak512_1_1 << <grid, block, 0, cudaState->context_streams[stream] >> >(cudaState->context_idata[stream], nonce);
+	cuda_pre_keccak512_1_1 << <grid, block >> >(cudaState->context_idata, nonce);
 }
 
 extern "C" void post_keccak512(_cudaState *cudaState, int stream, uint64_t nonce, int throughput, uint32_t hash_len_bits)
@@ -1325,35 +1325,35 @@ extern "C" void post_keccak512(_cudaState *cudaState, int stream, uint64_t nonce
 
 	switch (hash_len_bits) {
 	case 8:
-		cuda_post_keccak512_8 << <grid, block, 0, cudaState->context_streams[stream] >> > ((uint32_t *)cudaState->context_odata[stream], cudaState->context_labels[stream], nonce, cudaState->context_solutions[stream]);
+		cuda_post_keccak512_8 << <grid, block >> > ((uint32_t *)cudaState->context_odata, cudaState->context_labels, nonce, cudaState->context_solutions);
 		break;
 	case 7:
-		cuda_post_keccak512_7 << <grid, block, 0, cudaState->context_streams[stream] >> > ((uint32_t *)cudaState->context_odata[stream], cudaState->context_labels[stream], nonce, cudaState->context_solutions[stream]);
+		cuda_post_keccak512_7 << <grid, block >> > ((uint32_t *)cudaState->context_odata, cudaState->context_labels, nonce, cudaState->context_solutions);
 		break;
 	case 6:
-		cuda_post_keccak512_6 << <grid, block, 0, cudaState->context_streams[stream] >> > ((uint32_t *)cudaState->context_odata[stream], cudaState->context_labels[stream], nonce, cudaState->context_solutions[stream]);
+		cuda_post_keccak512_6 << <grid, block >> > ((uint32_t *)cudaState->context_odata, cudaState->context_labels, nonce, cudaState->context_solutions);
 		break;
 	case 5:
-		cuda_post_keccak512_5 << <grid, block, 0, cudaState->context_streams[stream] >> > ((uint32_t *)cudaState->context_odata[stream], cudaState->context_labels[stream], nonce, cudaState->context_solutions[stream]);
+		cuda_post_keccak512_5 << <grid, block >> > ((uint32_t *)cudaState->context_odata, cudaState->context_labels, nonce, cudaState->context_solutions);
 		break;
 	case 4:
-		cuda_post_keccak512_4 << <grid, block, 0, cudaState->context_streams[stream] >> > ((uint32_t *)cudaState->context_odata[stream], cudaState->context_labels[stream], nonce, cudaState->context_solutions[stream]);
+		cuda_post_keccak512_4 << <grid, block >> > ((uint32_t *)cudaState->context_odata, cudaState->context_labels, nonce, cudaState->context_solutions);
 		break;
 	case 3:
-		cuda_post_keccak512_3 << <grid, block, 0, cudaState->context_streams[stream] >> > ((uint32_t *)cudaState->context_odata[stream], cudaState->context_labels[stream], nonce, cudaState->context_solutions[stream]);
+		cuda_post_keccak512_3 << <grid, block >> > ((uint32_t *)cudaState->context_odata, cudaState->context_labels, nonce, cudaState->context_solutions);
 		break;
 	case 2:
-		cuda_post_keccak512_2 << <grid, block, 0, cudaState->context_streams[stream] >> > ((uint32_t *)cudaState->context_odata[stream], cudaState->context_labels[stream], nonce, cudaState->context_solutions[stream]);
+		cuda_post_keccak512_2 << <grid, block >> > ((uint32_t *)cudaState->context_odata, cudaState->context_labels, nonce, cudaState->context_solutions);
 		break;
 	case 1:
-		cuda_post_keccak512_1 << <grid, block, 0, cudaState->context_streams[stream] >> > ((uint32_t *)cudaState->context_odata[stream], cudaState->context_labels[stream], nonce, cudaState->context_solutions[stream]);
+		cuda_post_keccak512_1 << <grid, block >> > ((uint32_t *)cudaState->context_odata, cudaState->context_labels, nonce, cudaState->context_solutions);
 		break;
 	case 256:
-		cuda_post_keccak512_256 << <grid, block, 0, cudaState->context_streams[stream] >> > ((uint32_t *)cudaState->context_odata[stream], cudaState->context_labels[stream], nonce, cudaState->context_solutions[stream]);
+		cuda_post_keccak512_256 << <grid, block >> > ((uint32_t *)cudaState->context_odata, cudaState->context_labels, nonce, cudaState->context_solutions);
 		break;
 	default:
 		if (hash_len_bits < 256) {
-			cuda_post_keccak512_9_255 << <grid, block, 0, cudaState->context_streams[stream] >> > ((uint32_t *)cudaState->context_odata[stream], cudaState->context_labels[stream], nonce, cudaState->context_solutions[stream], hash_len_bits);
+			cuda_post_keccak512_9_255 << <grid, block >> > ((uint32_t *)cudaState->context_odata, cudaState->context_labels, nonce, cudaState->context_solutions, hash_len_bits);
 		}
 	}
 }
@@ -1363,6 +1363,6 @@ extern "C" void post_labels_copy(_cudaState *cudaState, int stream, int throughp
 	dim3 block(128);
 	dim3 grid((throughput + 127) / 128);
 	if (hash_len_bits > 0 && hash_len_bits <= 256) {
-		cuda_post_labels_copy << <grid, block, 0, cudaState->context_streams[stream] >> > ((uint32_t *)cudaState->context_odata[stream], cudaState->context_labels[stream], hash_len_bits);
+		cuda_post_labels_copy << <grid, block >> > ((uint32_t *)cudaState->context_odata, cudaState->context_labels, hash_len_bits);
 	}
 }

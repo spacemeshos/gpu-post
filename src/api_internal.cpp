@@ -33,6 +33,8 @@ extern "C" void spacemesh_api_init()
 {
 	if (0 == api_inited) {
 		api_inited = 1;
+		const char *disabled = getenv("SPACEMESH_PROVIDERS_DISABLED");
+		const char *dual = getenv("SPACEMESH_DUAL_ENABLED");
 #ifdef WIN32
 		InitializeCriticalSection(&g_spacemesh_api_applog_lock);
 #else
@@ -42,12 +44,18 @@ extern "C" void spacemesh_api_init()
 		memset(s_gpus, 0, sizeof(s_gpus));
 		memset(&s_cpu, 0, sizeof(s_cpu));
 
-#ifdef HAVE_VULKAN
-		g_spacemesh_api_have_vulkan = vulkan_drv.drv_detect(s_gpus, &s_total_devices) > 0;
+#ifdef HAVE_CUDA
+		if (nullptr == disabled || nullptr == strstr(disabled, "cuda")) {
+			g_spacemesh_api_have_cuda = cuda_drv.drv_detect(s_gpus, &s_total_devices) > 0;
+		}
 #endif
 
-#ifdef HAVE_CUDA
-		g_spacemesh_api_have_cuda = cuda_drv.drv_detect(s_gpus, &s_total_devices) > 0;
+#ifdef HAVE_VULKAN
+		if (nullptr == disabled || nullptr == strstr(disabled, "vulkan")) {
+			if (!g_spacemesh_api_have_cuda || (nullptr != dual && atoi(dual) > 0)) {
+				g_spacemesh_api_have_vulkan = vulkan_drv.drv_detect(s_gpus, &s_total_devices) > 0;
+			}
+		}
 #endif
 
 		if (cpu_drv.drv_detect(&s_cpu, NULL) > 0) {
@@ -58,6 +66,7 @@ extern "C" void spacemesh_api_init()
 		for (int i = 0; i < s_total_devices; ++i) {
 			struct cgpu_info *cgpu = &s_gpus[i];
 			cgpu->status = LIFE_INIT;
+			cgpu->id = i;
 
 			if (!cgpu->drv->init(cgpu)) {
 				continue;
@@ -182,11 +191,31 @@ extern "C" int spacemesh_api_get_providers(
 	return current_providers;
 }
 
-extern "C" int opt_logs = 0;
+int opt_logs = 0;
 
 extern "C" void spacemesh_api_logging(int enable)
 {
 	opt_logs = enable;
+}
+
+extern "C" void spacemesh_api_shutdown(void)
+{
+	if (api_inited) {
+		int i;
+		for (i = 0; i < s_total_devices; i++) {
+			if (NULL != s_gpus[i].drv && 0 != (s_gpus[i].drv->type & (SPACEMESH_API_CUDA | SPACEMESH_API_VULKAN))) {
+				if (s_gpus[i].drv->shutdown) {
+					s_gpus[i].drv->shutdown(&s_gpus[i]);
+				}
+			}
+		}
+#ifdef HAVE_VULKAN
+		vulkan_library_shutdown();
+#endif
+		memset(s_gpus, 0, sizeof(s_gpus));
+		memset(&s_cpu, 0, sizeof(s_cpu));
+		api_inited = 0;
+	}
 }
 
 void applog(int prio, const char *fmt, ...)
