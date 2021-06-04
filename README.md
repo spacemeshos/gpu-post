@@ -124,6 +124,20 @@ Run the tests:
 
 ----
 
+## Mixing CUDA and Vulkan
+
+By default, the library does not detect supported Vulkan GPUs if CUDA GPUs are detected. This behavior can be changed using two environment variables:
+```SPACEMESH_DUAL_ENABLED
+	empty or 0 - default behavior
+	1 - detect Vulkan GPUs even if CUDA GPUs are detected
+```
+```SPACEMESH_PROVIDERS_DISABLED
+	empty - default behavior
+	"cuda" - do not detect CUDA GPUs
+	"vulkan" - do not detect Vulkan GPUs
+```
+
+
 ## Runtime Providers Recommendations
 
 The library supports multiple compute providers at runtime. For best performance, use the following providers based on your OS and GPU:
