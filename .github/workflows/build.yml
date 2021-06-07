@@ -1,9 +1,10 @@
 name: Build
 
 on:
-  push
+  push:
   release:
-    types: [published]
+    types:
+      - published
 
 jobs:
   linux:
