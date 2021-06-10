@@ -2,9 +2,9 @@ name: Build
 
 on:
   push:
-  release:
-    types:
-      - published
+  # release:
+  #   types:
+  #     - published
 
 jobs:
   linux:
@@ -37,17 +37,17 @@ jobs:
 
     - run: make
 
-    - name: Rename library
-      run: |
-        REF="${{ github.ref }}"
-        if [[ "$REF" == refs/tags/v* ]]; then
-          mv src/libgpu-setup.so src/libgpu-setup-${REF#refs/tags/v}.so
-        fi
+    # - name: Rename library
+    #   run: |
+    #     REF="${{ github.ref }}"
+    #     if [[ "$REF" == refs/tags/v* ]]; then
+    #       mv src/libgpu-setup.so src/libgpu-setup-${REF#refs/tags/v}.so
+    #     fi
 
     - uses: actions/upload-artifact@v2
       with:
         name: linux
-        path: src/libgpu-setup*.so
+        path: src/libgpu-setup.so
 
     - uses: actions/upload-artifact@v2
       with:
@@ -93,20 +93,20 @@ jobs:
         cmake --build .
       shell: cmd
 
-    - name: Rename library
-      shell: bash
-      run: |
-        REF="${{ github.ref }}"
-        if [[ "$REF" == refs/tags/v* ]]; then
-          mv build/src/gpu-setup.dll build/src/gpu-setup-${REF#refs/tags/v}.dll
-          mv build/src/gpu-setup.lib build/src/gpu-setup-${REF#refs/tags/v}.lib
-        fi
+    # - name: Rename library
+    #   shell: bash
+    #   run: |
+    #     REF="${{ github.ref }}"
+    #     if [[ "$REF" == refs/tags/v* ]]; then
+    #       mv build/src/gpu-setup.dll build/src/gpu-setup-${REF#refs/tags/v}.dll
+    #       mv build/src/gpu-setup.lib build/src/gpu-setup-${REF#refs/tags/v}.lib
+    #     fi
 
     - name: Upload DLL
       uses: actions/upload-artifact@v2
       with:
         name: windows
-        path: build/src/gpu-setup*.dll
+        path: build/src/gpu-setup.dll
 
     - name: Upload test app
       uses: actions/upload-artifact@v2
@@ -118,7 +118,7 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: windows
-        path: build/src/gpu-setup*.lib
+        path: build/src/gpu-setup.lib
 
     - name: Upload api.h
       uses: actions/upload-artifact@v2
@@ -141,18 +141,18 @@ jobs:
 
     - run: make
 
-    - name: Rename library
-      run: |
-        REF="${{ github.ref }}"
-        if [[ "$REF" == refs/tags/v* ]]; then
-          mv src/libgpu-setup.dylib src/libgpu-setup-${REF#refs/tags/v}.dylib
-        fi
+    # - name: Rename library
+    #   run: |
+    #     REF="${{ github.ref }}"
+    #     if [[ "$REF" == refs/tags/v* ]]; then
+    #       mv src/libgpu-setup.dylib src/libgpu-setup-${REF#refs/tags/v}.dylib
+    #     fi
 
     - name: Upload library
       uses: actions/upload-artifact@v2
       with:
         name: macos
-        path: src/libgpu-setup*.dylib
+        path: src/libgpu-setup.dylib
 
     - name: Upload test app
       uses: actions/upload-artifact@v2
