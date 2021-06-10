@@ -80,7 +80,11 @@ extern "C" void spacemesh_api_init()
 extern "C" struct cgpu_info * spacemesh_api_get_gpu(int id)
 {
 	spacemesh_api_init();
-	if (id >= 0 && id < s_total_devices) {
+	if (id < 1) {
+		return nullptr;
+	}
+	id--;
+	if (id < s_total_devices) {
 		return &s_gpus[id];
 	}
 	if (id == s_total_devices && s_cpu.available) {
@@ -168,7 +172,7 @@ extern "C" int spacemesh_api_get_providers(
 			else {
 				providers->compute_api = COMPUTE_API_CLASS_VULKAN;
 			}
-			providers->id = i;
+			providers->id = i + 1;
 			memcpy(providers->model, s_gpus[i].name, min(sizeof(providers->model), sizeof(s_gpus[i].name)));
 			providers->model[sizeof(providers->model) - 1] = 0;
 
@@ -179,7 +183,7 @@ extern "C" int spacemesh_api_get_providers(
 
 	if (s_cpu.available && current_providers < max_providers) {
 		providers->compute_api = COMPUTE_API_CLASS_CPU;
-		providers->id = i;
+		providers->id = i + 1;
 		providers->model[0] = 'C';
 		providers->model[1] = 'P';
 		providers->model[2] = 'U';

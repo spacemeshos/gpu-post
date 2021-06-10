@@ -499,7 +499,7 @@ void do_providers_list()
 		if (spacemesh_api_get_providers(providers, providersCount) == providersCount) {
 			printf("Available POST compute providers:\n");
 			for (int i = 0; i < providersCount; i++) {
-				printf("%3d: [%s] %s\n", i, getProviderClassString(providers[i].compute_api), providers[i].model);
+				printf("%3d: [%s] %s\n", providers[i].id, getProviderClassString(providers[i].compute_api), providers[i].model);
 			}
 		}
 

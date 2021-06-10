@@ -63,7 +63,7 @@ int scryptPositions(
 	cgpu = spacemesh_api_get_gpu(provider_id);
 
 	if (NULL == cgpu) {
-		return SPACEMESH_API_ERROR_INVALID_PARAMETER;
+		return SPACEMESH_API_ERROR_INVALID_PROVIDER_ID;
 	}
 	if (options & SPACEMESH_API_COMPUTE_LEAFS) {
 		if (NULL == out) {
