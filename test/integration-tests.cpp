@@ -140,6 +140,9 @@ int test_variable_label_length()
 		if (ok) {
 			printf("OK\n");
 		}
+		else {
+			return 1;
+		}
 	}
 
 	return 0;
@@ -186,6 +189,9 @@ int test_variable_labels_count()
 			if (ok) {
 				printf("OK\n");
 			}
+			else {
+				return 1;
+			}
 		}
 	}
 
@@ -227,6 +233,9 @@ int test_of_concurrency()
 		if (ok) {
 			printf("OK\n");
 		}
+		else {
+			return 1;
+		}
 	}
 
 	return 0;
@@ -253,6 +262,7 @@ int test_of_cancelation()
 				providers.first->compute(start_pos, start_pos + 127, 1);
 				if (0 != memcmp(providers.first->labels.data(), provider->labels.data() + (start_pos / 8), providers.first->labels.size())) {
 					printf("[%s]: WRONG result for cancel\n", provider->info.model);
+					return 1;
 				}
 				else {
 					printf("[%s]: cancel OK\n", provider->info.model);

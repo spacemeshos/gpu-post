@@ -1,5 +1,6 @@
 #include "test.hpp"
 #include "test-vectors.h"
+#include <memory>
 
 static void printHex(uint8_t *data, uint32_t length)
 {
@@ -13,7 +14,7 @@ static void printHex(uint8_t *data, uint32_t length)
 	}
 }
 
-void do_unit_tests()
+int do_unit_tests()
 {
 	uint32_t input[20]; // align 16
 	int providersCount = spacemesh_api_get_providers(NULL, 0);
@@ -21,8 +22,9 @@ void do_unit_tests()
 	memset(input, 0, sizeof(input));
 
 	if (providersCount > 0) {
-		PostComputeProvider *providers = (PostComputeProvider *)malloc(providersCount * sizeof(PostComputeProvider));
+		std::auto_ptr<PostComputeProvider> providers_holder((PostComputeProvider *)malloc(providersCount * sizeof(PostComputeProvider)));
 		uint8_t hashes[128][32];
+		PostComputeProvider *providers = providers_holder.get();
 
 		if (spacemesh_api_get_providers(providers, providersCount) == providersCount) {
 			int i;
@@ -35,6 +37,7 @@ void do_unit_tests()
 				;
 				if (memcmp(test_vector_hashes, hashes, sizeof(hashes))) {
 					printf("[%s]: hash test WRONG\n", providers[i].model);
+					return 1;
 				}
 				else {
 					printf("[%s]: hash test OK\n", providers[i].model);
@@ -47,6 +50,7 @@ void do_unit_tests()
 						int64_t output_stream_length = unit_test_bit_stream(i, (uint8_t*)hashes, 128, stream, label_length);
 						if (expected_stream_length != output_stream_length) {
 							printf("[%s]: %d bits stream test WRONG\n", providers[i].model, label_length);
+							return 1;
 						}
 						else {
 							printf("[%s]: %d bits stream test OK\n", providers[i].model, label_length);
@@ -56,6 +60,8 @@ void do_unit_tests()
 			}
 		}
 
-		free(providers);
+		return 0;
 	}
+
+	return 1;
 }

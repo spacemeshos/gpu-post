@@ -522,7 +522,9 @@ static int cpu_scrypt_positions(
 
 		gettimeofday(tv_start, NULL);
 
-		*output = 0;
+		if (computeLeafs) {
+			*output = 0;
+		}
 		cgpu->busy = true;
 
 		do {
@@ -557,46 +559,48 @@ static int cpu_scrypt_positions(
 				/* 3: Out = PBKDF2(password, X) */
 				scrypt_pbkdf2_1((uchar*)pdata, 72, cpuState->X, cpuState->chunk_bytes * p, hash, label_total_bytes);
 			}
-			if (use_byte_copy) {
-				memcpy(output, hash, label_full_bytes);
-				output += label_full_bytes;
-			}
-			else {
-				if (label_full_bytes) {
-					if (8 == available) {
-						memcpy(output, hash, label_full_bytes);
-						output += label_full_bytes;
-						output[0] = 0;
-					}
-					else {
-						uint8_t lo_part_mask = (1 << available) - 1;
-						uint8_t lo_part_shift = 8 - available;
-						uint8_t hi_part_shift = available;
-
-						for (int i = 0; i < label_full_bytes; i++) {
-							// get 8 bits
-							label = hash[i];
-							*output++ |= (label & lo_part_mask) << lo_part_shift;
-							*output = label >> hi_part_shift;
-						}
-					}
-				}
-				uint8_t label = hash[label_full_bytes] & label_last_byte_mask;
-				if (label_last_byte_length > available) {
-					uint8_t lo_part_mask = (1 << available) - 1;
-					uint8_t lo_part_shift = 8 - available;
-					*output++ |= (label & lo_part_mask) << lo_part_shift;
-					*output = label >> available;
-					available = 8 - (label_last_byte_length - available);
+			if (computeLeafs) {
+				if (use_byte_copy) {
+					memcpy(output, hash, label_full_bytes);
+					output += label_full_bytes;
 				}
 				else {
-					*output |= label << (8 - available);
-					available -= label_last_byte_length;
-					if (0 == available) {
-						available = 8;
-						output++;
-						if (n < end_position) {
+					if (label_full_bytes) {
+						if (8 == available) {
+							memcpy(output, hash, label_full_bytes);
+							output += label_full_bytes;
 							output[0] = 0;
+						}
+						else {
+							uint8_t lo_part_mask = (1 << available) - 1;
+							uint8_t lo_part_shift = 8 - available;
+							uint8_t hi_part_shift = available;
+
+							for (int i = 0; i < label_full_bytes; i++) {
+								// get 8 bits
+								label = hash[i];
+								*output++ |= (label & lo_part_mask) << lo_part_shift;
+								*output = label >> hi_part_shift;
+							}
+						}
+					}
+					uint8_t label = hash[label_full_bytes] & label_last_byte_mask;
+					if (label_last_byte_length > available) {
+						uint8_t lo_part_mask = (1 << available) - 1;
+						uint8_t lo_part_shift = 8 - available;
+						*output++ |= (label & lo_part_mask) << lo_part_shift;
+						*output = label >> available;
+						available = 8 - (label_last_byte_length - available);
+					}
+					else {
+						*output |= label << (8 - available);
+						available -= label_last_byte_length;
+						if (0 == available) {
+							available = 8;
+							output++;
+							if (n < end_position) {
+								output[0] = 0;
+							}
 						}
 					}
 				}

@@ -3,8 +3,9 @@
 #include <conio.h>
 #endif
 #include "test-vectors.h"
+#include <memory>
 
-void do_unit_tests();
+int do_unit_tests();
 void do_integration_tests();
 int test_variable_label_length();
 int test_variable_labels_count();
@@ -389,7 +390,7 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 	}
 }
 
-void do_test_pow(uint64_t aStartPos, int aLabelsCount, unsigned aDiff, unsigned aSeed, int aProviderId)
+int do_test_pow(uint64_t aStartPos, int aLabelsCount, unsigned aDiff, unsigned aSeed, int aProviderId, uint64_t aSolutionIdx)
 {
 	int providersCount = spacemesh_api_get_providers(NULL, 0);
 
@@ -410,7 +411,8 @@ void do_test_pow(uint64_t aStartPos, int aLabelsCount, unsigned aDiff, unsigned 
 	}
 
 	if (providersCount > 0) {
-		PostComputeProvider *providers = (PostComputeProvider *)malloc(providersCount * sizeof(PostComputeProvider));
+		std::auto_ptr<PostComputeProvider> providers_holder((PostComputeProvider *)malloc(providersCount * sizeof(PostComputeProvider)));
+		PostComputeProvider *providers = providers_holder.get();
 
 		if (spacemesh_api_get_providers(providers, providersCount) == providersCount) {
 			uint64_t idx_solution = -1;
@@ -437,7 +439,7 @@ void do_test_pow(uint64_t aStartPos, int aLabelsCount, unsigned aDiff, unsigned 
 				}
 			}
 			for (int i = 0; i < providersCount; i++) {
-				if (providers[i].compute_api != COMPUTE_API_CLASS_CPU)
+				if (providersCount == 1 || providers[i].compute_api != COMPUTE_API_CLASS_CPU)
 				{
 					if (-1 != aProviderId && aProviderId != providers[i].id) {
 						continue;
@@ -452,6 +454,12 @@ void do_test_pow(uint64_t aStartPos, int aLabelsCount, unsigned aDiff, unsigned 
 						if (-1 != cpu_id) {
 							uint8_t hash[32];
 							scryptPositions(cpu_id, s_id, idx_solution, idx_solution, 256, s_salt, SPACEMESH_API_COMPUTE_LEAFS, hash, 512, 1, 1, NULL, NULL, &hashes_computed, &hashes_per_sec);
+							printf("id: ");
+							print_hex32(s_id);
+							printf("\n");
+							printf("salt: ");
+							print_hex32(s_salt);
+							printf("\n");
 							printf("D: ");
 							print_hex32(D);
 							printf("\n");
@@ -466,11 +474,20 @@ void do_test_pow(uint64_t aStartPos, int aLabelsCount, unsigned aDiff, unsigned 
 					default:
 						printf("error %d, %u hashes, %u h/s\n", status, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
 					}
+					if (aSolutionIdx != 0xffffffffffffffffull) {
+						if (idx_solution != aSolutionIdx) {
+							printf("WRONG solution index %ull, expected %ull\n", idx_solution, aSolutionIdx);
+							return 1;
+						}
+					}
 				}
 			}
+
+			return 0;
 		}
-		free(providers);
 	}
+
+	return 1;
 }
 
 const char * getProviderClassString(ComputeApiClass aClass)
@@ -657,6 +674,9 @@ int main(int argc, char **argv)
 	unsigned srand_seed = 0;
 	bool printDataCompare = false;
 	uint64_t startPos = 0;
+	uint64_t solutionIdx = 0xffffffffffffffff;
+
+	getch();
 
 	if (argc == 1) {
 		print_usage();
@@ -683,12 +703,11 @@ int main(int argc, char **argv)
 		}
 		else if (0 == strcmp(argv[i], "--list") || 0 == strcmp(argv[i], "-l")) {
 			do_providers_list();
-			spacemesh_api_shutdown();
+//			spacemesh_api_shutdown();
 			return 0;
 		}
 		else if (0 == strcmp(argv[i], "--unit-tests") || 0 == strcmp(argv[i], "-u")) {
-			do_unit_tests();
-			return 0;
+			return do_unit_tests();
 		}
 		else if (0 == strcmp(argv[i], "--integration-tests") || 0 == strcmp(argv[i], "-i")) {
 			do_integration_tests();
@@ -757,6 +776,12 @@ int main(int argc, char **argv)
 				startPos = strtoull(argv[i], NULL, 10);
 			}
 		}
+		else if (0 == strcmp(argv[i], "--solution-idx") || 0 == strcmp(argv[i], "-si")) {
+			i++;
+			if (i < argc) {
+				solutionIdx = strtoull(argv[i], NULL, 10);
+			}
+		}
 		else if (0 == strcmp(argv[i], "-id")) {
 			i++;
 			if (i < argc) {
@@ -781,6 +806,12 @@ int main(int argc, char **argv)
 		else if (0 == strcmp(argv[i], "--logs")) {
 			spacemesh_api_logging(1);
 		}
+		else if (0 == strcmp(argv[i], "--false")) {
+			return 1;
+		}
+		else if (0 == strcmp(argv[i], "--true")) {
+			return 0;
+		}
 		else {
 			printf("Unknown options: %s\n", argv[i]);
 		}
@@ -804,7 +835,7 @@ int main(int argc, char **argv)
 	}
 	if (runTestPow) {
 		printf("Test POW: count %u\n", labelsCount);
-		do_test_pow(startPos, labelsCount, powDiff, srand_seed, referenceProvider);
+		do_test_pow(startPos, labelsCount, powDiff, srand_seed, referenceProvider, solutionIdx);
 		return 0;
 	}
 	if (runTestCore) {
