@@ -676,8 +676,6 @@ int main(int argc, char **argv)
 	uint64_t startPos = 0;
 	uint64_t solutionIdx = 0xffffffffffffffff;
 
-	getch();
-
 	if (argc == 1) {
 		print_usage();
 		return 0;
