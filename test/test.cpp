@@ -535,28 +535,28 @@ bool do_test_vector(const TestVector *aTestVector, bool aPrintResult)
 	printf("Check test vector...\n");
 
 	if (providersCount > 0) {
-		PostComputeProvider *providers = (PostComputeProvider *)malloc(providersCount * sizeof(PostComputeProvider));
+		std::auto_ptr<PostComputeProvider> providers_holder((PostComputeProvider *)malloc(providersCount * sizeof(PostComputeProvider)));
+		PostComputeProvider *providers = providers_holder.get();
 
 		if (spacemesh_api_get_providers(providers, providersCount) == providersCount) {
 			for (int i = 0; i < providersCount; i++) {
 				if (providers[i].compute_api == COMPUTE_API_CLASS_CPU) {
 					const size_t labelsBufferSize = (size_t(aTestVector->labelsCount) * size_t(aTestVector->labelSize) + 7ull) / 8ull;
-					uint8_t *out;
 					uint64_t hashes_computed;
 					uint64_t hashes_per_sec;
 					uint64_t idx_solution = -1;
 					uint8_t D[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
-					out = (uint8_t*)calloc(1, labelsBufferSize);
+					std::auto_ptr<uint8_t> out((uint8_t*)calloc(1, labelsBufferSize));
 
-					scryptPositions(providers[i].id, aTestVector->id, 0, aTestVector->labelsCount - 1, aTestVector->labelSize, aTestVector->salt, SPACEMESH_API_COMPUTE_LEAFS, out, 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
+					scryptPositions(providers[i].id, aTestVector->id, 0, aTestVector->labelsCount - 1, aTestVector->labelSize, aTestVector->salt, SPACEMESH_API_COMPUTE_LEAFS, out.get(), 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
 					printf("Test vector: %s: %u hashes, %u h/s\n", providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
 
-					if (0 != memcmp(aTestVector->result, out, labelsBufferSize)) {
+					if (0 != memcmp(aTestVector->result, out.get(), labelsBufferSize)) {
 						printf("WRONG result for label size %d from provider %d [%s]\n", aTestVector->labelSize, i, providers[i].model);
 						if (aPrintResult) {
 							const uint8_t *ref = aTestVector->result;
-							const uint8_t *res = out;
+							const uint8_t *res = out.get();
 							for (size_t i = 0; i < labelsBufferSize / 32; i++) {
 								for (int j = 0; j < 32; j++, ref++, res++) {
 									if (*ref == *res) {
@@ -575,14 +575,10 @@ bool do_test_vector(const TestVector *aTestVector, bool aPrintResult)
 						printf("OK result for label size %d from provider %d [%s]\n", aTestVector->labelSize, i, providers[i].model);
 					}
 
-					free(out);
-
 					break;
 				}
 			}
 		}
-
-		free(providers);
 	}
 	else {
 		printf("There are no POST computation providers available.\n");
