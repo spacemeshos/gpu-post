@@ -164,7 +164,10 @@ jobs:
     #     fi
 
     - name: Copy library
-      run: mv src/libgpu-setup.dylib test/libgpu-setup.dylib
+      run: cp src/libgpu-setup.dylib test/libgpu-setup.dylib
+
+    - name: Fix library import paths
+      run: install_name_tool -add_rpath @loader_path test/libgpu-setup.dylib
 
     - name: Unit tests
       run: test/gpu-setup-test --false
