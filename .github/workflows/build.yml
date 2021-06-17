@@ -111,11 +111,11 @@ jobs:
 
     - name: Copy library
       shell: bash
-      run: cp src/gpu-setup.dll test/gpu-setup.dll
+      run: cp build/src/gpu-setup.dll build/test/gpu-setup.dll
 
     - name: Unit tests
-      run: test/gpu-setup-test --false
-    #   run: test/gpu-setup-test -tp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
+      run: build/test/gpu-setup-test --false
+    #   run: build/test/gpu-setup-test -tp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
 
     - name: Upload DLL
       uses: actions/upload-artifact@v2
