@@ -2,9 +2,9 @@ name: Build
 
 on:
   push:
-  # release:
-  #   types:
-  #     - published
+  release:
+    types:
+      - published
 
 jobs:
   linux:
