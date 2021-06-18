@@ -47,25 +47,25 @@ jobs:
     - name: Copy library
       run: cp src/libgpu-setup.so test/libgpu-setup.so
 
-    - name: Unit tests: Golden vectors
+    - name: Unit tests - Golden vectors
       run: test/gpu-setup-test --test-vector-check
 
-    - name: Unit tests: hash and bitstream
+    - name: Unit tests - hash and bitstream
       run: test/gpu-setup-test --unit-tests
 
-    - name: Unit tests: PoW
+    - name: Unit tests - PoW
       run: test/gpu-setup-test -tp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
 
-    - name: Unit tests: label lengths
+    - name: Unit tests - label lengths
       run: test/gpu-setup-test -il
 
-    - name: Unit tests: labels count
+    - name: Unit tests - labels count
       run: test/gpu-setup-test -in
 
-    - name: Integration tests: concurrency test
+    - name: Integration tests - concurrency test
       run: test/gpu-setup-test -ip
 
-    - name: Integration tests: cancelation test
+    - name: Integration tests - cancelation test
       run: test/gpu-setup-test -ic
 
     - uses: actions/upload-artifact@v2
@@ -130,25 +130,25 @@ jobs:
       shell: bash
       run: cp build/src/gpu-setup.dll build/test/gpu-setup.dll
 
-    - name: Unit tests: Golden vectors
+    - name: Unit tests - Golden vectors
       run: build/test/gpu-setup-test --test-vector-check
 
-    - name: Unit tests: hash and bitstream
+    - name: Unit tests - hash and bitstream
       run: build/test/gpu-setup-test --unit-tests
 
-    - name: Unit tests: PoW
+    - name: Unit tests - PoW
       run: build/test/gpu-setup-test -tp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
 
-    - name: Unit tests: label lengths
+    - name: Unit tests - label lengths
       run: build/test/gpu-setup-test -il
 
-    - name: Unit tests: labels count
+    - name: Unit tests - labels count
       run: build/test/gpu-setup-test -in
 
-    - name: Integration tests: concurrency test
+    - name: Integration tests - concurrency test
       run: build/test/gpu-setup-test -ip
 
-    - name: Integration tests: cancelation test
+    - name: Integration tests - cancelation test
       run: build/test/gpu-setup-test -ic
 
     - name: Upload DLL
@@ -203,25 +203,25 @@ jobs:
     - name: Fix library import paths
       run: install_name_tool -add_rpath @loader_path test/libgpu-setup.dylib
 
-    - name: Unit tests: Golden vectors
+    - name: Unit tests - Golden vectors
       run: test/gpu-setup-test --test-vector-check
 
-    - name: Unit tests: hash and bitstream
+    - name: Unit tests - hash and bitstream
       run: test/gpu-setup-test --unit-tests
 
-    - name: Unit tests: PoW
+    - name: Unit tests - PoW
       run: test/gpu-setup-test -tp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
 
-    - name: Unit tests: label lengths
+    - name: Unit tests - label lengths
       run: test/gpu-setup-test -il
 
-    - name: Unit tests: labels count
+    - name: Unit tests - labels count
       run: test/gpu-setup-test -in
 
-    - name: Integration tests: concurrency test
+    - name: Integration tests - concurrency test
       run: test/gpu-setup-test -ip
 
-    - name: Integration tests: cancelation test
+    - name: Integration tests - cancelation test
       run: test/gpu-setup-test -ic
 
     - name: Upload library
