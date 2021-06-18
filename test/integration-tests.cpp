@@ -86,7 +86,7 @@ static std::pair<Provider::Ptr, Provider::Vector> getProviders()
 
 		if (spacemesh_api_get_providers(providers.data(), providersCount) == providersCount) {
 			for (int i = 0; i < providersCount; i++) {
-				Provider::Ptr provider(new Provider(i, providers[i]));
+				Provider::Ptr provider(new Provider(providers[i].id, providers[i]));
 				if (providers[i].compute_api == COMPUTE_API_CLASS_CPU) {
 					cpu = provider;
 				}
@@ -102,19 +102,20 @@ static std::pair<Provider::Ptr, Provider::Vector> getProviders()
 
 int test_variable_label_length()
 {
+	static const uint32_t cLabelsCount = 256;
 	std::pair<Provider::Ptr, Provider::Vector> providers{getProviders()};
 
 	for (uint32_t label_length = 1; label_length <= 256; label_length++) {
 		bool ok = true;
 		printf("Label length %d: ", label_length);
 		if (providers.first) {
-			if (SPACEMESH_API_ERROR_NONE != providers.first->compute(0, 32768 - 1, label_length)) {
+			if (SPACEMESH_API_ERROR_NONE != providers.first->compute(0, cLabelsCount - 1, label_length)) {
 				printf("[CPU]: Error compute labels\n");
-				return -1;
+				return 1;
 			}
 		}
 		for (auto provider : providers.second) {
-			if (SPACEMESH_API_ERROR_NONE != provider->compute(0, 32768 - 1, label_length)) {
+			if (SPACEMESH_API_ERROR_NONE != provider->compute(0, cLabelsCount - 1, label_length)) {
 				printf("[%s]: Error compute labels\n", provider->info.model);
 				ok = false;
 			}
