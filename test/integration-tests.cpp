@@ -30,6 +30,7 @@ struct Provider
 		memset(salt, 0, sizeof(salt));
 	}
 
+	/* compute labels */
 	int compute(uint64_t start_pos, uint64_t end_pos, uint32_t label_length) {
 		uint64_t idx_solution = -1;
 		uint8_t D[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -39,6 +40,7 @@ struct Provider
 		return scryptPositions(provider_id, id, start_pos, end_pos, label_length, salt, SPACEMESH_API_COMPUTE_LEAFS, labels.data(), 512, 1, 1, D, &idx_solution, &hashes_computed, NULL);
 	}
 
+	/* compute labels in separate thread */
 	void post(uint64_t start_pos, uint64_t end_pos, uint32_t label_length, std::atomic_uint32_t *counter) {
 		_start_pos = start_pos;
 		_end_pos = end_pos;
@@ -52,6 +54,7 @@ struct Provider
 		}
 	}
 
+	/* compare computed labels by this provider with computed labels by aRef provider */
 	bool equals(const Provider &aRef) const {
 		if (labels.size() == aRef.labels.size()) {
 			return 0 == memcmp(labels.data(), aRef.labels.data(), labels.size());
@@ -59,6 +62,7 @@ struct Provider
 		return false;
 	}
 
+	/* thread proc */
 	void background() {
 		compute(_start_pos, _end_pos, _label_length);
 		if (_counter) {
@@ -67,6 +71,7 @@ struct Provider
 		}
 	}
 
+	/* wait for thread end */
 	void join() {
 		if (_thread.joinable()) {
 			_thread.join();
@@ -74,6 +79,7 @@ struct Provider
 	}
 };
 
+/* get providers list */
 static std::pair<Provider::Ptr, Provider::Vector> getProviders()
 {
 	Provider::Ptr cpu;
@@ -86,7 +92,7 @@ static std::pair<Provider::Ptr, Provider::Vector> getProviders()
 
 		if (spacemesh_api_get_providers(providers.data(), providersCount) == providersCount) {
 			for (int i = 0; i < providersCount; i++) {
-				Provider::Ptr provider(new Provider(i, providers[i]));
+				Provider::Ptr provider(new Provider(providers[i].id, providers[i]));
 				if (providers[i].compute_api == COMPUTE_API_CLASS_CPU) {
 					cpu = provider;
 				}
@@ -100,21 +106,23 @@ static std::pair<Provider::Ptr, Provider::Vector> getProviders()
 	return {cpu, gpus};
 }
 
+/* compute labels with varios length and compare with others providers */
 int test_variable_label_length()
 {
+	static const uint32_t cLabelsCount = 256;
 	std::pair<Provider::Ptr, Provider::Vector> providers{getProviders()};
 
 	for (uint32_t label_length = 1; label_length <= 256; label_length++) {
 		bool ok = true;
 		printf("Label length %d: ", label_length);
 		if (providers.first) {
-			if (SPACEMESH_API_ERROR_NONE != providers.first->compute(0, 32768 - 1, label_length)) {
+			if (SPACEMESH_API_ERROR_NONE != providers.first->compute(0, cLabelsCount - 1, label_length)) {
 				printf("[CPU]: Error compute labels\n");
-				return -1;
+				return 1;
 			}
 		}
 		for (auto provider : providers.second) {
-			if (SPACEMESH_API_ERROR_NONE != provider->compute(0, 32768 - 1, label_length)) {
+			if (SPACEMESH_API_ERROR_NONE != provider->compute(0, cLabelsCount - 1, label_length)) {
 				printf("[%s]: Error compute labels\n", provider->info.model);
 				ok = false;
 			}
@@ -140,17 +148,22 @@ int test_variable_label_length()
 		if (ok) {
 			printf("OK\n");
 		}
+		else {
+			return 1;
+		}
 	}
 
 	return 0;
 }
 
+/* compute varios labels count with varios length and compare with others providers */
 int test_variable_labels_count()
 {
+	static const uint32_t cLabelsCount = 16;
 	std::pair<Provider::Ptr, Provider::Vector> providers{ getProviders() };
 
 	for (uint32_t label_length = 1; label_length <= 256; label_length++) {
-		for (uint32_t labels_count = 1; labels_count <= 256; labels_count++) {
+		for (uint32_t labels_count = 1; labels_count <= cLabelsCount; labels_count++) {
 			bool ok = true;
 			printf("Label length %d, labels count: %d ", label_length, labels_count);
 			if (providers.first) {
@@ -186,12 +199,16 @@ int test_variable_labels_count()
 			if (ok) {
 				printf("OK\n");
 			}
+			else {
+				return 1;
+			}
 		}
 	}
 
 	return 0;
 }
 
+/* run all providers in parallel and compare computed labels */
 int test_of_concurrency()
 {
 	std::pair<Provider::Ptr, Provider::Vector> providers{ getProviders() };
@@ -227,11 +244,15 @@ int test_of_concurrency()
 		if (ok) {
 			printf("OK\n");
 		}
+		else {
+			return 1;
+		}
 	}
 
 	return 0;
 }
 
+/* run labels computation for provider, cancel it and check if tail result is right */
 int test_of_cancelation()
 {
 	std::pair<Provider::Ptr, Provider::Vector> providers{ getProviders() };
@@ -253,6 +274,7 @@ int test_of_cancelation()
 				providers.first->compute(start_pos, start_pos + 127, 1);
 				if (0 != memcmp(providers.first->labels.data(), provider->labels.data() + (start_pos / 8), providers.first->labels.size())) {
 					printf("[%s]: WRONG result for cancel\n", provider->info.model);
+					return 1;
 				}
 				else {
 					printf("[%s]: cancel OK\n", provider->info.model);
@@ -264,6 +286,7 @@ int test_of_cancelation()
 	return 0;
 }
 
+/* run all integration tests */
 void do_integration_tests()
 {
 	// test variable label length

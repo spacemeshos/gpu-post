@@ -3,8 +3,9 @@
 #include <conio.h>
 #endif
 #include "test-vectors.h"
+#include <memory>
 
-void do_unit_tests();
+int do_unit_tests();
 void do_integration_tests();
 int test_variable_label_length();
 int test_variable_labels_count();
@@ -19,6 +20,7 @@ static uint8_t s_salt[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 
 static const uint8_t zeros[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
+/* find binary substring */
 void * memstr(const void *src, size_t length, const uint8_t *token, int token_length)
 {
 	for (const uint8_t *cp = (const uint8_t *)src; length >= token_length; cp++, length--) {
@@ -29,6 +31,7 @@ void * memstr(const void *src, size_t length, const uint8_t *token, int token_le
 	return 0;
 }
 
+/* print 32 bytes binary in hex */
 void print_hex32(const uint8_t *aSrc)
 {
 	printf("0x");
@@ -37,11 +40,13 @@ void print_hex32(const uint8_t *aSrc)
 	}
 }
 
+/* check hex digits */
 inline bool isHexDigits(char aChar)
 {
 	return (aChar >= '0' && aChar <= '9') || (aChar >= 'a' && aChar <= 'f') || (aChar >= 'A' && aChar <= 'F');
 }
 
+/* convert hex char to int */
 inline char hexToInt(char aChar)
 {
 	if (aChar >= '0' && aChar <= '9') {
@@ -56,6 +61,7 @@ inline char hexToInt(char aChar)
 	return 0;
 }
 
+/* convert hex to bin */
 int hex2bin(const char *aSrc, unsigned char *aDst, size_t aDstLen)
 {
 	if (aSrc[0] == '0' && aSrc[1] == 'x') {
@@ -80,6 +86,8 @@ int hex2bin(const char *aSrc, unsigned char *aDst, size_t aDstLen)
 	}
 	return -1;
 }
+
+/* do  providers benchmark */
 void do_benchmark(int aLabelSize, int aLabelsCount)
 {
 	uint8_t id[32];
@@ -119,6 +127,7 @@ void do_benchmark(int aLabelSize, int aLabelsCount)
 	}
 }
 
+/* test labers computation */
 void do_test(int aLabelSize, int aLabelsCount, int aReferenceProvider, bool aPrintResult)
 {
 	int referenceLabelsCount = aLabelsCount;
@@ -389,7 +398,8 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 	}
 }
 
-void do_test_pow(uint64_t aStartPos, int aLabelsCount, unsigned aDiff, unsigned aSeed, int aProviderId)
+/* test PoW */
+int do_test_pow(uint64_t aStartPos, int aLabelsCount, unsigned aDiff, unsigned aSeed, int aProviderId, uint64_t aSolutionIdx)
 {
 	int providersCount = spacemesh_api_get_providers(NULL, 0);
 
@@ -410,7 +420,8 @@ void do_test_pow(uint64_t aStartPos, int aLabelsCount, unsigned aDiff, unsigned 
 	}
 
 	if (providersCount > 0) {
-		PostComputeProvider *providers = (PostComputeProvider *)malloc(providersCount * sizeof(PostComputeProvider));
+		std::unique_ptr<PostComputeProvider> providers_holder((PostComputeProvider *)malloc(providersCount * sizeof(PostComputeProvider)));
+		PostComputeProvider *providers = providers_holder.get();
 
 		if (spacemesh_api_get_providers(providers, providersCount) == providersCount) {
 			uint64_t idx_solution = -1;
@@ -437,7 +448,7 @@ void do_test_pow(uint64_t aStartPos, int aLabelsCount, unsigned aDiff, unsigned 
 				}
 			}
 			for (int i = 0; i < providersCount; i++) {
-				if (providers[i].compute_api != COMPUTE_API_CLASS_CPU)
+				if (providersCount == 1 || providers[i].compute_api != COMPUTE_API_CLASS_CPU)
 				{
 					if (-1 != aProviderId && aProviderId != providers[i].id) {
 						continue;
@@ -452,6 +463,12 @@ void do_test_pow(uint64_t aStartPos, int aLabelsCount, unsigned aDiff, unsigned 
 						if (-1 != cpu_id) {
 							uint8_t hash[32];
 							scryptPositions(cpu_id, s_id, idx_solution, idx_solution, 256, s_salt, SPACEMESH_API_COMPUTE_LEAFS, hash, 512, 1, 1, NULL, NULL, &hashes_computed, &hashes_per_sec);
+							printf("id: ");
+							print_hex32(s_id);
+							printf("\n");
+							printf("salt: ");
+							print_hex32(s_salt);
+							printf("\n");
 							printf("D: ");
 							print_hex32(D);
 							printf("\n");
@@ -466,13 +483,23 @@ void do_test_pow(uint64_t aStartPos, int aLabelsCount, unsigned aDiff, unsigned 
 					default:
 						printf("error %d, %u hashes, %u h/s\n", status, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
 					}
+					if (aSolutionIdx != 0xffffffffffffffffull) {
+						if (idx_solution != aSolutionIdx) {
+							printf("WRONG solution index %ull, expected %ull\n", idx_solution, aSolutionIdx);
+							return 1;
+						}
+					}
 				}
 			}
+
+			return 0;
 		}
-		free(providers);
 	}
+
+	return 1;
 }
 
+/* get string representation of compute provider class */
 const char * getProviderClassString(ComputeApiClass aClass)
 {
 	switch (aClass) {
@@ -489,6 +516,7 @@ const char * getProviderClassString(ComputeApiClass aClass)
 	}
 }
 
+/* show providers list */
 void do_providers_list()
 {
 	int providersCount = spacemesh_api_get_providers(NULL, 0);
@@ -510,6 +538,7 @@ void do_providers_list()
 	}
 }
 
+/* test with golden vector */
 bool do_test_vector(const TestVector *aTestVector, bool aPrintResult)
 {
 	bool ok = false;
@@ -518,28 +547,28 @@ bool do_test_vector(const TestVector *aTestVector, bool aPrintResult)
 	printf("Check test vector...\n");
 
 	if (providersCount > 0) {
-		PostComputeProvider *providers = (PostComputeProvider *)malloc(providersCount * sizeof(PostComputeProvider));
+		std::unique_ptr<PostComputeProvider> providers_holder((PostComputeProvider *)malloc(providersCount * sizeof(PostComputeProvider)));
+		PostComputeProvider *providers = providers_holder.get();
 
 		if (spacemesh_api_get_providers(providers, providersCount) == providersCount) {
 			for (int i = 0; i < providersCount; i++) {
 				if (providers[i].compute_api == COMPUTE_API_CLASS_CPU) {
 					const size_t labelsBufferSize = (size_t(aTestVector->labelsCount) * size_t(aTestVector->labelSize) + 7ull) / 8ull;
-					uint8_t *out;
 					uint64_t hashes_computed;
 					uint64_t hashes_per_sec;
 					uint64_t idx_solution = -1;
 					uint8_t D[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
-					out = (uint8_t*)calloc(1, labelsBufferSize);
+					std::unique_ptr<uint8_t> out((uint8_t*)calloc(1, labelsBufferSize));
 
-					scryptPositions(providers[i].id, aTestVector->id, 0, aTestVector->labelsCount - 1, aTestVector->labelSize, aTestVector->salt, SPACEMESH_API_COMPUTE_LEAFS, out, 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
+					scryptPositions(providers[i].id, aTestVector->id, 0, aTestVector->labelsCount - 1, aTestVector->labelSize, aTestVector->salt, SPACEMESH_API_COMPUTE_LEAFS, out.get(), 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
 					printf("Test vector: %s: %u hashes, %u h/s\n", providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
 
-					if (0 != memcmp(aTestVector->result, out, labelsBufferSize)) {
+					if (0 != memcmp(aTestVector->result, out.get(), labelsBufferSize)) {
 						printf("WRONG result for label size %d from provider %d [%s]\n", aTestVector->labelSize, i, providers[i].model);
 						if (aPrintResult) {
 							const uint8_t *ref = aTestVector->result;
-							const uint8_t *res = out;
+							const uint8_t *res = out.get();
 							for (size_t i = 0; i < labelsBufferSize / 32; i++) {
 								for (int j = 0; j < 32; j++, ref++, res++) {
 									if (*ref == *res) {
@@ -558,14 +587,10 @@ bool do_test_vector(const TestVector *aTestVector, bool aPrintResult)
 						printf("OK result for label size %d from provider %d [%s]\n", aTestVector->labelSize, i, providers[i].model);
 					}
 
-					free(out);
-
 					break;
 				}
 			}
 		}
-
-		free(providers);
 	}
 	else {
 		printf("There are no POST computation providers available.\n");
@@ -574,6 +599,7 @@ bool do_test_vector(const TestVector *aTestVector, bool aPrintResult)
 	return ok;
 }
 
+/* create golden vector */
 void create_test_vector()
 {
 	int providersCount = spacemesh_api_get_providers(NULL, 0);
@@ -657,6 +683,7 @@ int main(int argc, char **argv)
 	unsigned srand_seed = 0;
 	bool printDataCompare = false;
 	uint64_t startPos = 0;
+	uint64_t solutionIdx = 0xffffffffffffffff;
 
 	if (argc == 1) {
 		print_usage();
@@ -683,12 +710,11 @@ int main(int argc, char **argv)
 		}
 		else if (0 == strcmp(argv[i], "--list") || 0 == strcmp(argv[i], "-l")) {
 			do_providers_list();
-			spacemesh_api_shutdown();
+//			spacemesh_api_shutdown();
 			return 0;
 		}
 		else if (0 == strcmp(argv[i], "--unit-tests") || 0 == strcmp(argv[i], "-u")) {
-			do_unit_tests();
-			return 0;
+			return do_unit_tests();
 		}
 		else if (0 == strcmp(argv[i], "--integration-tests") || 0 == strcmp(argv[i], "-i")) {
 			do_integration_tests();
@@ -757,6 +783,12 @@ int main(int argc, char **argv)
 				startPos = strtoull(argv[i], NULL, 10);
 			}
 		}
+		else if (0 == strcmp(argv[i], "--solution-idx") || 0 == strcmp(argv[i], "-si")) {
+			i++;
+			if (i < argc) {
+				solutionIdx = strtoull(argv[i], NULL, 10);
+			}
+		}
 		else if (0 == strcmp(argv[i], "-id")) {
 			i++;
 			if (i < argc) {
@@ -781,6 +813,12 @@ int main(int argc, char **argv)
 		else if (0 == strcmp(argv[i], "--logs")) {
 			spacemesh_api_logging(1);
 		}
+		else if (0 == strcmp(argv[i], "--false")) {
+			return 1;
+		}
+		else if (0 == strcmp(argv[i], "--true")) {
+			return 0;
+		}
 		else {
 			printf("Unknown options: %s\n", argv[i]);
 		}
@@ -804,7 +842,7 @@ int main(int argc, char **argv)
 	}
 	if (runTestPow) {
 		printf("Test POW: count %u\n", labelsCount);
-		do_test_pow(startPos, labelsCount, powDiff, srand_seed, referenceProvider);
+		do_test_pow(startPos, labelsCount, powDiff, srand_seed, referenceProvider, solutionIdx);
 		return 0;
 	}
 	if (runTestCore) {

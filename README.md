@@ -3,18 +3,18 @@
 [![Build](https://github.com/spacemeshos/gpu-post/actions/workflows/build.yml/badge.svg)](https://github.com/spacemeshos/gpu-post/actions/workflows/build.yml)
 
 ## Current functionality
-A c libraray implementing the POST API setup method for general-purpose CPUs and for CUDA and Vulkan compute processors.
+A c library implementing the POST API setup method for general-purpose CPUs and for CUDA and Vulkan compute processors.
 
 ## Runtime System Requirements
 Windows 10, macOS or Ubuntu.
 One or more of the following processors:
-- A GPU and drivers with CUDA 11.0 support such as a modern Nvidia GPU and Nvidia drivers versoin R450 or later.
-- A GPU and drivers with Vulkan 1.2 suppport such as a modern AMD, Apple M1 processor, and Intel GPUs.
+- A GPU and drivers with CUDA 11.0 support such as a modern Nvidia GPU and Nvidia drivers version R450 or later.
+- A GPU and drivers with Vulkan 1.2 support such as a modern AMD, Apple M1 processor, and Intel GPUs.
 - A x86-64 cpu such as AMD or Intel cpus.
 
 
 
-- Both discrete and on-board GPUs are supported as long as they support the minimum CUDA or Vulkan runtime vesion.
+- Both discrete and on-board GPUs are supported as long as they support the minimum CUDA or Vulkan runtime version.
 - We currently provide release binaries and build instructions for Ubuntu 20.04 but the library can be built on other Linux distros for usage on these systems.
 
 ---
@@ -78,7 +78,7 @@ SPACEMESHVULKAN "Build with Vulkan support" default: ON
 
 ## Building
 
-To build the library with full support for both CUDA and Vulkan on Windows or on Linux use a system with an Nvidia GPU and drivers. Otherwie, turn off CUDA support and build for Vulkan only. Building on macOS only supports Vulkan.
+To build the library with full support for both CUDA and Vulkan on Windows or on Linux use a system with an Nvidia GPU and drivers. Otherwise, turn off CUDA support and build for Vulkan only. Building on macOS only supports Vulkan.
 
 ### Windows
 1. Open project folder into Visual Studio 2017: `File -> Open -> Folder`.
@@ -205,7 +205,7 @@ SPACEMESHAPI int spacemesh_api_get_providers(
 ---
 
 ## Linking
-1. Download relase artifacts from a github release in this repo for your platform or build the artifects from source code.
+1. Download release artifacts from a github release in this repo for your platform or build the artifacts from source code.
 1. Copy all artifacts to your project resources directory. The files should be included in your app's runtime resources.
 1. Use api.h to link the library from your code.
 
