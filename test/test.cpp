@@ -20,6 +20,7 @@ static uint8_t s_salt[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 
 static const uint8_t zeros[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
+/* find binary substring */
 void * memstr(const void *src, size_t length, const uint8_t *token, int token_length)
 {
 	for (const uint8_t *cp = (const uint8_t *)src; length >= token_length; cp++, length--) {
@@ -30,6 +31,7 @@ void * memstr(const void *src, size_t length, const uint8_t *token, int token_le
 	return 0;
 }
 
+/* print 32 bytes binary in hex */
 void print_hex32(const uint8_t *aSrc)
 {
 	printf("0x");
@@ -38,11 +40,13 @@ void print_hex32(const uint8_t *aSrc)
 	}
 }
 
+/* check hex digits */
 inline bool isHexDigits(char aChar)
 {
 	return (aChar >= '0' && aChar <= '9') || (aChar >= 'a' && aChar <= 'f') || (aChar >= 'A' && aChar <= 'F');
 }
 
+/* convert hex char to int */
 inline char hexToInt(char aChar)
 {
 	if (aChar >= '0' && aChar <= '9') {
@@ -57,6 +61,7 @@ inline char hexToInt(char aChar)
 	return 0;
 }
 
+/* convert hex to bin */
 int hex2bin(const char *aSrc, unsigned char *aDst, size_t aDstLen)
 {
 	if (aSrc[0] == '0' && aSrc[1] == 'x') {
@@ -81,6 +86,8 @@ int hex2bin(const char *aSrc, unsigned char *aDst, size_t aDstLen)
 	}
 	return -1;
 }
+
+/* do  providers benchmark */
 void do_benchmark(int aLabelSize, int aLabelsCount)
 {
 	uint8_t id[32];
@@ -120,6 +127,7 @@ void do_benchmark(int aLabelSize, int aLabelsCount)
 	}
 }
 
+/* test labers computation */
 void do_test(int aLabelSize, int aLabelsCount, int aReferenceProvider, bool aPrintResult)
 {
 	int referenceLabelsCount = aLabelsCount;
@@ -390,6 +398,7 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 	}
 }
 
+/* test PoW */
 int do_test_pow(uint64_t aStartPos, int aLabelsCount, unsigned aDiff, unsigned aSeed, int aProviderId, uint64_t aSolutionIdx)
 {
 	int providersCount = spacemesh_api_get_providers(NULL, 0);
@@ -490,6 +499,7 @@ int do_test_pow(uint64_t aStartPos, int aLabelsCount, unsigned aDiff, unsigned a
 	return 1;
 }
 
+/* get string representation of compute provider class */
 const char * getProviderClassString(ComputeApiClass aClass)
 {
 	switch (aClass) {
@@ -506,6 +516,7 @@ const char * getProviderClassString(ComputeApiClass aClass)
 	}
 }
 
+/* show providers list */
 void do_providers_list()
 {
 	int providersCount = spacemesh_api_get_providers(NULL, 0);
@@ -527,6 +538,7 @@ void do_providers_list()
 	}
 }
 
+/* test with golden vector */
 bool do_test_vector(const TestVector *aTestVector, bool aPrintResult)
 {
 	bool ok = false;
@@ -587,6 +599,7 @@ bool do_test_vector(const TestVector *aTestVector, bool aPrintResult)
 	return ok;
 }
 
+/* create golden vector */
 void create_test_vector()
 {
 	int providersCount = spacemesh_api_get_providers(NULL, 0);

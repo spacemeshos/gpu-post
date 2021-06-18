@@ -2,6 +2,7 @@
 #include "test-vectors.h"
 #include <memory>
 
+/* print bin data in hex */
 static void printHex(uint8_t *data, uint32_t length)
 {
 	while (length >= 32) {
@@ -14,6 +15,7 @@ static void printHex(uint8_t *data, uint32_t length)
 	}
 }
 
+/* test hash computation and labels serialize  */
 int do_unit_tests()
 {
 	uint32_t input[20]; // align 16
