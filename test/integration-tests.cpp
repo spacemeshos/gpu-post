@@ -151,10 +151,11 @@ int test_variable_label_length()
 
 int test_variable_labels_count()
 {
+	static const uint32_t cLabelsCount = 16;
 	std::pair<Provider::Ptr, Provider::Vector> providers{ getProviders() };
 
 	for (uint32_t label_length = 1; label_length <= 256; label_length++) {
-		for (uint32_t labels_count = 1; labels_count <= 256; labels_count++) {
+		for (uint32_t labels_count = 1; labels_count <= cLabelsCount; labels_count++) {
 			bool ok = true;
 			printf("Label length %d, labels count: %d ", label_length, labels_count);
 			if (providers.first) {

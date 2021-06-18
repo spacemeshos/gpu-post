@@ -30,7 +30,7 @@ int do_unit_tests()
 			int i;
 			for (i = 0; i < providersCount; i++) {
 				memset(hashes, 0, sizeof(hashes));
-				if (128 != unit_test_hash(i, (uint8_t*)input, (uint8_t*)hashes)) {
+				if (128 != unit_test_hash(providers[i].id, (uint8_t*)input, (uint8_t*)hashes)) {
 					printf("[%s]: error compute hashes\n", providers[i].model);
 					continue;
 				}
@@ -47,7 +47,7 @@ int do_unit_tests()
 					for (uint32_t label_length = 1; label_length <= 256; label_length++) {
 						int64_t expected_stream_length = (128 * label_length + 7) / 8;
 						memset(stream, 0, sizeof(stream));
-						int64_t output_stream_length = unit_test_bit_stream(i, (uint8_t*)hashes, 128, stream, label_length);
+						int64_t output_stream_length = unit_test_bit_stream(providers[i].id, (uint8_t*)hashes, 128, stream, label_length);
 						if (expected_stream_length != output_stream_length) {
 							printf("[%s]: %d bits stream test WRONG\n", providers[i].model, label_length);
 							return 1;
