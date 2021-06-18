@@ -411,7 +411,7 @@ int do_test_pow(uint64_t aStartPos, int aLabelsCount, unsigned aDiff, unsigned a
 	}
 
 	if (providersCount > 0) {
-		std::auto_ptr<PostComputeProvider> providers_holder((PostComputeProvider *)malloc(providersCount * sizeof(PostComputeProvider)));
+		std::unique_ptr<PostComputeProvider> providers_holder((PostComputeProvider *)malloc(providersCount * sizeof(PostComputeProvider)));
 		PostComputeProvider *providers = providers_holder.get();
 
 		if (spacemesh_api_get_providers(providers, providersCount) == providersCount) {
@@ -535,7 +535,7 @@ bool do_test_vector(const TestVector *aTestVector, bool aPrintResult)
 	printf("Check test vector...\n");
 
 	if (providersCount > 0) {
-		std::auto_ptr<PostComputeProvider> providers_holder((PostComputeProvider *)malloc(providersCount * sizeof(PostComputeProvider)));
+		std::unique_ptr<PostComputeProvider> providers_holder((PostComputeProvider *)malloc(providersCount * sizeof(PostComputeProvider)));
 		PostComputeProvider *providers = providers_holder.get();
 
 		if (spacemesh_api_get_providers(providers, providersCount) == providersCount) {
@@ -547,7 +547,7 @@ bool do_test_vector(const TestVector *aTestVector, bool aPrintResult)
 					uint64_t idx_solution = -1;
 					uint8_t D[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
-					std::auto_ptr<uint8_t> out((uint8_t*)calloc(1, labelsBufferSize));
+					std::unique_ptr<uint8_t> out((uint8_t*)calloc(1, labelsBufferSize));
 
 					scryptPositions(providers[i].id, aTestVector->id, 0, aTestVector->labelsCount - 1, aTestVector->labelSize, aTestVector->salt, SPACEMESH_API_COMPUTE_LEAFS, out.get(), 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
 					printf("Test vector: %s: %u hashes, %u h/s\n", providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);

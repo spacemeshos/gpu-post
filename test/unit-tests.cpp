@@ -22,7 +22,7 @@ int do_unit_tests()
 	memset(input, 0, sizeof(input));
 
 	if (providersCount > 0) {
-		std::auto_ptr<PostComputeProvider> providers_holder((PostComputeProvider *)malloc(providersCount * sizeof(PostComputeProvider)));
+		std::unique_ptr<PostComputeProvider> providers_holder((PostComputeProvider *)malloc(providersCount * sizeof(PostComputeProvider)));
 		uint8_t hashes[128][32];
 		PostComputeProvider *providers = providers_holder.get();
 
