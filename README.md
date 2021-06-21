@@ -255,14 +255,19 @@ Integration test of the basic library use case in a Spacemesh full node to gener
 
 ---
 
-## Benchmarking
+## Community Benchmarks
 
 ```bash
-/build/test/.gpu-setup-test -b
+gpu-setup-test -b -n 2000000
 ```
+
+| Date       	| Reporter 	| Release  	| Compute Provider | OS & CPU            	| Driver                                  	| kh/s |
+|------------	|----------	|-----------	|----------------------------------	|---------------------	|----------------------------------------	|-------|
+| 06/21/2021 	| Obsidian   	| v0.1.20 	| RTX 2080ti 11GB @ stock (1350mhz / 7000mhz) | Windows 10 Pro v20H2, Build 19042.985,  Intel i7-6700K @ 4.6ghz (HT enabled: 4c/8t) |   Nvidia 466.11 | 2560  
+
 ---
 
-## Initial Benchmarks
+## Prerelease Benchmarks
 
 Scrypt Benchmarks (n=512, r=1, p=1) 1 byte per leaf, batch size leaves per API call.
 
@@ -293,6 +298,7 @@ Scrypt Benchmarks (n=512, r=1, p=1) 1 byte per leaf, batch size leaves per API c
 | 04/21/2020 	| avive   	| sm-scrypt 	| Nvidia RTX 2070 Super, 8GB    | Ubuntu 20.04, Driver 460.73.01  | CUDA optimized prototype   	     	|  2038 | 2.038
 
 ---
+
 
 ## 3rd Party Vulkan and CUDA Benchmarks
 The library performance on a GPU depends on the GPU's CUDA and Vulkan performance. The following benchmarks are available from geekbench:
