@@ -133,7 +133,7 @@ Run the tests:
 
 ### Linux Configuration
 1. Set execute permissions. e.g. `chmod a+x gpu-setup-test`
-2. Add the test app's path to the dynamic lib search path, e.g. `export DYLD_LIBRARY_PATH=.`
+2. Add the test app's path to the dynamic lib search path, e.g. `export LD_LIBRARY_PATH=.`
 
 Run from the console to print usage:
 
