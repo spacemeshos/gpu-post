@@ -267,6 +267,9 @@ gpu-setup-test -b -n 2000000
 | 06/22/2021     | Scerbera       | v0.1.20     | Gergorce RTX 3090 - Gigabyte Vision OC - Core Clock 1250MHz - Memory clock 2663MHz | AMD 5950x Windows 10 |   Nvidia 460.89 | 302
 | 06/22/2021 	| Scerbera   	| v0.1.20 	| Gergorce RTX 2060 SUPER | Windows 10 |   Nvidia 466.11 | 1.7  
 | 06/22/2021 	| Scerbera   	| v0.1.20 	| AMD Radeon Pro WX 7100 | Windows 10 |   Nvidia 466.11 | 0.88 
+| 06/22/2021    | Scerbera      | v0.1.20       | RTX 3070 - Various models - Core Clock 1550MHz - Memory clock 1975MHz | Intel i3-9100F Windows 10 |   Nvidia 460.89 | 209-241
+| 06/22/2021     | Scerbera       | v0.1.20     | RTX 3060Ti - Various models - Core Clock 1550MHz - Memory clock 1975MHz | Intel i5-7600K Windows 10 |   Nvidia 460.89 | 154-177
+| 06/22/2021     | Scerbera       | v0.1.20     | RTX 3080 - Various models - Core Clock 1500MHz - Memory clock 2550MHz | Intel i5-7600K Windows 10 |   Nvidia 460.89 | 151-171
 
 ---
 
