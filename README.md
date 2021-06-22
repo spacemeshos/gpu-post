@@ -270,7 +270,8 @@ gpu-setup-test -b -n 2000000
 | 06/22/2021    | Scerbera      | v0.1.20       | RTX 3070 - Various models - Core Clock 1550MHz - Memory clock 1975MHz | Intel i3-9100F Windows 10 |   Nvidia 460.89 | 209-241
 | 06/22/2021     | Scerbera       | v0.1.20     | RTX 3060Ti - Various models - Core Clock 1550MHz - Memory clock 1975MHz | Intel i5-7600K Windows 10 |   Nvidia 460.89 | 154-177
 | 06/22/2021     | Scerbera       | v0.1.20     | RTX 3080 - Various models - Core Clock 1500MHz - Memory clock 2550MHz | Intel i5-7600K Windows 10 |   Nvidia 460.89 | 151-171
-
+| 06/22/2021     | Scerbera       | v0.1.20     | RX VEGA 64  - Core Clock 1500MHz - Memory clock 960MHz | Intel i7-8700K Windows 10 |   Pro 20.Q4 | 0.9
+| 06/22/2021     | Scerbera       | v0.1.20     | WX7100 - Core Clock 1250MHz - Memory clock 1700MHz | Intel i7-8700K Windows 10 |   Pro 20.Q4 | 0.87
 ---
 
 ## Prerelease Benchmarks
