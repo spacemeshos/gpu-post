@@ -261,9 +261,12 @@ Integration test of the basic library use case in a Spacemesh full node to gener
 gpu-setup-test -b -n 2000000
 ```
 
-| Date       	| Reporter 	| Release  	| Compute Provider | OS & CPU            	| Driver                                  	| kh/s |
+| Date       	| Reporter 	| Release  	| Compute Provider | OS & CPU            	| Driver                                  	| mh/s |
 |------------	|----------	|-----------	|----------------------------------	|---------------------	|----------------------------------------	|-------|
-| 06/21/2021 	| Obsidian   	| v0.1.20 	| RTX 2080ti 11GB @ stock (1350mhz / 7000mhz) | Windows 10 Pro v20H2, Build 19042.985,  Intel i7-6700K @ 4.6ghz (HT enabled: 4c/8t) |   Nvidia 466.11 | 2560  
+| 06/21/2021 	| Obsidian   	| v0.1.20 	| Geforce RTX 2080ti 11GB @ stock (1350mhz / 7000mhz) | Windows 10 Pro v20H2, Build 19042.985,  Intel i7-6700K @ 4.6ghz (HT enabled: 4c/8t) |   Nvidia 466.11 | 2.56  
+| 06/22/2021 	| Scerbera   	| v0.1.20 	| Gergorce RTX 3090 - Gigabyte Vision - Eth mining OC settings | Windows 10 |   Nvidia 466.11 | 279  
+| 06/22/2021 	| Scerbera   	| v0.1.20 	| Gergorce RTX 2060 SUPER | Windows 10 |   Nvidia 466.11 | 1.7  
+| 06/22/2021 	| Scerbera   	| v0.1.20 	| AMD Radeon Pro WX 7100 | Windows 10 |   Nvidia 466.11 | 0.88 
 
 ---
 
