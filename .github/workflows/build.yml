@@ -15,10 +15,6 @@ jobs:
         include:
         - os: ubuntu-20.04
           cuda: "11.2"
-        # - os: ubuntu-18.04
-        #   cuda: "10.2"
-        # - os: ubuntu-16.04
-        #   cuda: "9.2"
 
     steps:
     - uses: actions/checkout@v2
@@ -36,13 +32,6 @@ jobs:
     - run: cmake .
 
     - run: make
-
-    # - name: Rename library
-    #   run: |
-    #     REF="${{ github.ref }}"
-    #     if [[ "$REF" == refs/tags/v* ]]; then
-    #       mv src/libgpu-setup.so src/libgpu-setup-${REF#refs/tags/v}.so
-    #     fi
 
     - name: Copy library
       run: cp src/libgpu-setup.so test/libgpu-setup.so
@@ -117,15 +106,6 @@ jobs:
         cmake --build .
       shell: cmd
 
-    # - name: Rename library
-    #   shell: bash
-    #   run: |
-    #     REF="${{ github.ref }}"
-    #     if [[ "$REF" == refs/tags/v* ]]; then
-    #       mv build/src/gpu-setup.dll build/src/gpu-setup-${REF#refs/tags/v}.dll
-    #       mv build/src/gpu-setup.lib build/src/gpu-setup-${REF#refs/tags/v}.lib
-    #     fi
-
     - name: Copy library
       shell: bash
       run: cp build/src/gpu-setup.dll build/test/gpu-setup.dll
@@ -189,13 +169,6 @@ jobs:
     - run: cmake -DSPACEMESHCUDA=OFF .
 
     - run: make
-
-    # - name: Rename library
-    #   run: |
-    #     REF="${{ github.ref }}"
-    #     if [[ "$REF" == refs/tags/v* ]]; then
-    #       mv src/libgpu-setup.dylib src/libgpu-setup-${REF#refs/tags/v}.dylib
-    #     fi
 
     - name: Copy library
       run: cp src/libgpu-setup.dylib test/libgpu-setup.dylib
