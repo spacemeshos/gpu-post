@@ -272,6 +272,7 @@ gpu-setup-test -b -n 2000000
 | 06/22/2021     | Scerbera       | v0.1.20     | RTX 3080 - Various models - Core Clock 1500MHz - Memory clock 2550MHz | Intel i5-7600K Windows 10 |   Nvidia 460.89 | 151-171
 | 06/22/2021     | Scerbera       | v0.1.20     | RX VEGA 64  - Core Clock 1500MHz - Memory clock 960MHz | Intel i7-8700K Windows 10 |   Pro 20.Q4 | 0.9
 | 06/22/2021     | Scerbera       | v0.1.20     | WX7100 - Core Clock 1250MHz - Memory clock 1700MHz | Intel i7-8700K Windows 10 |   Pro 20.Q4 | 0.87
+| 06/28/2021     | cmoetzing      | v0.1.20     | MSI GeForce RTX 2060 VENTUS GP OC - Core Clock 1365MHz - Memory Clock 1750MHz | Ubuntu 20.04 Core i5-11600k | NVIDIA 465.19.01 | 1.36 
 ---
 
 ## Prerelease Benchmarks
