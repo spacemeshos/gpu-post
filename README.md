@@ -257,6 +257,8 @@ Integration test of the basic library use case in a Spacemesh full node to gener
 
 ## Community Benchmarks
 
+> Disclaimer: these are community submitted benchmarks which haven't been verified. Your milage may vary.
+
 ```bash
 gpu-setup-test -b -n 2000000
 ```
