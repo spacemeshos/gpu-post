@@ -261,18 +261,18 @@ Integration test of the basic library use case in a Spacemesh full node to gener
 gpu-setup-test -b -n 2000000
 ```
 
-| Date       	| Reporter 	| Release  	| Compute Provider | OS & CPU            	| Driver                                  	| mh/s |
-|------------	|----------	|-----------	|----------------------------------	|---------------------	|----------------------------------------	|-------|
-| 06/21/2021 	| Obsidian   	| v0.1.20 	| Geforce RTX 2080ti 11GB @ stock (1350mhz / 7000mhz) | Windows 10 Pro v20H2, Build 19042.985,  Intel i7-6700K @ 4.6ghz (HT enabled: 4c/8t) |   Nvidia 466.11 | 2.56  
-| 06/22/2021     | Scerbera       | v0.1.20     | Gergorce RTX 3090 - Gigabyte Vision OC - Core Clock 1250MHz - Memory clock 2663MHz | AMD 5950x Windows 10 |   Nvidia 460.89 | 302
-| 06/22/2021 	| Scerbera   	| v0.1.20 	| Gergorce RTX 2060 SUPER | Windows 10 |   Nvidia 466.11 | 1.7  
-| 06/22/2021 	| Scerbera   	| v0.1.20 	| AMD Radeon Pro WX 7100 | Windows 10 |   Nvidia 466.11 | 0.88 
-| 06/22/2021    | Scerbera      | v0.1.20       | RTX 3070 - Various models - Core Clock 1550MHz - Memory clock 1975MHz | Intel i3-9100F Windows 10 |   Nvidia 460.89 | 209-241
-| 06/22/2021     | Scerbera       | v0.1.20     | RTX 3060Ti - Various models - Core Clock 1550MHz - Memory clock 1975MHz | Intel i5-7600K Windows 10 |   Nvidia 460.89 | 154-177
-| 06/22/2021     | Scerbera       | v0.1.20     | RTX 3080 - Various models - Core Clock 1500MHz - Memory clock 2550MHz | Intel i5-7600K Windows 10 |   Nvidia 460.89 | 151-171
-| 06/22/2021     | Scerbera       | v0.1.20     | RX VEGA 64  - Core Clock 1500MHz - Memory clock 960MHz | Intel i7-8700K Windows 10 |   Pro 20.Q4 | 0.9
-| 06/22/2021     | Scerbera       | v0.1.20     | WX7100 - Core Clock 1250MHz - Memory clock 1700MHz | Intel i7-8700K Windows 10 |   Pro 20.Q4 | 0.87
-| 06/28/2021     | cmoetzing      | v0.1.20     | MSI GeForce RTX 2060 VENTUS GP OC - Core Clock 1365MHz - Memory Clock 1750MHz | Ubuntu 20.04 Core i5-11600k | NVIDIA 465.19.01 | 1.36 
+| Date       	| Reporter 	| Release       | Compute Provider | OS & CPU            	| Driver                                  	| mh/s |
+|------------	|----------	|-----------    |----------------------------------	|---------------------	|----------------------------------------	|-------|
+| 06/21/2021 	| Obsidian   	| v0.1.20       | Geforce RTX 2080ti 11GB @ stock (1350mhz / 7000mhz) | Windows 10 Pro v20H2, Build 19042.985,  Intel i7-6700K @ 4.6ghz (HT enabled: 4c/8t) |   NVIDIA 466.11 | 2.56  
+| 06/22/2021    | Scerbera      | v0.1.20       | Geforce RTX 3090 - Gigabyte Vision OC - Core Clock 1250MHz - Memory clock 2663MHz | AMD 5950x Windows 10 |   NVIDIA 460.89 | 302
+| 06/22/2021 	| Scerbera   	| v0.1.20       | Geforce RTX 2060 SUPER | Windows 10 |   NVIDIA 466.11 | 1.7  
+| 06/22/2021 	| Scerbera   	| v0.1.20       | AMD Radeon Pro WX 7100 | Windows 10 |   NVIDIA 466.11 | 0.88 
+| 06/22/2021    | Scerbera      | v0.1.20       | RTX 3070 - Various models - Core Clock 1550MHz - Memory Clock 1975MHz | Intel i3-9100F Windows 10 |   NVIDIA 460.89 | 209-241
+| 06/22/2021    | Scerbera      | v0.1.20       | RTX 3060Ti - Various models - Core Clock 1550MHz - Memory Clock 1975MHz | Intel i5-7600K Windows 10 |   NVIDIA 460.89 | 154-177
+| 06/22/2021    | Scerbera      | v0.1.20       | RTX 3080 - Various models - Core Clock 1500MHz - Memory Clock 2550MHz | Intel i5-7600K Windows 10 |   NVIDIA 460.89 | 151-171
+| 06/22/2021    | Scerbera      | v0.1.20       | RX VEGA 64  - Core Clock 1500MHz - Memory Clock 960MHz | Intel i7-8700K Windows 10 |   Pro 20.Q4 | 0.9
+| 06/22/2021    | Scerbera      | v0.1.20       | WX7100 - Core Clock 1250MHz - Memory Clock 1700MHz | Intel i7-8700K Windows 10 |   Pro 20.Q4 | 0.87
+| 06/28/2021    | cmoetzing     | v0.1.20       | MSI GeForce RTX 2060 VENTUS GP OC - Core Clock 1365MHz - Memory Clock 1750MHz | Ubuntu 20.04 Core i5-11600k | NVIDIA 465.19.01 | 1.36 
 ---
 
 ## Prerelease Benchmarks
