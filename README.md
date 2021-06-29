@@ -12,10 +12,12 @@ One or more of the following processors:
 - A GPU and drivers with Vulkan 1.2 support such as a modern AMD, Apple M1 processor, and Intel GPUs.
 - A x86-64 cpu such as AMD or Intel cpus.
 
-
-
 - Both discrete and on-board GPUs are supported as long as they support the minimum CUDA or Vulkan runtime version.
 - We currently provide release binaries and build instructions for Ubuntu 20.04 but the library can be built on other Linux distros for usage on these systems.
+
+## GPU Memory Requirements
+- 16kb per CUDA core for CUDA.
+- 4mb per compute unit for Vulkan.
 
 ---
 
