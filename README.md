@@ -16,8 +16,13 @@ One or more of the following processors:
 - We currently provide release binaries and build instructions for Ubuntu 20.04 but the library can be built on other Linux distros for usage on these systems.
 
 ## GPU Memory Requirements
+
+### Minimum
 - 16kb per CUDA core for CUDA.
 - 4mb per compute unit for Vulkan.
+
+### Recommended
+- 2GB RAM
 
 ---
 
