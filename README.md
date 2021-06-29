@@ -257,7 +257,7 @@ Integration test of the basic library use case in a Spacemesh full node to gener
 
 ## Community Benchmarks
 
-> Disclaimer: these are community submitted benchmarks which haven't been verified. Your milage may vary.
+> Disclaimer: these are community submitted benchmarks which haven't been verified. Your milage may vary. The library is also likely to have bugs, is in alpha quality and the gpu-post algorithm is likely to change before the release of the Spacemesh 0.2 testnet.
 
 ```bash
 gpu-setup-test -b -n 2000000
