@@ -70,6 +70,13 @@ if (SPACEMESHCUDA)
                 "-gencode arch=compute_75,code=sm_75"
             )
         endif()
+        if(CUDA_VERSION_MAJOR GREATER 10)
+            set(
+                CUDA_NVCC_FLAGS
+                ${CUDA_NVCC_FLAGS}
+                "-gencode arch=compute_86,code=sm_86"
+            )
+        endif()
     endif()
 
     include_directories(${CUDA_INCLUDE_DIRS})
