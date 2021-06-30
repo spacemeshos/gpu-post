@@ -280,6 +280,8 @@ gpu-setup-test -b -n 2000000
 | 06/28/2021    | cmoetzing     | v0.1.20       | MSI GeForce RTX 2060 VENTUS GP OC - Core Clock 1365MHz - Memory Clock 1750MHz | Ubuntu 20.04 Core i5-11600k | NVIDIA 465.19.01 | 1.36 
 | 06/29/2021    | avive         | v0.1.21      | GeForce RTX 3090 | Ubuntu 20.04 | Nvidia 460.80 | 4.97
 | 06/29/2021    | avive         | v0.1.21      | GeForce RTX 3080 | Ubuntu 20.04 | Nvidia 460.80 | 4.08
+| 06/30/2021    | shanyaa       | v0.1.21      | GeForce RTX 3070 @ 1.9 Ghz core, 6.8 Ghz mem | Windows 10   | Nvidia 466.63 | 2.7
+| 06/30/2021    | shanyaa       | v0.1.21      | GeForce RTX 3070 @ 2 Ghz core, 8.08 Ghz mem | Windows 10   | Nvidia 466.63 | 3.43
 
 ---
 
