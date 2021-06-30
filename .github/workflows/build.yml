@@ -285,6 +285,7 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
+          name: Release v${{ env.VERSION }}
           files: |
             libgpu-setup-linux-${{ env.VERSION }}.zip
             libgpu-setup-windows-${{ env.VERSION }}.zip
