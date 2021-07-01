@@ -17,12 +17,12 @@ One or more of the following processors:
 
 ## GPU Memory Requirements
 
-### Minimum
-- 16kb per CUDA core for CUDA.
-- 4mb per compute unit for Vulkan.
+### Minimum GPU RAM
+- 16 KiB per CUDA core for CUDA
+- 4 MiB per compute unit for Vulkan
 
-### Recommended
-- 2GB RAM
+### Recommended GPU RAM
+- 2080 MiB
 
 ---
 
@@ -283,7 +283,7 @@ gpu-setup-test -b -n 2000000
 | 06/30/2021    | shanyaa       | v0.1.21      | GeForce RTX 3070 @ 1.9 Ghz core, 6.8 Ghz mem | Windows 10   | Nvidia 466.63 | 2.7
 | 06/30/2021    | shanyaa       | v0.1.21      | GeForce RTX 3070 @ 2 Ghz core, 8.08 Ghz mem | Windows 10   | Nvidia 466.63 | 3.43
 | 07/01/2021    | avive         | v0.1.21      | [Nvdia CMP 30HX](https://www.nvidia.com/en-us/cmp/) | Ubuntu 20.04.2 LTS | Nvidia 460.80 | 1.45
-| 07/01/2021.   | avive         | v0.1.21.     | GeForce RTX 2060 | Ubutnu 20.04.2 LTS | Nvidia 465.27 | 1.56
+| 07/01/2021.   | avive         | v0.1.21      | GeForce RTX 2060 | Ubutnu 20.04.2 LTS | Nvidia 465.27 | 1.56
 ---
 
 ## Prerelease Benchmarks
