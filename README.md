@@ -283,7 +283,7 @@ gpu-setup-test -b -n 2000000
 | 06/30/2021    | shanyaa       | v0.1.21      | GeForce RTX 3070 @ 1.9 Ghz core, 6.8 Ghz mem | Windows 10 / AMD Ryzen 5800X |  CUDA | Nvidia 466.63 | 2.7
 | 06/30/2021    | shanyaa       | v0.1.21      | GeForce RTX 3070 @ 2 Ghz core, 8.08 Ghz mem | Windows 10 / AMD Ryzen 5800X |  CUDA | Nvidia 466.63 | 3.43
 | 07/01/2021    | avive         | v0.1.21      | [Nvdia CMP 30HX](https://www.nvidia.com/en-us/cmp/) | Ubuntu 20.04.2 LTS |  CUDA | Nvidia 460.80 | 1.45
-| 07/01/2021.   | avive         | v0.1.21      | GeForce RTX 2060 | Ubutnu 20.04.2 LTS | CUDA | Nvidia 465.27 | 1.56
+| 07/01/2021    | avive         | v0.1.21      | GeForce RTX 2060 | Ubutnu 20.04.2 LTS | CUDA | Nvidia 465.27 | 1.56
 | 07/01/2021    | shanyaa       | v0.1.21      | Intel Iris Xe (integrated graphics) | Windows 10 / Intel core i7 1165G7 | Vulkan | Intel 27.20.100.9565 | 0.28
 | 07/03/2021    | neodied       | v0.1.21      | Radeon 5700XT @ 1333MHz core, 1824MHz mem | Windows 10 / Intel core i7 9700K | Vulkan | AMD Radeon Software 21.6.1 | 1.38
 | 07/03/2021    | neodied       | v0.1.21      | Radeon 5700XT @ 2016MHz core, 1748MHz mem | Windows 10 / Intel core i7 9700K | Vulkan | AMD Radeon Software 21.6.1 | 1.87
