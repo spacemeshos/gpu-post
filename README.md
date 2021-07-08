@@ -8,10 +8,9 @@ A c library implementing the POST API setup method for general-purpose CPUs and 
 ## Runtime System Requirements
 Windows 10, macOS or Ubuntu.
 One or more of the following processors:
-- A GPU and drivers with CUDA 11.0 support amd with minimum compute compatiblity 5.0 and maximum compute compatability 8.6) such as a modern Nvidia GPU and Nvidia drivers version R450 or newer.
+- A GPU and drivers with CUDA 11.0 support (minimum compute compatibility 5.0, maximum compute compatibility 8.6), such as a modern Nvidia GPU and Nvidia drivers version R450 or newer.
 - A GPU and drivers with Vulkan 1.2 support such as a modern AMD, Apple M1 processor, and Intel GPUs.
 - A x86-64 cpu such as AMD or Intel cpus.
-
 - Both discrete and on-board GPUs are supported as long as they support the minimum CUDA or Vulkan runtime version.
 - We currently provide release binaries and build instructions for Ubuntu 20.04 but the library can be built on other Linux distros for usage on these systems.
 
@@ -29,7 +28,7 @@ One or more of the following processors:
 ## Build System Requirements
 
 ### All Platforms
-- For building CUDA support: NVIDIA Cuda Tookit 11, an NVIDIA GPU with CUDA support, and an Nvdia driver version R450 or newer.
+- For building CUDA support: NVIDIA Cuda Toolkit 11, an NVIDIA GPU with CUDA support, and an Nvdia driver version R450 or newer.
 - For building Vulkan support: Vulkan SDK 1.2 and a GPU with Vulkan 1.2 runtime support.
 
 ### Windows
@@ -272,12 +271,12 @@ gpu-setup-test -b -n 2000000
 
 | Date       	| Reporter 	| Release       | Compute Provider | OS & CPU | Type          	| Driver                                  	| mh/s |
 |------------	|----------	|-----------    |---------------------------------- |---------------------|---------------------	|----------------------------------------	|-------|
-| 06/21/2021 	| Obsidian   	| v0.1.20       | Geforce RTX 2080ti 11GB @ stock (1350mhz / 7000mhz) | Windows 10 Pro v20H2, Build 19042.985,  Intel i7-6700K @ 4.6ghz (HT enabled: 4c/8t) |  CUDA | NVIDIA 466.11 | 2.56  
+| 06/21/2021 	| Obsidian   	| v0.1.20       | Geforce RTX 2080ti 11GB @ stock (1350 mhz / 7000 mhz) | Windows 10 Pro v20H2, Build 19042.985,  Intel i7-6700K @ 4.6ghz (HT enabled: 4c/8t) |  CUDA | NVIDIA 466.11 | 2.56  
 | 06/22/2021 	| Scerbera   	| v0.1.20       | Geforce RTX 2060 SUPER | Windows 10 | CUDA |  NVIDIA 466.11 | 1.7  
 | 06/22/2021 	| Scerbera   	| v0.1.20       | AMD Radeon Pro WX 7100 | Windows 10 | CUDA |  NVIDIA 466.11 | 0.88 
-| 06/22/2021    | Scerbera      | v0.1.20       | RX VEGA 64  - Core Clock 1500MHz - Memory Clock 960MHz | Intel i7-8700K Windows 10 |   Vulkan |  Pro 20.Q4 | 0.9
-| 06/22/2021    | Scerbera      | v0.1.20       | WX7100 - Core Clock 1250MHz - Memory Clock 1700MHz | Intel i7-8700K Windows 10 | Vulkan | Pro 20.Q4 | 0.87
-| 06/28/2021    | cmoetzing     | v0.1.20       | MSI GeForce RTX 2060 VENTUS GP OC - Core Clock 1365MHz - Memory Clock 1750MHz |  Ubuntu 20.04 Core i5-11600k | CUDA | NVIDIA 465.19.01 | 1.36 
+| 06/22/2021    | Scerbera      | v0.1.20       | RX VEGA 64  - Core Clock 1500 MHz - Memory Clock 960MHz | Intel i7-8700K Windows 10 |   Vulkan |  Pro 20.Q4 | 0.9
+| 06/22/2021    | Scerbera      | v0.1.20       | WX7100 - Core Clock 1250MHz - Memory Clock 1700 MHz | Intel i7-8700K Windows 10 | Vulkan | Pro 20.Q4 | 0.87
+| 06/28/2021    | cmoetzing     | v0.1.20       | MSI GeForce RTX 2060 VENTUS GP OC - Core Clock 1365MHz - Memory Clock 1750 MHz |  Ubuntu 20.04 Core i5-11600k | CUDA | NVIDIA 465.19.01 | 1.36 
 | 06/29/2021    | avive         | v0.1.21      | GeForce RTX 3090 | Ubuntu 20.04 | CUDA | Nvidia 460.80 | 4.97
 | 06/29/2021    | avive         | v0.1.21      | GeForce RTX 3080 | Ubuntu 20.04 | CUDA | Nvidia 460.80 | 4.08
 | 06/30/2021    | shanyaa       | v0.1.21      | GeForce RTX 3070 @ 1.9 Ghz core, 6.8 Ghz mem | Windows 10 / AMD Ryzen 5800X |  CUDA | Nvidia 466.63 | 2.7
@@ -285,8 +284,8 @@ gpu-setup-test -b -n 2000000
 | 07/01/2021    | avive         | v0.1.21      | [Nvdia CMP 30HX](https://www.nvidia.com/en-us/cmp/) | Ubuntu 20.04.2 LTS |  CUDA | Nvidia 460.80 | 1.45
 | 07/01/2021    | avive         | v0.1.21      | GeForce RTX 2060 | Ubutnu 20.04.2 LTS | CUDA | Nvidia 465.27 | 1.56
 | 07/01/2021    | shanyaa       | v0.1.21      | Intel Iris Xe (integrated graphics) | Windows 10 / Intel core i7 1165G7 | Vulkan | Intel 27.20.100.9565 | 0.28
-| 07/03/2021    | neodied       | v0.1.21      | Radeon 5700XT @ 1333MHz core, 1824MHz mem | Windows 10 / Intel core i7 9700K | Vulkan | AMD Radeon Software 21.6.1 | 1.38
-| 07/03/2021    | neodied       | v0.1.21      | Radeon 5700XT @ 2016MHz core, 1748MHz mem | Windows 10 / Intel core i7 9700K | Vulkan | AMD Radeon Software 21.6.1 | 1.87
+| 07/03/2021    | neodied       | v0.1.21      | Radeon 5700XT @ 1333 MHz core, 1824 MHz mem | Windows 10 / Intel core i7 9700K | Vulkan | AMD Radeon Software 21.6.1 | 1.38
+| 07/03/2021    | neodied       | v0.1.21      | Radeon 5700XT @ 2016 MHz core, 1748 MHz mem | Windows 10 / Intel core i7 9700K | Vulkan | AMD Radeon Software 21.6.1 | 1.87
 ---
 
 ## Prerelease Benchmarks
