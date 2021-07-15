@@ -8,7 +8,7 @@ A c library implementing the POST API setup method for general-purpose CPUs and 
 ## Runtime System Requirements
 Windows 10, macOS or Ubuntu.
 One or more of the following processors:
-- A GPU and drivers with CUDA 11.0 support (minimum compute compatibility 5.0, maximum compute compatibility 8.6), such as a modern Nvidia GPU and Nvidia drivers version R450 or newer.
+- A GPU and drivers with CUDA upport (minimum compute compatibility 5.0, maximum compute compatibility 8.6), such as a modern Nvidia GPU and Nvidia drivers version R450 or newer.
 - A GPU and drivers with Vulkan 1.2 support such as a modern AMD, Apple M1 processor, and Intel GPUs.
 - A x86-64 cpu such as AMD or Intel cpus.
 - Both discrete and on-board GPUs are supported as long as they support the minimum CUDA or Vulkan runtime version.
