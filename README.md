@@ -216,6 +216,13 @@ int scryptPositions(
 	uint64_t *hashes_per_sec   // Performance
 	);
 ```
+### Supported scrypt parameters
+The api currently only supports the following N, P, R scrypt params.
+
+- Supported N values: 1 - 28835
+- Supported R valus: 1
+- Supported P values: 1
+
 
 Gets the system's GPU capabilities. E.g. CUDA and/or NVIDIA or NONE:
 ```c
