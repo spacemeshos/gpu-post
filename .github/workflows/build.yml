@@ -14,7 +14,7 @@ jobs:
       matrix:
         include:
         - os: ubuntu-20.04
-          cuda: "11.2"
+          cuda: "11.4"
 
     steps:
     - uses: actions/checkout@v2
