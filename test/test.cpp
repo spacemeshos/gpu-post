@@ -953,8 +953,7 @@ int main(int argc, char **argv)
 	}
 	if (runTestLeafsAndPow) {
 		printf("Test LEAFS and POW: Label size: %u, count %u, buffer %.1fM\n", labelSize, labelsCount, ((uint64_t(labelsCount) * uint64_t(labelSize) + 7ull) / 8ull) / (1024.0 * 1024));
-		do_test_leafs_and_pow(startPos, labelsCount, powDiff, srand_seed, referenceProvider, solutionIdx);
-		return 0;
+		return do_test_leafs_and_pow(startPos, labelsCount, powDiff, srand_seed, referenceProvider, solutionIdx);
 	}
 	if (runTestCore) {
 		printf("Test POS+POW core use case: count %u\n", labelsCount);
