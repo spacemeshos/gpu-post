@@ -499,152 +499,126 @@ static int cpu_scrypt_positions(
 		*hashes_computed = 0;
 	}
 
-	if (cpu_prepare(cgpu, N, r, p))
+	if (!cpu_prepare(cgpu, N, r, p))
 	{
-		_cpuState *cpuState = (_cpuState *)cgpu->device_data;
-		uint64_t n = start_position;
-		uint32_t label_full_bytes = hash_len_bits / 8;
-		uint32_t label_total_bytes = (hash_len_bits + 7) / 8;
-		uint8_t label_last_byte_length = hash_len_bits & 7;
-		uint8_t label_last_byte_mask = (1 << label_last_byte_length) - 1;
-		uint32_t available = 8;
-		uint8_t hash[32];
-		uint8_t label;
-		bool use_byte_copy = 0 == (hash_len_bits % 8);
-		bool compute_pow = 0 != (options & SPACEMESH_API_COMPUTE_POW);
-		bool computeLeafs = 0 != (options & SPACEMESH_API_COMPUTE_LEAFS);
-		uint64_t *D = (uint64_t*)(pdata + 80);
-		int status = SPACEMESH_API_ERROR_NONE;
+		return SPACEMESH_API_ERROR;
+	}
+		
+	_cpuState *cpuState = (_cpuState *)cgpu->device_data;
+	uint64_t n = start_position;
+	uint32_t label_full_bytes = hash_len_bits / 8;
+	uint32_t label_total_bytes = (hash_len_bits + 7) / 8;
+	uint8_t label_last_byte_length = hash_len_bits & 7;
+	uint8_t label_last_byte_mask = (1 << label_last_byte_length) - 1;
+	uint32_t available = 8;
+	uint8_t hash[32];
+	uint8_t label;
+	bool use_byte_copy = 0 == (hash_len_bits % 8);
+	bool computePow = 0 != (options & SPACEMESH_API_COMPUTE_POW);
+	bool computeLeafs = 0 != (options & SPACEMESH_API_COMPUTE_LEAFS);
+	uint64_t *D = (uint64_t*)(pdata + 80);
+	int status = SPACEMESH_API_ERROR_NONE;
 
-		if (compute_pow) {
-			label_total_bytes = 32;
-		}
-
-		gettimeofday(tv_start, NULL);
-
-		if (computeLeafs) {
-			*output = 0;
-		}
-		cgpu->busy = true;
-
-		do {
-			((uint64_t*)pdata)[4] = n;
-			if (1 == r && 1 == p) {
-				scrypt_jane_hash_1_1((uchar*)pdata, 72, NULL, 0, (uint32_t)N, cpuState->X, cpuState->Y, cpuState->V.ptr, hash, 32/*label_total_bytes*/);
-				if (compute_pow) {
-					if (cmp_uint256((uint64_t*)hash, D) < 0) {
-						if (0 == (options & SPACEMESH_API_COMPUTE_LEAFS)) {
-							if (idx_solution) {
-								*idx_solution = n;
-							}
-							status = SPACEMESH_API_POW_SOLUTION_FOUND;
-							if (!computeLeafs) {
-								break;
-							}
-						}
-					}
-				}
-			}
-			else {
-				uint32_t i;
-
-				/* 1: X = PBKDF2(password, salt) */
-				scrypt_pbkdf2((uchar*)pdata, 72, NULL, 0, cpuState->X, cpuState->chunk_bytes * p);
-
-				/* 2: X = ROMix(X) */
-				for (i = 0; i < p; i++) {
-					scrypt_ROMix_1((scrypt_mix_word_t *)(cpuState->X + (cpuState->chunk_bytes * i)), (scrypt_mix_word_t *)cpuState->Y, (scrypt_mix_word_t *)cpuState->V.ptr, N, r);
-				}
-
-				/* 3: Out = PBKDF2(password, X) */
-				scrypt_pbkdf2_1((uchar*)pdata, 72, cpuState->X, cpuState->chunk_bytes * p, hash, label_total_bytes);
-			}
-			if (computeLeafs) {
-				if (use_byte_copy) {
-					memcpy(output, hash, label_full_bytes);
-					output += label_full_bytes;
-				}
-				else {
-					if (label_full_bytes) {
-						if (8 == available) {
-							memcpy(output, hash, label_full_bytes);
-							output += label_full_bytes;
-							output[0] = 0;
-						}
-						else {
-							uint8_t lo_part_mask = (1 << available) - 1;
-							uint8_t lo_part_shift = 8 - available;
-							uint8_t hi_part_shift = available;
-
-							for (int i = 0; i < label_full_bytes; i++) {
-								// get 8 bits
-								label = hash[i];
-								*output++ |= (label & lo_part_mask) << lo_part_shift;
-								*output = label >> hi_part_shift;
-							}
-						}
-					}
-					uint8_t label = hash[label_full_bytes] & label_last_byte_mask;
-					if (label_last_byte_length > available) {
-						uint8_t lo_part_mask = (1 << available) - 1;
-						uint8_t lo_part_shift = 8 - available;
-						*output++ |= (label & lo_part_mask) << lo_part_shift;
-						*output = label >> available;
-						available = 8 - (label_last_byte_length - available);
-					}
-					else {
-						*output |= label << (8 - available);
-						available -= label_last_byte_length;
-						if (0 == available) {
-							available = 8;
-							output++;
-							if (n < end_position) {
-								output[0] = 0;
-							}
-						}
-					}
-				}
-			}
-#if 0
-			if (8 == hash_len_bits) {
-				*output++ = label;
-			}
-			else {
-				label &= label_mask;
-				if (available >= hash_len_bits) {
-					label <<= 8 - available;
-					*output |= label;
-					available -= hash_len_bits;
-					if (0 == available) {
-						available = 8;
-						output++;
-					}
-				}
-				else {
-					*output++ |= label << (8 - available);
-					*output = label >> available;
-					available = 8 - (hash_len_bits - available);
-				}
-			}
-#endif
-			n++;
-		} while (n <= end_position && !g_spacemesh_api_abort_flag);
-
-		gettimeofday(tv_end, NULL);
-
-		cgpu->busy = false;
-		if (hashes_computed) {
-			*hashes_computed = n - start_position;
-		}
-
-		if (0 == g_spacemesh_api_abort_flag && 0 != status) {
-			return status;
-		}
-
-		return (n <= end_position) ? SPACEMESH_API_ERROR_CANCELED : SPACEMESH_API_ERROR_NONE;
+	if (computePow) {
+		label_total_bytes = 32;
 	}
 
-	return SPACEMESH_API_ERROR;
+	gettimeofday(tv_start, NULL);
+
+	if (computeLeafs) {
+		*output = 0;
+	}
+	cgpu->busy = true;
+
+	for (; n <= end_position && !g_spacemesh_api_abort_flag; n++) {
+		((uint64_t*)pdata)[4] = n;
+		if (1 == r && 1 == p) {
+			scrypt_jane_hash_1_1((uchar*)pdata, 72, NULL, 0, (uint32_t)N, cpuState->X, cpuState->Y, cpuState->V.ptr, hash, 32/*label_total_bytes*/);
+		}
+		else {
+			uint32_t i;
+
+			/* 1: X = PBKDF2(password, salt) */
+			scrypt_pbkdf2((uchar*)pdata, 72, NULL, 0, cpuState->X, cpuState->chunk_bytes * p);
+
+			/* 2: X = ROMix(X) */
+			for (i = 0; i < p; i++) {
+				scrypt_ROMix_1((scrypt_mix_word_t *)(cpuState->X + (cpuState->chunk_bytes * i)), (scrypt_mix_word_t *)cpuState->Y, (scrypt_mix_word_t *)cpuState->V.ptr, N, r);
+			}
+
+			/* 3: Out = PBKDF2(password, X) */
+			scrypt_pbkdf2_1((uchar*)pdata, 72, cpuState->X, cpuState->chunk_bytes * p, hash, label_total_bytes);
+		}
+		if (computePow && cmp_uint256((uint64_t*)hash, D) < 0) {
+			if (idx_solution) {
+				*idx_solution = n;
+			}
+			status = SPACEMESH_API_POW_SOLUTION_FOUND;
+			if (!computeLeafs) {
+				break;
+			}
+		}
+		if (!computeLeafs) {
+			continue;
+		}
+
+		if (use_byte_copy) {
+			memcpy(output, hash, label_full_bytes);
+			output += label_full_bytes;
+			continue;
+		}
+		if (label_full_bytes) {
+			if (8 == available) {
+				memcpy(output, hash, label_full_bytes);
+				output += label_full_bytes;
+				output[0] = 0;
+			}
+			else {
+				uint8_t lo_part_mask = (1 << available) - 1;
+				uint8_t lo_part_shift = 8 - available;
+				uint8_t hi_part_shift = available;
+
+				for (int i = 0; i < label_full_bytes; i++) {
+					// get 8 bits
+					label = hash[i];
+					*output++ |= (label & lo_part_mask) << lo_part_shift;
+					*output = label >> hi_part_shift;
+				}
+			}
+		}
+		uint8_t label = hash[label_full_bytes] & label_last_byte_mask;
+		if (label_last_byte_length > available) {
+			uint8_t lo_part_mask = (1 << available) - 1;
+			uint8_t lo_part_shift = 8 - available;
+			*output++ |= (label & lo_part_mask) << lo_part_shift;
+			*output = label >> available;
+			available = 8 - (label_last_byte_length - available);
+		}
+		else {
+			*output |= label << (8 - available);
+			available -= label_last_byte_length;
+			if (0 == available) {
+				available = 8;
+				output++;
+				if (n < end_position) {
+					output[0] = 0;
+				}
+			}
+		}
+	}
+
+	gettimeofday(tv_end, NULL);
+
+	cgpu->busy = false;
+	if (hashes_computed) {
+		*hashes_computed = n - start_position;
+	}
+
+	if (0 == g_spacemesh_api_abort_flag && 0 != status) {
+		return status;
+	}
+
+	return (n <= end_position) ? SPACEMESH_API_ERROR_CANCELED : SPACEMESH_API_ERROR_NONE;
 }
 
 static int64_t cpu_hash(struct cgpu_info *cgpu, uint8_t *input, uint8_t *hashes)
