@@ -462,7 +462,7 @@ int do_test_pow(uint64_t aStartPos, int aLabelsCount, unsigned aDiff, unsigned a
 						printf("%u hashes, %u h/s, solution at %u\n", (uint32_t)hashes_computed, (uint32_t)hashes_per_sec, (uint32_t)idx_solution);
 						if (-1 != cpu_id) {
 							uint8_t hash[32];
-							scryptPositions(cpu_id, s_id, idx_solution, idx_solution, 256, s_salt, SPACEMESH_API_COMPUTE_LEAFS, hash, 512, 1, 1, NULL, NULL, &hashes_computed, &hashes_per_sec);
+							scryptPositions(cpu_id, s_id, idx_solution, idx_solution, 256, s_salt, SPACEMESH_API_COMPUTE_POW, hash, 512, 1, 1, NULL, NULL, &hashes_computed, &hashes_per_sec);
 							printf("id: ");
 							print_hex32(s_id);
 							printf("\n");
@@ -500,7 +500,7 @@ int do_test_pow(uint64_t aStartPos, int aLabelsCount, unsigned aDiff, unsigned a
 }
 
 /* test PoW */
-int do_test_leafs_and_pow(uint64_t aStartPos, int aLabelsCount, unsigned aDiff, unsigned aSeed, int aProviderId, uint64_t aSolutionIdx)
+int do_test_leafs_and_pow(uint64_t aStartPos, int labelSize, int aLabelsCount, unsigned aDiff, unsigned aSeed, int aProviderId, uint64_t aSolutionIdx)
 {
 	int providersCount = spacemesh_api_get_providers(NULL, 0);
 
@@ -554,16 +554,22 @@ int do_test_leafs_and_pow(uint64_t aStartPos, int aLabelsCount, unsigned aDiff, 
 					if (-1 != aProviderId && aProviderId != providers[i].id) {
 						continue;
 					}
+
+					const uint64_t labelsBufferSize = (uint64_t(aLabelsCount) * uint64_t(labelSize) + 7ull) / 8ull;
+					uint8_t *out = (uint8_t *)malloc(labelsBufferSize);
+
+					printf("buffer size: %0.1f MiB\n", labelsBufferSize / (1024.0*1024));
+
 					uint64_t hashes_computed;
 					uint64_t hashes_per_sec;
 					printf("%s: ", providers[i].model);
-					int status = scryptPositions(providers[i].id, s_id, aStartPos, aStartPos + aLabelsCount - 1, 8, s_salt, SPACEMESH_API_COMPUTE_LEAFS | SPACEMESH_API_COMPUTE_POW, NULL, 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
+					int status = scryptPositions(providers[i].id, s_id, aStartPos, aStartPos + aLabelsCount - 1, 8, s_salt, SPACEMESH_API_COMPUTE_LEAFS | SPACEMESH_API_COMPUTE_POW, out, 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
 					switch (status) {
 					case SPACEMESH_API_POW_SOLUTION_FOUND:
 						printf("%u hashes, %u h/s, solution at %u\n", (uint32_t)hashes_computed, (uint32_t)hashes_per_sec, (uint32_t)idx_solution);
 						if (-1 != cpu_id) {
 							uint8_t hash[32];
-							scryptPositions(cpu_id, s_id, idx_solution, idx_solution, 256, s_salt, SPACEMESH_API_COMPUTE_LEAFS, hash, 512, 1, 1, NULL, NULL, &hashes_computed, &hashes_per_sec);
+							scryptPositions(cpu_id, s_id, idx_solution, idx_solution, 256, s_salt, SPACEMESH_API_COMPUTE_POW, hash, 512, 1, 1, NULL, NULL, &hashes_computed, &hashes_per_sec);
 							printf("id: ");
 							print_hex32(s_id);
 							printf("\n");
@@ -952,8 +958,8 @@ int main(int argc, char **argv)
 		return do_test_pow(startPos, labelsCount, powDiff, srand_seed, referenceProvider, solutionIdx);
 	}
 	if (runTestLeafsAndPow) {
-		printf("Test LEAFS and POW: Label size: %u, count %u, buffer %.1fM\n", labelSize, labelsCount, ((uint64_t(labelsCount) * uint64_t(labelSize) + 7ull) / 8ull) / (1024.0 * 1024));
-		return do_test_leafs_and_pow(startPos, labelsCount, powDiff, srand_seed, referenceProvider, solutionIdx);
+		printf("Test LEAFS and POW: Label size: %u, count %u, buffer %.1fM\n", labelSize, labelsCount);
+		return do_test_leafs_and_pow(startPos, labelSize, labelsCount, powDiff, srand_seed, referenceProvider, solutionIdx);
 	}
 	if (runTestCore) {
 		printf("Test POS+POW core use case: count %u\n", labelsCount);
