@@ -298,6 +298,6 @@ void do_integration_tests()
 	// test of concurrency
 	test_of_concurrency();
 
-	// test of cancelation
+	// test of cancellation
 	test_of_cancellation();
 }
