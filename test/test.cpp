@@ -570,18 +570,6 @@ int do_test_leafs_and_pow(uint64_t aStartPos, int labelSize, int aLabelsCount, u
 						if (-1 != cpu_id) {
 							uint8_t hash[32];
 							scryptPositions(cpu_id, s_id, idx_solution, idx_solution, 256, s_salt, SPACEMESH_API_COMPUTE_POW, hash, 512, 1, 1, NULL, NULL, &hashes_computed, &hashes_per_sec);
-							printf("id: ");
-							print_hex32(s_id);
-							printf("\n");
-							printf("salt: ");
-							print_hex32(s_salt);
-							printf("\n");
-							printf("D: ");
-							print_hex32(D);
-							printf("\n");
-							printf("H: ");
-							print_hex32(hash);
-							printf("\n");
 						}
 						break;
 					case SPACEMESH_API_ERROR_NONE:
