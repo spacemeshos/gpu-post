@@ -7,6 +7,8 @@ if [ -z "${VULKAN_WINDOWS}" ]; then
     exit 1
 fi
 
+mkdir -p cache
+
 url=https://sdk.lunarg.com/sdk/download/${VULKAN_WINDOWS}/windows/VulkanSDK-${VULKAN_WINDOWS}-Installer.exe
 filename=./cache/${url##*/}
 

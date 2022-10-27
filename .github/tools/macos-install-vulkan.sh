@@ -7,6 +7,8 @@ if [ -z "${VULKAN_MAC}" ]; then
     exit 1
 fi
 
+mkdir -p cache
+
 url=https://sdk.lunarg.com/sdk/download/$VULKAN_MAC/mac/vulkansdk-macos-$VULKAN_MAC.dmg
 filename=./cache/${url##*/}
 

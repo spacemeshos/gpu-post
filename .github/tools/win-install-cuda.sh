@@ -7,6 +7,8 @@ if [ -z "${CUDA_WINDOWS}" ]; then
     exit 1
 fi
 
+mkdir -p cache
+
 url=https://developer.download.nvidia.com/compute/cuda/${CUDA_WINDOWS/_*/}/local_installers/cuda_${CUDA_WINDOWS}_windows.exe
 filename=./cache/${url##*/}
 
