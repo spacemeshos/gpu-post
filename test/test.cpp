@@ -373,8 +373,6 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 						idx += labels_per_iter;
 					}
 
-					free(out);
-
 				 	if (idx_solution != -1ull) {
 
 						printf("Pow solution at %u\n", (uint32_t)idx_solution);
@@ -565,6 +563,7 @@ int do_test_leafs_and_pow(uint64_t aStartPos, int labelSize, int aLabelsCount, u
 					uint64_t hashes_per_sec;
 					printf("%s: ", providers[i].model);
 					int status = scryptPositions(providers[i].id, s_id, aStartPos, aStartPos + aLabelsCount - 1, 8, s_salt, SPACEMESH_API_COMPUTE_LEAFS | SPACEMESH_API_COMPUTE_POW, out, 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
+					free(out);
 					switch (status) {
 					case SPACEMESH_API_POW_SOLUTION_FOUND:
 						printf("%u hashes, %u h/s, solution at %u\n", (uint32_t)hashes_computed, (uint32_t)hashes_per_sec, (uint32_t)idx_solution);
