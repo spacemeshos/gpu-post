@@ -29,8 +29,8 @@ jobs:
         run: zip --junk-paths libgpu-setup-macos-${{ env.VERSION }}.zip macos/*
       - name: Archive MacOS-M1 Library
         run: zip --junk-paths libgpu-setup-macos-m1-${{ env.VERSION }}.zip macos-m1/*
-      - name: Archive Linux ARM64 Library
-        run: zip --junk-paths libgpu-setup-linux-arm64-${{ env.VERSION }}.zip linux-arm64/*
+      # - name: Archive Linux ARM64 Library
+      #   run: zip --junk-paths libgpu-setup-linux-arm64-${{ env.VERSION }}.zip linux-arm64/*
 
       - name: Release
         uses: softprops/action-gh-release@v1
@@ -41,6 +41,6 @@ jobs:
             libgpu-setup-windows-${{ env.VERSION }}.zip
             libgpu-setup-macos-${{ env.VERSION }}.zip
             libgpu-setup-macos-m1-${{ env.VERSION }}.zip
-            libgpu-setup-linux-arm64-${{ env.VERSION }}.zip
+          #  libgpu-setup-linux-arm64-${{ env.VERSION }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
