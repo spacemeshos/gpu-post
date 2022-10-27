@@ -8,12 +8,13 @@ if [ -z "${VULKAN_MAC}" ]; then
 fi
 
 mkdir -p cache
+cd cache
 
 url=https://sdk.lunarg.com/sdk/download/$VULKAN_MAC/mac/vulkansdk-macos-$VULKAN_MAC.dmg
-filename=./cache/${url##*/}
+filename=${url##*/}
 
 wget -nc -q -O $filename "${url}"
-shasum -c .github/tools/macos-vulkan.sha256
+shasum -c $GITHUB_WORKSPACE/.github/tools/macos-vulkan.sha256
 sudo hdiutil attach $filename
 
 cd /Volumes/vulkansdk-macos-$VULKAN_MAC

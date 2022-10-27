@@ -8,11 +8,12 @@ if [ -z "${VULKAN_WINDOWS}" ]; then
 fi
 
 mkdir -p cache
+cd cache
 
 url=https://sdk.lunarg.com/sdk/download/${VULKAN_WINDOWS}/windows/VulkanSDK-${VULKAN_WINDOWS}-Installer.exe
-filename=./cache/${url##*/}
+filename=${url##*/}
 
 wget -nc -q -O $filename "${url}"
-md5sum -c .github/tools/win-cuda.md5
+md5sum -c $GITHUB_WORKSPACE/.github/tools/win-cuda.md5
 
 ./$filename /S

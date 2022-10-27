@@ -8,11 +8,12 @@ if [ -z "${CUDA_WINDOWS}" ]; then
 fi
 
 mkdir -p cache
+cd cache
 
 url=https://developer.download.nvidia.com/compute/cuda/${CUDA_WINDOWS/_*/}/local_installers/cuda_${CUDA_WINDOWS}_windows.exe
-filename=./cache/${url##*/}
+filename=${url##*/}
 
 wget -nc -q -O $filename "${url}"
-md5sum -c .github/tools/win-cuda.md5
+md5sum -c $GITHUB_WORKSPACE/.github/tools/win-cuda.md5
 
 ./$filename /s
