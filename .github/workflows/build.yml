@@ -4,7 +4,7 @@ env:
   CUDA_LINUX: "11.8"
   CUDA_WINDOWS: "11.8.0.52206"
   VULKAN_LINUX: "1.3.231"
-  VULKAN_MAC: "1.3.231.1"
+  VULKAN_MAC: "1.2.198.1"
   VULKAN_WINDOWS: "1.2.182.0"
 
 on:
@@ -195,16 +195,6 @@ jobs:
         with:
           name: macos
           path: include/api.h
-      - name: Upload MoltenVK
-        uses: actions/upload-artifact@v2
-        with:
-          name: macos
-          path: ${{ env.VULKAN_ROOT_LOCATION }}/MoltenVK/dylib/macOS/libMoltenVK.dylib
-      - name: Upload MoltenVK config
-        uses: actions/upload-artifact@v2
-        with:
-          name: macos
-          path: ${{ env.VULKAN_ROOT_LOCATION }}/MoltenVK/dylib/macOS/MoltenVK_icd.json
       - name: Upload Vulkan
         uses: actions/upload-artifact@v2
         with:
@@ -221,6 +211,9 @@ jobs:
 
       - name: Setup env
         run: echo "VULKAN_ROOT_LOCATION=$VULKAN_ROOT_LOCATION" >> $GITHUB_ENV
+
+      - name: Vulkan Info
+        run: vulkaninfo
 
       - run: arch -arm64 cmake -DSPACEMESHCUDA=OFF .
       - run: arch -arm64 make

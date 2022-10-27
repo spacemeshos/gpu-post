@@ -290,7 +290,7 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 						labels_per_iter = MAX_LABELS_COUNT_API_CALL;
 						iters = aLabelsCount / MAX_LABELS_COUNT_API_CALL;
 					}
-					printf("Labels+Pow Task. Iters: %u, Total labels: %d, Labels per iter: %lu. Label size (bits): %u\n", iters,  aLabelsCount, labels_per_iter, labelSize);
+					printf("Labels+Pow Task. Iters: %u, Total labels: %d, Labels per iter: %llu. Label size (bits): %u\n", iters,  aLabelsCount, labels_per_iter, labelSize);
 
 					const uint64_t labelsBufferSize = (uint64_t(labels_per_iter) * uint64_t(labelSize) + 7ull) / 8ull;
 					uint8_t *out = (uint8_t *)malloc(labelsBufferSize);
@@ -316,13 +316,13 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 							}
 
 							if (hashes_computed != labels_per_iter) {
-								printf ("Compute error: hashes computed: %lu, hashes expected: %lu\n", hashes_computed, labels_per_iter);
+								printf ("Compute error: hashes computed: %llu, hashes expected: %llu\n", hashes_computed, labels_per_iter);
 							}
 
-							printf("Labels + pow: requested %lu labels at index %lu. Computed hashes: %lu, (%lu h/s)\n", labels_per_iter, idx, hashes_computed, hashes_per_sec);
+							printf("Labels + pow: requested %llu labels at index %llu. Computed hashes: %llu, (%llu h/s)\n", labels_per_iter, idx, hashes_computed, hashes_per_sec);
 
 							if (idx_solution != -1ull) {
-								printf("Found pow solution at index %lu\n", idx_solution);
+								printf("Found pow solution at index %llu\n", idx_solution);
 							} else {
 								printf("Pow solution not found in this iteration.\n");
 							}
@@ -337,7 +337,7 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 								printf("Compute returned an error: %u", status);
 							}
 
-							printf("Compute labels only. Requested: %lu labels at index %lu. hashes computed: %lu. (%lu h/s). Solution index:  %lu\n", labels_per_iter, idx, hashes_computed, hashes_per_sec, idx_solution);
+							printf("Compute labels only. Requested: %llu labels at index %llu. hashes computed: %llu. (%llu h/s). Solution index:  %llu\n", labels_per_iter, idx, hashes_computed, hashes_per_sec, idx_solution);
 						}
 
 						// start index of next iteration
@@ -353,7 +353,7 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 
 						int status = scryptPositions(providers[i].id, id, idx, idx + labels_per_iter - 1, labelSize, salt, SPACEMESH_API_COMPUTE_POW, out, 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
 
-						printf("Compute pow only at index: %lu. hashes computed: %lu (%lu h/s)\n", idx, hashes_computed, hashes_per_sec);
+						printf("Compute pow only at index: %llu. hashes computed: %llu (%llu h/s)\n", idx, hashes_computed, hashes_per_sec);
 
 						switch(status) {
 							case SPACEMESH_API_POW_SOLUTION_FOUND:
@@ -361,11 +361,11 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 
 							case SPACEMESH_API_ERROR_NONE:
 								if (hashes_computed != labels_per_iter) {
-									printf("Error: compute diff than expected: hashes computed: %lu, labels requested: %lu\n", hashes_computed, labels_per_iter);
+									printf("Error: compute diff than expected: hashes computed: %llu, labels requested: %llu\n", hashes_computed, labels_per_iter);
 								}
 								break;
 							default:
-								printf("Error %d. Hashes computed: %lu, (%lu h/s)\n", status, hashes_computed, hashes_per_sec);
+								printf("Error %d. Hashes computed: %llu, (%llu h/s)\n", status, hashes_computed, hashes_per_sec);
 								break;
 						}
 
@@ -485,7 +485,7 @@ int do_test_pow(uint64_t aStartPos, int aLabelsCount, unsigned aDiff, unsigned a
 					}
 					if (aSolutionIdx != 0xffffffffffffffffull) {
 						if (idx_solution != aSolutionIdx) {
-							printf("WRONG solution index %ull, expected %ull\n", idx_solution, aSolutionIdx);
+							printf("WRONG solution index %llu, expected %llu\n", idx_solution, aSolutionIdx);
 							return 1;
 						}
 					}
