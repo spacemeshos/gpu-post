@@ -373,6 +373,8 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 						idx += labels_per_iter;
 					}
 
+					free(out);
+
 				 	if (idx_solution != -1ull) {
 
 						printf("Pow solution at %u\n", (uint32_t)idx_solution);
@@ -390,7 +392,6 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 					} else {
 						printf("error: no pow solution found");
 					}
-
 				}
 			}
 		}
@@ -499,7 +500,7 @@ int do_test_pow(uint64_t aStartPos, int aLabelsCount, unsigned aDiff, unsigned a
 	return 1;
 }
 
-/* test PoW */
+/* this test verifies that scryptPositions correctly calculates Pow and Leafs when asked to do both */
 int do_test_leafs_and_pow(uint64_t aStartPos, int labelSize, int aLabelsCount, unsigned aDiff, unsigned aSeed, int aProviderId, uint64_t aSolutionIdx)
 {
 	int providersCount = spacemesh_api_get_providers(NULL, 0);
