@@ -8,8 +8,8 @@ if [ -z "${CUDA_LINUX}" ]; then
 fi
 
 OS=$(lsb_release -r | cut -f 2 | tr -d .)
-sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu${OS}/x86_64/3bf863cc.pub
-sudo add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu${OS}/x86_64/ /"
+sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu${OS}/sbsa/3bf863cc.pub
+sudo add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu${OS}/sbsa/ /"
 
 sudo apt update
 sudo apt install -y cuda-toolkit-${CUDA/./-}
