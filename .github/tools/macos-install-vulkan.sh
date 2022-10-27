@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -ex
+set -e
 
 if [ -z "${VULKAN_MAC}" ]; then
     echo "VULKAN_MAC variable empty"
@@ -10,7 +10,7 @@ fi
 url=https://sdk.lunarg.com/sdk/download/$VULKAN_MAC/mac/vulkansdk-macos-$VULKAN_MAC.dmg
 
 filename=${url##*/}
-wget -q -O $filename "${url}?u="
+wget -q -O $filename "${url}"
 shasum -c .github/tools/vulkan.sha256
 sudo hdiutil attach $filename
 
