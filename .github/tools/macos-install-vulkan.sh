@@ -1,7 +1,6 @@
 #!/bin/bash
 
-set -e
-
+set -ex
 
 if [ -z "${VULKAN_MAC}" ]; then
     echo "VULKAN_MAC variable empty"

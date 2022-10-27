@@ -12,4 +12,4 @@ sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda
 sudo add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu${OS}/sbsa/ /"
 
 sudo apt update
-sudo apt install -y cuda-toolkit-${CUDA/./-}
+sudo apt install -y cuda-toolkit-${CUDA_LINUX/./-}

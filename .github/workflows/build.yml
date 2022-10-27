@@ -86,7 +86,9 @@ jobs:
         call "${{ env.vs_path }}\VC\Auxiliary\Build\vcvars64.bat"
         mkdir build
         cd build
-        "${{ env.vs_path }}\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake" -G "Ninja" -DCMAKE_BUILD_TYPE="Release" -DCMAKE_IGNORE_PATH="C:/Strawberry/c/bin;C:/ProgramData/chocolatey/bin" -DCUDA_TOOLKIT_ROOT_DIR="C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.8" -DCMAKE_MAKE_PROGRAM="${{ env.vs_path }}\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe" ..
+        CUDA="$(cut -d '.' -f 1 <<< {{ env.CUDA_WINDOWS }})"."$(cut -d '.' -f 2 <<< {{ env.CUDA_WINDOWS }})"
+        echo $CUDA
+        "${{ env.vs_path }}\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake" -G "Ninja" -DCMAKE_BUILD_TYPE="Release" -DCMAKE_IGNORE_PATH="C:/Strawberry/c/bin;C:/ProgramData/chocolatey/bin" -DCUDA_TOOLKIT_ROOT_DIR="C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v${CUDA}" -DCMAKE_MAKE_PROGRAM="${{ env.vs_path }}\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe" ..
         cmake --build .
       shell: cmd
 
