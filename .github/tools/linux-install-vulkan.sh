@@ -2,7 +2,6 @@
 
 set -e
 
-
 if [ -z "${VULKAN_LINUX}" ]; then
     echo "VULKAN_LINUX variable empty"
     exit 1
@@ -16,4 +15,4 @@ sudo apt update
 sudo apt install -y vulkan-sdk
 
 VULKAN_VERSION=$(dpkg -s vulkan-sdk | awk '/^Version:/ {split($2, a, /\./); printf "%d.%d.%d", a[1], a[2], a[3]}')
-echo "VULKAN_VERSION=$VULKAN_VERSION" >> $GITHUB_ENV
+echo "VULKAN_VERSION=$VULKAN_VERSION" >>$GITHUB_ENV
