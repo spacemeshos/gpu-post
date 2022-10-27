@@ -84,8 +84,10 @@ jobs:
 
       - name: Install CUDA
         run: .github/tools/win-install-cuda.sh
+        shell: bash
       - name: Install Vulkan
         run: .github/tools/win-install-vulkan.sh
+        shell: bash
 
       - name: Build
         env:
