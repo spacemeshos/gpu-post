@@ -76,14 +76,6 @@ jobs:
         with:
           submodules: true
 
-      - name: Cache Choco downloads
-        uses: actions/cache@v3
-        with:
-          path: C:\choco-cache
-          key: choco-cuda-${{ env.CUDA_WINDOWS }}-vulkan-${{ env.VULKAN_WINDOWS }}
-
-      - name: Set Choco cache location
-        run: choco config set --name cacheLocation --value C:\choco-cache
       - name: Install CUDA
         run: choco install cuda --version={{ env.CUDA_WINDOWS }}
       - name: Install Vulkan
