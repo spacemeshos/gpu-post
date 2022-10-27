@@ -13,7 +13,7 @@ cd cache
 url=https://developer.download.nvidia.com/compute/cuda/${CUDA_WINDOWS/_*/}/local_installers/cuda_${CUDA_WINDOWS}_windows.exe
 filename=${url##*/}
 
-wget -nc -q -O $filename "${url}"
-md5sum -c $GITHUB_WORKSPACE/.github/tools/win-cuda.md5
+/C/msys64/usr/bin/wget.exe -nc -O $filename "${url}"
+# md5sum -c $GITHUB_WORKSPACE/.github/tools/win-cuda.md5
 
 ./$filename /s
