@@ -99,7 +99,8 @@ jobs:
           sha256: "ffdf442893761a453499d612d86534a02573c3d2b2442b40311b69a4b2518bf2"
         run: go run .github/tools/download.go
       - name: Install vulkan SDK
-        run: .cache\vulkan\VulkanSDK-${{ env.VULKAN_WINDOWS }}-Installer.exe --accept-licenses --default-answer --confirm-command install
+        run: |
+          Start-Process .cache/vulkan/VulkanSDK-${{ env.VULKAN_WINDOWS }}-Installer.exe -Wait -ArgumentList "--accept-licenses","--default-answer","--confirm-command install"
 
       - name: Setup CUDA env variables
         shell: bash
@@ -119,12 +120,11 @@ jobs:
           md5: "894c61ba173d26dc667e95ee734d3c5a"
         run: go run .github/tools/download.go
       - name: Install CUDA
-        shell: cmd
         run: |
-          .cache/cuda/cuda_${{ env.CUDA_WINDOWS }}_windows.exe /s /n
-          cd "C:\Program Files"
+          Start-Process .cache/cuda/cuda_${{ env.CUDA_WINDOWS }}_windows.exe -Wait -ArgumentList "-s","-n" 
+          cd "C:/Program Files"
           dir
-          cd "C:\Program Files\NVIDIA GPU Computing Toolkit"
+          cd "C:/Program Files/NVIDIA GPU Computing Toolkit"
           dir
 
       - name: Build
