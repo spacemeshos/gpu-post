@@ -104,7 +104,7 @@ jobs:
       - name: Setup CUDA env variables
         shell: bash
         run: |
-          CUDA_SHORT="$(cut -d '.' -f 1 <<< {{ env.CUDA_WINDOWS }})"."$(cut -d '.' -f 2 <<< {{ env.CUDA_WINDOWS }})"
+          CUDA_SHORT="$(cut -d '.' -f 1 <<< ${{ env.CUDA_WINDOWS }})"."$(cut -d '.' -f 2 <<< ${{ env.CUDA_WINDOWS }})"
           echo "CUDA_WINDOWS_SHORT=$CUDA_SHORT" >> $GITHUB_ENV
 
           CUDA_URL=${CUDA_WINDOWS/_*/}
