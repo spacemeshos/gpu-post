@@ -103,11 +103,19 @@ jobs:
           cd .cache\vulkan
           .\VulkanSDK-${{ env.VULKAN_WINDOWS }}-Installer.exe /S
 
+      - name: Setup CUDA env variables
+        run: |
+          CUDA_SHORT="$(cut -d '.' -f 1 <<< {{ env.CUDA_WINDOWS }})"."$(cut -d '.' -f 2 <<< {{ env.CUDA_WINDOWS }})"
+          echo "CUDA_WINDOWS_SHORT=$CUDA_SHORT" >> $GITHUB_ENV
+
+          CUDA_URL=${CUDA_WINDOWS/_*/}
+          echo "CUDA_WINDOWS_URL=$CUDA_URL" >> $GITHUB_ENV
+
       - name: Download CUDA
         if: ${{ steps.cache-win-cuda.outputs.cache-hit != 'true' }}
         uses: carlosperate/download-file-action@v2
         with:
-          file-url: "url=https://developer.download.nvidia.com/compute/cuda/${{ env.CUDA_WINDOWS/_*/ }}/local_installers/cuda_${{ env.CUDA_WINDOWS }}_windows.exe"
+          file-url: "url=https://developer.download.nvidia.com/compute/cuda/${{ env.CUDA_WINDOWS_URL }}/local_installers/cuda_${{ env.CUDA_WINDOWS }}_windows.exe"
           file-name: cuda_${{ env.CUDA_WINDOWS }}_windows.exe
           location: .cache/cuda
           md5: "894c61ba173d26dc667e95ee734d3c5a"
@@ -116,8 +124,6 @@ jobs:
         run: |
           cd .cache\cuda
           .\cuda_${{ env.CUDA_WINDOWS }}_windows.exe /s
-          CUDA="$(cut -d '.' -f 1 <<< {{ env.CUDA_WINDOWS }})"."$(cut -d '.' -f 2 <<< {{ env.CUDA_WINDOWS }})"
-          echo "CUDA_WINDOWS_SHORT=$CUDA" >> $GITHUB_ENV
 
       - name: Build
         env:
