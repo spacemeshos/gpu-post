@@ -121,11 +121,6 @@ jobs:
       - name: Install CUDA
         run: .cache\cuda\cuda_${{ env.CUDA_WINDOWS }}_windows.exe /s
 
-      - name: Unset env variables
-        shell: bash
-        run: |
-          echo "VULKAN_SDK=c:/VulkanSDK/$VULKAN_WINDOWS" > $GITHUB_ENV
-
       - name: Build
         run: |
           call "${{ env.vs_path }}\VC\Auxiliary\Build\vcvars64.bat"
