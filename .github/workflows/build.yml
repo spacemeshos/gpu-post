@@ -99,11 +99,10 @@ jobs:
           location: .cache/vulkan
           sha256: "ffdf442893761a453499d612d86534a02573c3d2b2442b40311b69a4b2518bf2"
       - name: Install vulkan SDK
-        run: |
-          cd .cache\vulkan
-          .\VulkanSDK-${{ env.VULKAN_WINDOWS }}-Installer.exe /S
+        run: .cache\vulkan\VulkanSDK-${{ env.VULKAN_WINDOWS }}-Installer.exe /S
 
       - name: Setup CUDA env variables
+        shell: bash
         run: |
           CUDA_SHORT="$(cut -d '.' -f 1 <<< {{ env.CUDA_WINDOWS }})"."$(cut -d '.' -f 2 <<< {{ env.CUDA_WINDOWS }})"
           echo "CUDA_WINDOWS_SHORT=$CUDA_SHORT" >> $GITHUB_ENV
@@ -120,10 +119,7 @@ jobs:
           location: .cache/cuda
           md5: "894c61ba173d26dc667e95ee734d3c5a"
       - name: Install CUDA
-        shell: bash
-        run: |
-          cd .cache\cuda
-          .\cuda_${{ env.CUDA_WINDOWS }}_windows.exe /s
+        run: .cache\cuda\cuda_${{ env.CUDA_WINDOWS }}_windows.exe /s
 
       - name: Build
         env:
