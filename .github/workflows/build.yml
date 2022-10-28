@@ -101,10 +101,12 @@ jobs:
       - name: Install vulkan SDK
         run: |
           Start-Process .cache/vulkan/VulkanSDK-${{ env.VULKAN_WINDOWS }}-Installer.exe -Wait -ArgumentList "--accept-licenses","--default-answer","--confirm-command install"
+          cd C:/VulkanSDK/${{ env.VULKAN_WINDOWS }}
+          dir
 
           "VULKAN_SDK_VERSION=${{ env.VULKAN_WINDOWS }}" >> $env:GITHUB_ENV
-          "VULKAN_SDK=$env:VULKAN_SDK" >> $env:GITHUB_ENV
-          "PATH=$env:PATH" >> $env:GITHUB_ENV
+          "VULKAN_SDK=C:\VulkanSDK\${{ env.VULKAN_WINDOWS }}" >> $env:GITHUB_ENV
+          "PATH=C:\VulkanSDK\${{ env.VULKAN_WINDOWS }}\bin;$env:PATH" >> $env:GITHUB_ENV
 
       - name: Setup CUDA env variables
         shell: bash
