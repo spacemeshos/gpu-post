@@ -153,13 +153,39 @@ jobs:
           submodules: true
 
       - name: Cache macOS downloads
+        id: cache-vulkan
         uses: actions/cache@v3
         with:
           path: ~/.cache/vulkan
           key: macos-cuda-vulkan-${{ env.VULKAN_MAC }}
+      - name: Download Vulkan SDK
+        if: ${{ steps.cache-npm.outputs.cache-hit != 'true' }}
+        uses: carlosperate/download-file-action@v2
+        id: download-vulkan
+        with:
+          file-url: "https://sdk.lunarg.com/sdk/download/${{ env.VULKAN_MAC }}/mac/vulkansdk-macos-${{ env.VULKAN_MAC }}.dmg"
+          file-name: vulkansdk-macos-${{ env.VULKAN_MAC }}.dmg
+          location: ~/.cache/vulkan
+          sha256: "ee63c647eb5108dfb663b701fd3d5e976e9826f991cbe4aaaf43b5bb01971db5"
+      - name: Install vulkan SDK
+        run: |
+          sudo hdiutil attach ~/.cache/vulkan/vulkansdk-macos-${{ env.VULKAN_MAC }}.dmg
 
-      - name: Install Vulkan
-        run: .github/tools/macos-install-vulkan.sh
+          cd /Volumes/vulkansdk-macos-${{ env.VULKAN_MAC }}
+          ./InstallVulkan.app/Contents/MacOS/InstallVulkan --accept-licenses --default-answer --confirm-command install
+
+          cd /Users/runner/VulkanSDK/${{ env.VULKAN_MAC }}
+          python install_vulkan.py
+
+          VULKAN_ROOT_LOCATION=$PWD
+          VULKAN_SDK=${VULKAN_ROOT_LOCATION}/macOS
+          echo "VULKAN_ROOT_LOCATION=$VULKAN_ROOT_LOCATION" >> $GITHUB_ENV
+          echo "VULKAN_SDK_VERSION=${{ env.VULKAN_MAC }}" >> $GITHUB_ENV
+          echo "VULKAN_SDK=$VULKAN_SDK" >> $GITHUB_ENV
+          echo "VK_ICD_FILENAMES=${VULKAN_SDK}/etc/vulkan/icd.d/MoltenVK_icd.json" >> $GITHUB_ENV
+          echo "VK_LAYER_PATH=${VULKAN_SDK}/etc/vulkan/explicit_layers.d" >> $GITHUB_ENV
+          echo "PATH=${VULKAN_SDK}/bin:$PATH" >> $GITHUB_ENV
+          echo "DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:${VULKAN_SDK}/lib" >> $GITHUB_ENV
 
       - run: cmake -DSPACEMESHCUDA=OFF .
       - run: make
