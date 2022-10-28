@@ -76,18 +76,48 @@ jobs:
         with:
           submodules: true
 
-      - name: Cache Windows downloads
+      - name: Cache Windows Vulkan downloads
         uses: actions/cache@v3
+        id: cache-win-vulkan
         with:
-          path: ./cache
-          key: win-cuda-${{ env.CUDA_WINDOWS }}-vulkan-${{ env.VULKAN_WINDOWS }}
+          path: .cache/vulkan
+          key: win-vulkan-${{ env.VULKAN_WINDOWS }}
 
+      - name: Cache Windows CUDA downloads
+        uses: actions/cache@v3
+        id: cache-win-cuda
+        with:
+          path: .cache/cuda
+          key: win-cuda-${{ env.CUDA_WINDOWS }}
+
+      - name: Download Vulkan SDK
+        if: ${{ steps.cache-win-vulkan.outputs.cache-hit != 'true' }}
+        uses: carlosperate/download-file-action@v2
+        with:
+          file-url: "https://sdk.lunarg.com/sdk/download/${{ env.VULKAN_WINDOWS }}/windows/VulkanSDK-${{ env.VULKAN_WINDOWS }}-Installer.exe"
+          file-name: VulkanSDK-${{ env.VULKAN_WINDOWS }}-Installer.exe
+          location: .cache/vulkan
+          sha256: "ffdf442893761a453499d612d86534a02573c3d2b2442b40311b69a4b2518bf2"
+      - name: Install vulkan SDK
+        run: |
+          cd .cache\vulkan
+          .\VulkanSDK-${{ env.VULKAN_WINDOWS }}-Installer.exe /S
+
+      - name: Download CUDA
+        if: ${{ steps.cache-win-cuda.outputs.cache-hit != 'true' }}
+        uses: carlosperate/download-file-action@v2
+        with:
+          file-url: "url=https://developer.download.nvidia.com/compute/cuda/${{ env.CUDA_WINDOWS/_*/ }}/local_installers/cuda_${{ env.CUDA_WINDOWS }}_windows.exe"
+          file-name: cuda_${{ env.CUDA_WINDOWS }}_windows.exe
+          location: .cache/cuda
+          md5: "894c61ba173d26dc667e95ee734d3c5a"
       - name: Install CUDA
-        run: .github/tools/win-install-cuda.sh
         shell: bash
-      - name: Install Vulkan
-        run: .github/tools/win-install-vulkan.sh
-        shell: bash
+        run: |
+          cd .cache\cuda
+          .\cuda_${{ env.CUDA_WINDOWS }}_windows.exe /s
+          CUDA="$(cut -d '.' -f 1 <<< {{ env.CUDA_WINDOWS }})"."$(cut -d '.' -f 2 <<< {{ env.CUDA_WINDOWS }})"
+          echo "CUDA_WINDOWS_SHORT=$CUDA" >> $GITHUB_ENV
 
       - name: Build
         env:
@@ -96,9 +126,7 @@ jobs:
           call "${{ env.vs_path }}\VC\Auxiliary\Build\vcvars64.bat"
           mkdir build
           cd build
-          CUDA="$(cut -d '.' -f 1 <<< {{ env.CUDA_WINDOWS }})"."$(cut -d '.' -f 2 <<< {{ env.CUDA_WINDOWS }})"
-          echo $CUDA
-          "${{ env.vs_path }}\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake" -G "Ninja" -DCMAKE_BUILD_TYPE="Release" -DCMAKE_IGNORE_PATH="C:/Strawberry/c/bin;C:/ProgramData/chocolatey/bin" -DCUDA_TOOLKIT_ROOT_DIR="C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v${CUDA}" -DCMAKE_MAKE_PROGRAM="${{ env.vs_path }}\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe" ..
+          "${{ env.vs_path }}\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake" -G "Ninja" -DCMAKE_BUILD_TYPE="Release" -DCMAKE_IGNORE_PATH="C:/Strawberry/c/bin;C:/ProgramData/chocolatey/bin" -DCUDA_TOOLKIT_ROOT_DIR="C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v${{ env.CUDA_WINDOWS_SHORT }}" -DCMAKE_MAKE_PROGRAM="${{ env.vs_path }}\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe" ..
           cmake --build .
         shell: cmd
 
@@ -153,23 +181,23 @@ jobs:
           submodules: true
 
       - name: Cache macOS downloads
-        id: cache-vulkan
+        id: cache-mac-vulkan
         uses: actions/cache@v3
         with:
-          path: ~/.cache/vulkan
+          path: .cache/vulkan
           key: macos-cuda-vulkan-${{ env.VULKAN_MAC }}
       - name: Download Vulkan SDK
-        if: ${{ steps.cache-npm.outputs.cache-hit != 'true' }}
+        if: ${{ steps.cache-mac-vulkan.outputs.cache-hit != 'true' }}
         uses: carlosperate/download-file-action@v2
         id: download-vulkan
         with:
           file-url: "https://sdk.lunarg.com/sdk/download/${{ env.VULKAN_MAC }}/mac/vulkansdk-macos-${{ env.VULKAN_MAC }}.dmg"
           file-name: vulkansdk-macos-${{ env.VULKAN_MAC }}.dmg
-          location: ~/.cache/vulkan
+          location: .cache/vulkan
           sha256: "ee63c647eb5108dfb663b701fd3d5e976e9826f991cbe4aaaf43b5bb01971db5"
       - name: Install vulkan SDK
         run: |
-          sudo hdiutil attach ~/.cache/vulkan/vulkansdk-macos-${{ env.VULKAN_MAC }}.dmg
+          sudo hdiutil attach .cache/vulkan/vulkansdk-macos-${{ env.VULKAN_MAC }}.dmg
 
           cd /Volumes/vulkansdk-macos-${{ env.VULKAN_MAC }}
           ./InstallVulkan.app/Contents/MacOS/InstallVulkan --accept-licenses --default-answer --confirm-command install
