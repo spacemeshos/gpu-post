@@ -99,6 +99,7 @@ jobs:
           location: .cache/vulkan
           sha256: "ffdf442893761a453499d612d86534a02573c3d2b2442b40311b69a4b2518bf2"
       - name: Install vulkan SDK
+        shell: cmd
         run: .cache\vulkan\VulkanSDK-${{ env.VULKAN_WINDOWS }}-Installer.exe /S
 
       - name: Setup CUDA env variables
