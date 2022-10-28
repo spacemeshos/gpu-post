@@ -30,8 +30,8 @@ func main() {
 		location, _ = os.Getwd()
 	}
 
-	if err := os.MkdirAll(location, 0o600); err != nil {
-		log.Fatalf("failed to create directory at %s", location)
+	if err := os.MkdirAll(location, 0o755); err != nil {
+		log.Fatalf("failed to create directory at %s: %s", location, err)
 	}
 
 	expected_sha := os.Getenv("sha256")
