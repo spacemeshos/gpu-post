@@ -5,7 +5,7 @@ env:
   CUDA_WINDOWS: "11.8.0.52206"
   VULKAN_LINUX: "1.3.231"
   VULKAN_MAC: "1.3.231.1"
-  VULKAN_WINDOWS: "1.3.231.1"
+  VULKAN_WINDOWS: "1.2.182.0"
 
 on:
   pull_request:
@@ -97,9 +97,8 @@ jobs:
           file-url: "https://sdk.lunarg.com/sdk/download/${{ env.VULKAN_WINDOWS }}/windows/VulkanSDK-${{ env.VULKAN_WINDOWS }}-Installer.exe"
           file-name: VulkanSDK-${{ env.VULKAN_WINDOWS }}-Installer.exe
           location: .cache/vulkan
-          sha256: "ffdf442893761a453499d612d86534a02573c3d2b2442b40311b69a4b2518bf2"
+          sha256: "7089d48011f06c4a02a593913c6a9385d1652ab7765c25d2666d5d6ef4e24af8"
       - name: Install vulkan SDK
-        shell: cmd
         run: .cache\vulkan\VulkanSDK-${{ env.VULKAN_WINDOWS }}-Installer.exe /S
 
       - name: Setup CUDA env variables
