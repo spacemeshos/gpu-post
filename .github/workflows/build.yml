@@ -120,10 +120,10 @@ jobs:
         run: go run .github/tools/download.go
       - name: Install CUDA
         run: |
-          cd .cache\cuda
+          cd .cache\cuda\cuda_${{ env.CUDA_WINDOWS }}_windows.exe -s -n
+          cd "C:/Program Files/"
           dir
-          .\cuda_${{ env.CUDA_WINDOWS }}_windows.exe -s -n
-          cd "C:\Program Files\NVIDIA GPU Computing Toolkit"
+          cd "C:/Program Files/NVIDIA GPU Computing Toolkit"
           dir
 
       - name: Build
