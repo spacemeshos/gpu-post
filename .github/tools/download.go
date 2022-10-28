@@ -72,8 +72,8 @@ func main() {
 
 	log.Println("Verifying file:")
 	log.Println("\tFile:", out.Name())
-	log.Printf("\tMD5: %x\n", actual_sha)
-	log.Printf("\tSHA256: %x\n", actual_md5)
+	log.Printf("\tMD5: %x\n", actual_md5)
+	log.Printf("\tSHA256: %x\n", actual_sha)
 
 	status := 0
 	if expected_sha != "" && expected_sha != hex.EncodeToString(actual_sha) {
