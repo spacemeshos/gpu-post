@@ -119,7 +119,10 @@ jobs:
           md5: "894c61ba173d26dc667e95ee734d3c5a"
         run: go run .github/tools/download.go
       - name: Install CUDA
-        run: .cache\cuda\cuda_${{ env.CUDA_WINDOWS }}_windows.exe /s
+        run: |
+          .cache\cuda\cuda_${{ env.CUDA_WINDOWS }}_windows.exe /s
+          cd "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ env.CUDA_WINDOWS_SHORT }}"
+          dir
 
       - name: Build
         run: |
