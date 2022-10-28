@@ -122,8 +122,7 @@ jobs:
         run: |
           cd .cache\cuda
           dir
-          .\cuda_${{ env.CUDA_WINDOWS }}_windows.exe /s
-          dir
+          .\cuda_${{ env.CUDA_WINDOWS }}_windows.exe -s
           cd "C:\Program Files\NVIDIA GPU Computing Toolkit"
           dir
 
