@@ -5,7 +5,7 @@ env:
   CUDA_WINDOWS: "11.8.0_522.06"
   VULKAN_LINUX: "1.3.231"
   VULKAN_MAC: "1.3.231.1"
-  VULKAN_WINDOWS: "1.2.182.0"
+  VULKAN_WINDOWS: "1.3.231.1"
 
 on:
   pull_request:
@@ -92,14 +92,14 @@ jobs:
 
       - name: Download Vulkan SDK
         if: ${{ steps.cache-win-vulkan.outputs.cache-hit != 'true' }}
-        uses: carlosperate/download-file-action@v2
-        with:
+        env:
           file-url: "https://sdk.lunarg.com/sdk/download/${{ env.VULKAN_WINDOWS }}/windows/VulkanSDK-${{ env.VULKAN_WINDOWS }}-Installer.exe"
           file-name: VulkanSDK-${{ env.VULKAN_WINDOWS }}-Installer.exe
           location: .cache/vulkan
           sha256: "7089d48011f06c4a02a593913c6a9385d1652ab7765c25d2666d5d6ef4e24af8"
+        run: go run .github/tools/download.go
       - name: Install vulkan SDK
-        run: .cache\vulkan\VulkanSDK-${{ env.VULKAN_WINDOWS }}-Installer.exe /S
+        run: .cache\vulkan\VulkanSDK-${{ env.VULKAN_WINDOWS }}-Installer.exe --accept-licenses --default-answer --confirm-command install
 
       - name: Setup CUDA env variables
         shell: bash
@@ -112,12 +112,12 @@ jobs:
 
       - name: Download CUDA
         if: ${{ steps.cache-win-cuda.outputs.cache-hit != 'true' }}
-        uses: carlosperate/download-file-action@v2
-        with:
+        env:
           file-url: "https://developer.download.nvidia.com/compute/cuda/${{ env.CUDA_WINDOWS_URL }}/local_installers/cuda_${{ env.CUDA_WINDOWS }}_windows.exe"
           file-name: cuda_${{ env.CUDA_WINDOWS }}_windows.exe
           location: .cache/cuda
           md5: "894c61ba173d26dc667e95ee734d3c5a"
+        run: go run .github/tools/download.go
       - name: Install CUDA
         run: .cache\cuda\cuda_${{ env.CUDA_WINDOWS }}_windows.exe /s
 
