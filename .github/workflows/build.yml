@@ -38,8 +38,6 @@ jobs:
         run: test/gpu-setup-test --unit-tests
       - name: Unit tests - PoW
         run: test/gpu-setup-test -tp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
-      - name: Unit tests - PoW and Leafs
-        run: test/gpu-setup-test -tlp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
       - name: Unit tests - label lengths
         run: test/gpu-setup-test -il
       - name: Unit tests - labels count
@@ -101,8 +99,6 @@ jobs:
       - name: Install vulkan SDK
         run: |
           Start-Process .cache/vulkan/VulkanSDK-${{ env.VULKAN_WINDOWS }}-Installer.exe -Wait -ArgumentList "--accept-licenses","--default-answer","--confirm-command install"
-          cd C:/VulkanSDK/${{ env.VULKAN_WINDOWS }}
-          dir
 
           "VULKAN_SDK_VERSION=${{ env.VULKAN_WINDOWS }}" >> $env:GITHUB_ENV
           "VULKAN_SDK=C:\VulkanSDK\${{ env.VULKAN_WINDOWS }}" >> $env:GITHUB_ENV
@@ -147,8 +143,6 @@ jobs:
         run: build/test/gpu-setup-test --unit-tests
       - name: Unit tests - PoW
         run: build/test/gpu-setup-test -tp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
-      - name: Unit tests - PoW and Leafs
-        run: build/test/gpu-setup-test -tlp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
       - name: Unit tests - label lengths
         run: build/test/gpu-setup-test -il
       - name: Unit tests - labels count
@@ -235,8 +229,6 @@ jobs:
         run: test/gpu-setup-test --unit-tests
       - name: Unit tests - PoW
         run: test/gpu-setup-test -tp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
-      - name: Unit tests - PoW and Leafs
-        run: test/gpu-setup-test -tlp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
       - name: Unit tests - label lengths
         run: test/gpu-setup-test -il
       - name: Unit tests - labels count
@@ -295,8 +287,6 @@ jobs:
         run: arch -arm64 test/gpu-setup-test --unit-tests
       - name: Unit tests - PoW
         run: arch -arm64 test/gpu-setup-test -tp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
-      - name: Unit tests - PoW and Leafs
-        run: arch -arm64 test/gpu-setup-test -tlp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
       - name: Unit tests - label lengths
         run: arch -arm64 test/gpu-setup-test -il
       - name: Unit tests - labels count
@@ -359,8 +349,6 @@ jobs:
   #     run: test/gpu-setup-test --unit-tests
   #   - name: Unit tests - PoW
   #     run: test/gpu-setup-test -tp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
-  #   - name: Unit tests - PoW and Leafs
-  #     run: test/gpu-setup-test -tlp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
   #   - name: Unit tests - label lengths
   #     run: test/gpu-setup-test -il
   #   - name: Unit tests - labels count
