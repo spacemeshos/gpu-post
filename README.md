@@ -12,7 +12,7 @@ Windows 10, macOS or Ubuntu.
 One or more of the following processors:
 
 - A GPU and drivers with CUDA support (minimum compute compatibility 5.0, maximum compute compatibility 8.6), such as a modern Nvidia GPU and Nvidia drivers version R450 or newer.
-- A GPU and drivers with Vulkan 1.2 support such as a modern AMD, Apple M1 processor, and Intel GPUs.
+- A GPU and drivers with Vulkan 1.3 support such as a modern AMD, Apple M1 processor, and Intel GPUs.
 - A x86-64 cpu such as AMD or Intel CPUs.
 - Both discrete and on-board GPUs are supported as long as they support the minimum CUDA or Vulkan runtime version.
 - We currently provide release binaries and build instructions for Ubuntu 20.04 but the library can be built on other Linux distros for usage on these systems.
@@ -35,7 +35,7 @@ One or more of the following processors:
 ### All Platforms
 
 - For building CUDA support: NVIDIA Cuda Toolkit 11, an NVIDIA GPU with CUDA support, and an Nvdia driver version R450 or newer.
-- For building Vulkan support: Vulkan SDK 1.2 and a GPU with Vulkan 1.2 runtime support.
+- For building Vulkan support: Vulkan SDK 1.3 and a GPU with Vulkan 1.3 runtime support.
 
 ### Windows
 
@@ -45,7 +45,7 @@ One or more of the following processors:
 
 ### Ubuntu
 
-- Ubuntu 20.04
+- Ubuntu 22.04
 - Cmake, GCC 7
 
 ### macOS
@@ -57,14 +57,14 @@ One or more of the following processors:
 ### macOS Dev Env Setup
 
 1. Install latest version of Xcode with the command line dev tools.
-1. Download the Vulkan 1.2 sdk installer for macOS from <https://vulkan.lunarg.com/sdk/home#mac>
-1. Copy Vulkan SDK from the Vulkan installer volume to a directory in your hard-drive.
-1. Install the SDK from your hard-drive directory and not from the installer volume by running `$ sudo ./install_vulkan.py`.
+1. Download the Vulkan 1.3 sdk installer for macOS from <https://vulkan.lunarg.com/sdk/home#mac>
+1. Install Vulkan SDK with the Vulkan installer.
+1. Change directory to the folder where the SDK is installed (default `$ cd $HOME/VulkanSDK/1.3.xxx`) and run the install script with `$ sudo ./install_vulkan.py`
 1. Add the Vulkan env vars to your `.bash_profile` file with the root location set to the sdk directory on your hard-drive. For example, if Vulkan sdk 1.2.154 is installed then the env vars should be set like this:
 
 ```bash
-export VULKAN_SDK_VERSION="1.2.154.0"
-export VULKAN_ROOT_LOCATION="$HOME/dev/vulkan-sdk-1.2.154"
+export VULKAN_SDK_VERSION="1.3.xxx"                   # Replace xxx with actual version
+export VULKAN_ROOT_LOCATION="$HOME/VulkanSDK/1.3.xxx" # adapt to install location on your machine
 export VULKAN_SDK="$VULKAN_ROOT_LOCATION/macOS"
 export VK_ICD_FILENAMES="$VULKAN_SDK/share/vulkan/icd.d/MoltenVK_icd.json"
 export VK_LAYER_PATH="$VULKAN_SDK/share/vulkan/explicit_layers.d"
@@ -217,22 +217,22 @@ Compute leaves and/or pow solution:
 
 ```c
 int scryptPositions(
- uint32_t provider_id,   // POST compute provider ID
- const uint8_t *id,   // 32 bytes
-    uint64_t start_position,   // e.g. 0
-    uint64_t end_position,  // e.g. 49,999
-    uint32_t hash_len_bits, // (1...256) for each hash output, the number of prefix bits (not bytes) to copy into the buffer
-    const uint8_t *salt,    // 32 bytes
-    uint32_t options,    // compute leafs and/or compute pow
-    uint8_t *out,              // memory buffer large enough to include hash_len_bits * number of requested hashes
-    uint32_t N,    // scrypt N
-    uint32_t R,    // scrypt r
-    uint32_t P,    // scrypt p
- uint8_t *D,    // Target D for the POW computation. 256 bits.
- uint64_t *idx_solution, // index of output where output < D if POW compute was on. MAX_UINT64 otherwise.
- uint64_t *hashes_computed, // The number of hashes computed, should be equal to the number of requested hashes.
- uint64_t *hashes_per_sec   // Performance
- );
+   uint32_t provider_id,      // POST compute provider ID
+   const uint8_t *id,         // 32 bytes
+   uint64_t start_position,   // e.g. 0
+   uint64_t end_position,     // e.g. 49,999
+   uint32_t hash_len_bits,    // (1...256) for each hash output, the number of prefix bits (not bytes) to copy into the buffer
+   const uint8_t *salt,       // 32 bytes
+   uint32_t options,          // compute leafs and/or compute pow
+   uint8_t *out,              // memory buffer large enough to include hash_len_bits * number of requested hashes
+   uint32_t N,                // scrypt N
+   uint32_t R,                // scrypt r
+   uint32_t P,                // scrypt p
+   uint8_t *D,                // Target D for the POW computation. 256 bits.
+   uint64_t *idx_solution,    // index of output where output < D if POW compute was on. MAX_UINT64 otherwise.
+   uint64_t *hashes_computed, // The number of hashes computed, should be equal to the number of requested hashes.
+   uint64_t *hashes_per_sec   // Performance
+);
 ```
 
 ### Supported scrypt parameters
