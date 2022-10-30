@@ -106,7 +106,7 @@ static std::pair<Provider::Ptr, Provider::Vector> getProviders()
 	return {cpu, gpus};
 }
 
-/* compute labels with varios length and compare with others providers */
+/* compute labels with various length and compare with others providers */
 int test_variable_label_length()
 {
 	static const uint32_t cLabelsCount = 256;
@@ -156,7 +156,7 @@ int test_variable_label_length()
 	return 0;
 }
 
-/* compute varios labels count with varios length and compare with others providers */
+/* compute various labels count with various length and compare with others providers */
 int test_variable_labels_count()
 {
 	static const uint32_t cLabelsCount = 16;
@@ -214,13 +214,13 @@ int test_of_concurrency()
 	std::pair<Provider::Ptr, Provider::Vector> providers{ getProviders() };
 
 	if (providers.second.size() > 1) {
-		std::atomic_uint32_t runned(0);
+		std::atomic_uint32_t counter(0);
 		for (auto provider : providers.second) {
 			printf("Run %s\n", provider->info.model);
-			provider->post(0, 32 * 1024 * 1024 - 1, 1, &runned);
+			provider->post(0, 32 * 1024 * 1024 - 1, 1, &counter);
 		}
 
-		while (runned.load()) {
+		while (counter.load()) {
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			printf(".");
 		}
@@ -253,18 +253,18 @@ int test_of_concurrency()
 }
 
 /* run labels computation for provider, cancel it and check if tail result is right */
-int test_of_cancelation()
+int test_of_cancellation()
 {
 	std::pair<Provider::Ptr, Provider::Vector> providers{ getProviders() };
 
 	for (auto provider : providers.second) {
 		for (int i = 1; i < 4; i++) {
-			std::atomic_uint32_t runned(0);
+			std::atomic_uint32_t counter(0);
 			printf("Run (%d) %s\n", i, provider->info.model);
-			provider->post(0, 32 * 1024 * 1024 - 1, 1, &runned);
+			provider->post(0, 32 * 1024 * 1024 - 1, 1, &counter);
 			std::this_thread::sleep_for(std::chrono::seconds(5));
 			stop(10000);
-			while (runned.load()) {
+			while (counter.load()) {
 				std::this_thread::sleep_for(std::chrono::milliseconds(100));
 				printf(".");
 			}
@@ -299,5 +299,5 @@ void do_integration_tests()
 	test_of_concurrency();
 
 	// test of cancelation
-	test_of_cancelation();
+	test_of_cancellation();
 }

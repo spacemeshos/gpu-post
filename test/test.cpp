@@ -10,7 +10,7 @@ void do_integration_tests();
 int test_variable_label_length();
 int test_variable_labels_count();
 int test_of_concurrency();
-int test_of_cancelation();
+int test_of_cancellation();
 
 #define	MAX_CPU_LABELS_COUNT	(1 * 128 * 1024)
 #define MAX_LABELS_COUNT_API_CALL (32 * 1024 * 1024)
@@ -127,7 +127,7 @@ void do_benchmark(int aLabelSize, int aLabelsCount)
 	}
 }
 
-/* test labers computation */
+/* test label computation */
 void do_test(int aLabelSize, int aLabelsCount, int aReferenceProvider, bool aPrintResult)
 {
 	int referenceLabelsCount = aLabelsCount;
@@ -149,12 +149,12 @@ void do_test(int aLabelSize, int aLabelsCount, int aReferenceProvider, bool aPri
 		if (spacemesh_api_get_providers(providers, providersCount) == providersCount) {
 			int i;
 			size_t labelsBufferSize = (size_t(aLabelsCount) * size_t(aLabelSize) + 7ull) / 8ull;
-			size_t labelsBufferAllignedSize = ((labelsBufferSize + 31ull) / 32ull) * 32ull;
-			uint8_t *out = (uint8_t *)malloc(providersCount * labelsBufferAllignedSize);
+			size_t labelsBufferAlignedSize = ((labelsBufferSize + 31ull) / 32ull) * 32ull;
+			uint8_t *out = (uint8_t *)malloc(providersCount * labelsBufferAlignedSize);
 			uint8_t *referenceLabels = nullptr;
 			uint64_t hashes_computed;
 			uint64_t hashes_per_sec;
-			bool checkOuitput = false;
+			bool checkOutput = false;
 
 			if (aReferenceProvider < 0 || aReferenceProvider >= providersCount) {
 				if (referenceLabelsCount > MAX_CPU_LABELS_COUNT) {
@@ -165,12 +165,12 @@ void do_test(int aLabelSize, int aLabelsCount, int aReferenceProvider, bool aPri
 					if (providers[i].compute_api == COMPUTE_API_CLASS_CPU) {
 						uint64_t idx_solution = -1;
 						uint8_t D[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-						referenceLabels = out + i * labelsBufferAllignedSize;
+						referenceLabels = out + i * labelsBufferAlignedSize;
 						memset(referenceLabels, 0, labelsBufferSize);
 						scryptPositions(providers[i].id, id, 0, referenceLabelsCount - 1, aLabelSize, salt, SPACEMESH_API_COMPUTE_LEAFS, referenceLabels, 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
 						printf("%s: %u hashes, %u h/s\n", providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
 						aReferenceProvider = i;
-						checkOuitput = true;
+						checkOutput = true;
 						break;
 					}
 				}
@@ -178,32 +178,32 @@ void do_test(int aLabelSize, int aLabelsCount, int aReferenceProvider, bool aPri
 			else {
 				uint64_t idx_solution = -1;
 				uint8_t D[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-				referenceLabels = out + aReferenceProvider * labelsBufferAllignedSize;
+				referenceLabels = out + aReferenceProvider * labelsBufferAlignedSize;
 				memset(referenceLabels, 0, labelsBufferSize);
 				scryptPositions(providers[aReferenceProvider].id, id, 0, referenceLabelsCount - 1, aLabelSize, salt, SPACEMESH_API_COMPUTE_LEAFS, referenceLabels, 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
 				printf("%s: %u hashes, %u h/s\n", providers[aReferenceProvider].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
-				checkOuitput = true;
+				checkOutput = true;
 			}
 
 			for (i = 0; i < providersCount; i++) {
 				if (i != aReferenceProvider && providers[i].compute_api != COMPUTE_API_CLASS_CPU) {
 					uint64_t idx_solution = -1;
 					uint8_t D[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-					uint8_t *labels = out + i * labelsBufferAllignedSize;
+					uint8_t *labels = out + i * labelsBufferAlignedSize;
 					memset(labels, 0, labelsBufferSize);
 					scryptPositions(providers[i].id, id, 0, aLabelsCount - 1, aLabelSize, salt, SPACEMESH_API_COMPUTE_LEAFS, labels, 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
 					printf("%s: %u hashes, %u h/s\n", providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
 					if (memstr(labels, labelsBufferSize, zeros, 8)) {
 						printf("ZEROS result\n");
 					}
-					if (checkOuitput) {
-						size_t referencelabelsBufferSize = (size_t(referenceLabelsCount) * size_t(aLabelSize)) / 8ull;
-						if (0 != memcmp(referenceLabels, labels, referencelabelsBufferSize)) {
+					if (checkOutput) {
+						size_t referenceLabelsBufferSize = (size_t(referenceLabelsCount) * size_t(aLabelSize)) / 8ull;
+						if (0 != memcmp(referenceLabels, labels, referenceLabelsBufferSize)) {
 							printf("WRONG result for label size %d from provider %d [%s]\n", aLabelSize, i, providers[i].model);
 							if (aPrintResult) {
 								const uint8_t *ref = referenceLabels;
 								const uint8_t *res = labels;
-								for (size_t i = 0; i < referencelabelsBufferSize / 32; i++) {
+								for (size_t i = 0; i < referenceLabelsBufferSize / 32; i++) {
 									for (int j = 0; j < 32; j++, ref++, res++) {
 										if (*ref == *res) {
 											printf("%02x=%02x ", *ref, *res);
@@ -290,7 +290,7 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 						labels_per_iter = MAX_LABELS_COUNT_API_CALL;
 						iters = aLabelsCount / MAX_LABELS_COUNT_API_CALL;
 					}
-					printf("Labels+Pow Task. Iters: %u, Total labels: %d, Labels per iter: %lu. Label size (bits): %u\n", iters,  aLabelsCount, labels_per_iter, labelSize);
+					printf("Labels+Pow Task. Iters: %u, Total labels: %d, Labels per iter: %llu. Label size (bits): %u\n", iters,  aLabelsCount, labels_per_iter, labelSize);
 
 					const uint64_t labelsBufferSize = (uint64_t(labels_per_iter) * uint64_t(labelSize) + 7ull) / 8ull;
 					uint8_t *out = (uint8_t *)malloc(labelsBufferSize);
@@ -316,13 +316,13 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 							}
 
 							if (hashes_computed != labels_per_iter) {
-								printf ("Compute error: hashes computed: %lu, hashes expected: %lu\n", hashes_computed, labels_per_iter);
+								printf ("Compute error: hashes computed: %llu, hashes expected: %llu\n", hashes_computed, labels_per_iter);
 							}
 
-							printf("Labels + pow: requested %lu labels at index %lu. Computed hashes: %lu, (%lu h/s)\n", labels_per_iter, idx, hashes_computed, hashes_per_sec);
+							printf("Labels + pow: requested %llu labels at index %llu. Computed hashes: %llu, (%llu h/s)\n", labels_per_iter, idx, hashes_computed, hashes_per_sec);
 
 							if (idx_solution != -1ull) {
-								printf("Found pow solution at index %lu\n", idx_solution);
+								printf("Found pow solution at index %llu\n", idx_solution);
 							} else {
 								printf("Pow solution not found in this iteration.\n");
 							}
@@ -337,7 +337,7 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 								printf("Compute returned an error: %u", status);
 							}
 
-							printf("Compute labels only. Requested: %lu labels at index %lu. hHshes computed: %lu. (%lu h/s). Solution index:  %lu\n", labels_per_iter, idx, hashes_computed, hashes_per_sec, idx_solution);
+							printf("Compute labels only. Requested: %llu labels at index %llu. hashes computed: %llu. (%llu h/s). Solution index:  %llu\n", labels_per_iter, idx, hashes_computed, hashes_per_sec, idx_solution);
 						}
 
 						// start index of next iteration
@@ -353,7 +353,7 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 
 						int status = scryptPositions(providers[i].id, id, idx, idx + labels_per_iter - 1, labelSize, salt, SPACEMESH_API_COMPUTE_POW, out, 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
 
-						printf("Compute pow only at index: %lu. hashes computed: %lu (%lu h/s)\n", idx, hashes_computed, hashes_per_sec);
+						printf("Compute pow only at index: %llu. hashes computed: %llu (%llu h/s)\n", idx, hashes_computed, hashes_per_sec);
 
 						switch(status) {
 							case SPACEMESH_API_POW_SOLUTION_FOUND:
@@ -361,11 +361,11 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 
 							case SPACEMESH_API_ERROR_NONE:
 								if (hashes_computed != labels_per_iter) {
-									printf("Error: compute diff than expected: hashes computed: %lu, labels requested: %lu\n", hashes_computed, labels_per_iter);
+									printf("Error: compute diff than expected: hashes computed: %llu, labels requested: %llu\n", hashes_computed, labels_per_iter);
 								}
 								break;
 							default:
-								printf("Error %d. Hashes computed: %lu, (%lu h/s)\n", status, hashes_computed, hashes_per_sec);
+								printf("Error %d. Hashes computed: %llu, (%llu h/s)\n", status, hashes_computed, hashes_per_sec);
 								break;
 						}
 
@@ -485,7 +485,7 @@ int do_test_pow(uint64_t aStartPos, int aLabelsCount, unsigned aDiff, unsigned a
 					}
 					if (aSolutionIdx != 0xffffffffffffffffull) {
 						if (idx_solution != aSolutionIdx) {
-							printf("WRONG solution index %ull, expected %ull\n", idx_solution, aSolutionIdx);
+							printf("WRONG solution index %llu, expected %llu\n", idx_solution, aSolutionIdx);
 							return 1;
 						}
 					}
@@ -652,20 +652,21 @@ void create_test_vector()
 
 void print_usage() {
 	printf("Usage:\n");
-	printf("--list               or -l	print available providers\n");
-	printf("--benchmark          or -b	run benchmark\n");
-	printf("--core               or -c	test the core library use case\n");
-	printf("--test               or -t	run basic test\n");
-	printf("--test-vector-check		run a CPU test and compare with test-vector\n");
-	printf("--test-pow           or -tp 	test pow computation\n");
-	printf("--unit-tests         or -u 	run unit tests\n");
-	printf("--integration-tests  or -i  	run integration tests\n");
-	printf("--label-size         or -s	<1-256>	set label size [1-256]\n");
-	printf("--labels-count       or -n	<1-32M>	set labels count [up to 32M]\n");
-	printf("--reference-provider or -r	<id> the result of this provider will be used as a reference [default - CPU]\n");
-	printf("--print              or -p	print detailed data comparison report for incorrect results\n");
-	printf("--pow-diff           or -d 	<0-256> count of leading zero bits in target D value [default - 16]\n");
-	printf("--srand-seed         or -ss	<unsigned int> set srand seed value for POW test: 0 - use zero id/seed [default], -1 - use random value\n");
+	printf("--list               or -l                 print available providers\n");
+	printf("--benchmark          or -b                 run benchmark\n");
+	printf("--core               or -c                 test the core library use case\n");
+	printf("--test               or -t                 run basic test\n");
+	printf("--test-vector-check                        run a CPU test and compare with test-vector\n");
+	printf("--test-pow           or -tp                test pow computation\n");
+	printf("--unit-tests         or -u                 run unit tests\n");
+	printf("--integration-tests  or -i                 run integration tests\n");
+	printf("--label-size         or -s <1-256>         set label size [1-256]\n");
+	printf("--labels-count       or -n <1-32M>         set labels count [up to 32M]\n");
+	printf("--reference-provider or -r <id>            the result of this provider will be used as a reference [default - CPU]\n");
+	printf("--print              or -p                 print detailed data comparison report for incorrect results\n");
+	printf("--pow-diff           or -d <0-256>         count of leading zero bits in target D value [default - 16]\n");
+	printf("--srand-seed         or -ss <unsigned int> set srand seed value for POW test: 0 - use zero id/seed [default], -1 - use random value\n");
+	printf("--solution-idx       or -si <unsigned int> set solution index for POW test: index will be compared to be the found solution for Pow [default - unset]\n");
 }
 
 int main(int argc, char **argv)
@@ -729,8 +730,8 @@ int main(int argc, char **argv)
 		else if (0 == strcmp(argv[i], "--integration-test-concurrency") || 0 == strcmp(argv[i], "-ip")) {
 			return test_of_concurrency();
 		}
-		else if (0 == strcmp(argv[i], "--integration-test-cancelation") || 0 == strcmp(argv[i], "-ic")) {
-			return test_of_cancelation();
+		else if (0 == strcmp(argv[i], "--integration-test-cancellation") || 0 == strcmp(argv[i], "-ic")) {
+			return test_of_cancellation();
 		}
 		else if (0 == strcmp(argv[i], "--pow-diff") || 0 == strcmp(argv[i], "-d")) {
 			i++;
@@ -842,8 +843,7 @@ int main(int argc, char **argv)
 	}
 	if (runTestPow) {
 		printf("Test POW: count %u\n", labelsCount);
-		do_test_pow(startPos, labelsCount, powDiff, srand_seed, referenceProvider, solutionIdx);
-		return 0;
+		return do_test_pow(startPos, labelsCount, powDiff, srand_seed, referenceProvider, solutionIdx);
 	}
 	if (runTestCore) {
 		printf("Test POS+POW core use case: count %u\n", labelsCount);

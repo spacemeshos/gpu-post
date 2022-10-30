@@ -1,375 +1,389 @@
 name: Build
 
+env:
+  CUDA_LINUX: "11.8"
+  CUDA_WINDOWS: "11.8.0_522.06"
+  VULKAN_LINUX: "1.3.231"
+  VULKAN_MAC: "1.3.231.1"
+  VULKAN_WINDOWS: "1.3.231.1"
+
 on:
+  pull_request:
   push:
+    branches: [master]
 
 jobs:
   linux:
-    runs-on: ${{ matrix.os }}
-
-    strategy:
-      matrix:
-        include:
-        - os: ubuntu-20.04
-          cuda: "11.4"
+    runs-on: ubuntu-22.04
 
     steps:
-    - uses: actions/checkout@v2
-      with:
-        submodules: true
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
 
-    - name: Install CUDA
-      env:
-        CUDA: ${{ matrix.cuda }}
-      run: .github/tools/linux-install-cuda.sh
+      - name: Install CUDA
+        run: .github/tools/linux-install-cuda.sh
+      - name: Install Vulkan
+        run: .github/tools/linux-install-vulkan.sh
 
-    - name: Install Vulkan
-      run: .github/tools/linux-install-vulkan.sh
+      - run: cmake .
+      - run: make
 
-    - run: cmake .
+      - name: Copy library
+        run: cp src/libgpu-setup.so test/libgpu-setup.so
 
-    - run: make
+      - name: Unit tests - Golden vectors
+        run: test/gpu-setup-test --test-vector-check
+      - name: Unit tests - hash and bitstream
+        run: test/gpu-setup-test --unit-tests
+      - name: Unit tests - PoW
+        run: test/gpu-setup-test -tp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
+      - name: Unit tests - label lengths
+        run: test/gpu-setup-test -il
+      - name: Unit tests - labels count
+        run: test/gpu-setup-test -in
+      - name: Integration tests - concurrency test
+        run: test/gpu-setup-test -ip
+      - name: Integration tests - cancellation test
+        run: test/gpu-setup-test -ic
 
-    - name: Copy library
-      run: cp src/libgpu-setup.so test/libgpu-setup.so
-
-    - name: Unit tests - Golden vectors
-      run: test/gpu-setup-test --test-vector-check
-
-    - name: Unit tests - hash and bitstream
-      run: test/gpu-setup-test --unit-tests
-
-    - name: Unit tests - PoW
-      run: test/gpu-setup-test -tp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
-
-    - name: Unit tests - label lengths
-      run: test/gpu-setup-test -il
-
-    - name: Unit tests - labels count
-      run: test/gpu-setup-test -in
-
-    - name: Integration tests - concurrency test
-      run: test/gpu-setup-test -ip
-
-    - name: Integration tests - cancelation test
-      run: test/gpu-setup-test -ic
-
-    - uses: actions/upload-artifact@v2
-      with:
-        name: linux
-        path: src/libgpu-setup.so
-
-    - uses: actions/upload-artifact@v2
-      with:
-        name: linux
-        path: test/gpu-setup-test
-
-    - uses: actions/upload-artifact@v2
-      with:
-        name: linux
-        path: include/api.h
+      - name: Upload lib
+        uses: actions/upload-artifact@v2
+        with:
+          name: linux
+          path: src/libgpu-setup.so
+      - name: Upload test-app
+        uses: actions/upload-artifact@v2
+        with:
+          name: linux
+          path: test/gpu-setup-test
+      - name: Upload api.h
+        uses: actions/upload-artifact@v2
+        with:
+          name: linux
+          path: include/api.h
 
   windows:
-    runs-on: ${{ matrix.os }}
+    runs-on: windows-2022
 
-    strategy:
-      matrix:
-        include:
-        - os: windows-2016
-          cuda: "11.2.2.46133"
-          vulkan: "1.2.154.1"
-          vs_path: c:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise
+    env:
+      vs_path: C:\Program Files\Microsoft Visual Studio\2022\Enterprise
 
     steps:
-    - uses: actions/checkout@v2
-      with:
-        submodules: true
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
 
-    - name: Install CUDA
-      run: choco install cuda --version=${{ matrix.cuda }}
+      - name: Cache Windows Vulkan downloads
+        uses: actions/cache@v3
+        id: cache-win-vulkan
+        with:
+          path: .cache/vulkan
+          key: win-vulkan-${{ env.VULKAN_WINDOWS }}
 
-    - name: Install Vulkan
-      run: choco install vulkan-sdk --version=${{ matrix.vulkan }}
+      - name: Cache Windows CUDA downloads
+        uses: actions/cache@v3
+        id: cache-win-cuda
+        with:
+          path: .cache/cuda
+          key: win-cuda-${{ env.CUDA_WINDOWS }}
 
-    - name: Build
-      env:
-        VULKAN_SDK: c:/VulkanSDK/${{ matrix.vulkan }}
-      run: |
-        call "${{ matrix.vs_path }}\VC\Auxiliary\Build\vcvars64.bat"
-        mkdir build
-        cd build
-        "${{ matrix.vs_path }}\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake" -G "Ninja" -DCMAKE_BUILD_TYPE="Release" -DCMAKE_IGNORE_PATH="C:/Strawberry/c/bin;C:/ProgramData/chocolatey/bin" -DCUDA_TOOLKIT_ROOT_DIR="C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.2" -DCMAKE_MAKE_PROGRAM="${{ matrix.vs_path }}\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe" ..
-        cmake --build .
-      shell: cmd
+      - name: Download Vulkan SDK
+        if: ${{ steps.cache-win-vulkan.outputs.cache-hit != 'true' }}
+        env:
+          file-url: "https://sdk.lunarg.com/sdk/download/${{ env.VULKAN_WINDOWS }}/windows/VulkanSDK-${{ env.VULKAN_WINDOWS }}-Installer.exe"
+          file-name: VulkanSDK-${{ env.VULKAN_WINDOWS }}-Installer.exe
+          location: .cache/vulkan
+          sha256: "ffdf442893761a453499d612d86534a02573c3d2b2442b40311b69a4b2518bf2"
+        run: go run .github/tools/download.go
+      - name: Install vulkan SDK
+        run: |
+          Start-Process .cache/vulkan/VulkanSDK-${{ env.VULKAN_WINDOWS }}-Installer.exe -Wait -ArgumentList "--accept-licenses","--default-answer","--confirm-command install"
 
-    - name: Copy library
-      shell: bash
-      run: cp build/src/gpu-setup.dll build/test/gpu-setup.dll
+          "VULKAN_SDK_VERSION=${{ env.VULKAN_WINDOWS }}" >> $env:GITHUB_ENV
+          "VULKAN_SDK=C:\VulkanSDK\${{ env.VULKAN_WINDOWS }}" >> $env:GITHUB_ENV
+          "PATH=C:\VulkanSDK\${{ env.VULKAN_WINDOWS }}\bin;$env:PATH" >> $env:GITHUB_ENV
 
-    - name: Unit tests - Golden vectors
-      run: build/test/gpu-setup-test --test-vector-check
+      - name: Setup CUDA env variables
+        shell: bash
+        run: |
+          CUDA_SHORT="$(cut -d '.' -f 1 <<< ${{ env.CUDA_WINDOWS }})"."$(cut -d '.' -f 2 <<< ${{ env.CUDA_WINDOWS }})"
+          echo "CUDA_WINDOWS_SHORT=$CUDA_SHORT" >> $GITHUB_ENV
 
-    - name: Unit tests - hash and bitstream
-      run: build/test/gpu-setup-test --unit-tests
+          CUDA_URL=${CUDA_WINDOWS/_*/}
+          echo "CUDA_WINDOWS_URL=$CUDA_URL" >> $GITHUB_ENV
 
-    - name: Unit tests - PoW
-      run: build/test/gpu-setup-test -tp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
+      - name: Download CUDA
+        if: ${{ steps.cache-win-cuda.outputs.cache-hit != 'true' }}
+        env:
+          file-url: "https://developer.download.nvidia.com/compute/cuda/${{ env.CUDA_WINDOWS_URL }}/local_installers/cuda_${{ env.CUDA_WINDOWS }}_windows.exe"
+          file-name: cuda_${{ env.CUDA_WINDOWS }}_windows.exe
+          location: .cache/cuda
+          md5: "894c61ba173d26dc667e95ee734d3c5a"
+        run: go run .github/tools/download.go
+      - name: Install CUDA
+        run: Start-Process .cache/cuda/cuda_${{ env.CUDA_WINDOWS }}_windows.exe -Wait -ArgumentList "-s","-n"
 
-    - name: Unit tests - label lengths
-      run: build/test/gpu-setup-test -il
+      - name: Build
+        run: |
+          call "${{ env.vs_path }}\VC\Auxiliary\Build\vcvars64.bat"
+          mkdir build
+          cd build
+          "${{ env.vs_path }}\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake" -G "Ninja" -DCMAKE_BUILD_TYPE="Release" -DCMAKE_IGNORE_PATH="C:/Strawberry/c/bin;C:/ProgramData/chocolatey/bin" -DCUDA_TOOLKIT_ROOT_DIR="C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v${{ env.CUDA_WINDOWS_SHORT }}" -DCMAKE_MAKE_PROGRAM="${{ env.vs_path }}\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe" ..
+          cmake --build .
+        shell: cmd
 
-    - name: Unit tests - labels count
-      run: build/test/gpu-setup-test -in
+      - name: Copy library
+        shell: bash
+        run: cp build/src/gpu-setup.dll build/test/gpu-setup.dll
 
-    - name: Integration tests - concurrency test
-      run: build/test/gpu-setup-test -ip
+      - name: Unit tests - Golden vectors
+        run: build/test/gpu-setup-test --test-vector-check
+      - name: Unit tests - hash and bitstream
+        run: build/test/gpu-setup-test --unit-tests
+      - name: Unit tests - PoW
+        run: build/test/gpu-setup-test -tp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
+      - name: Unit tests - label lengths
+        run: build/test/gpu-setup-test -il
+      - name: Unit tests - labels count
+        run: build/test/gpu-setup-test -in
+      - name: Integration tests - concurrency test
+        run: build/test/gpu-setup-test -ip
+      - name: Integration tests - cancellation test
+        run: build/test/gpu-setup-test -ic
 
-    - name: Integration tests - cancelation test
-      run: build/test/gpu-setup-test -ic
-
-    - name: Upload DLL
-      uses: actions/upload-artifact@v2
-      with:
-        name: windows
-        path: build/src/gpu-setup.dll
-
-    - name: Upload test app
-      uses: actions/upload-artifact@v2
-      with:
-        name: windows
-        path: build/test/gpu-setup-test.exe
-
-    - name: Upload lib
-      uses: actions/upload-artifact@v2
-      with:
-        name: windows
-        path: build/src/gpu-setup.lib
-
-    - name: Upload api.h
-      uses: actions/upload-artifact@v2
-      with:
-        name: windows
-        path: include/api.h
+      - name: Upload DLL
+        uses: actions/upload-artifact@v2
+        with:
+          name: windows
+          path: build/src/gpu-setup.dll
+      - name: Upload lib
+        uses: actions/upload-artifact@v2
+        with:
+          name: windows
+          path: build/src/gpu-setup.lib
+      - name: Upload test app
+        uses: actions/upload-artifact@v2
+        with:
+          name: windows
+          path: build/test/gpu-setup-test.exe
+      - name: Upload api.h
+        uses: actions/upload-artifact@v2
+        with:
+          name: windows
+          path: include/api.h
 
   macos:
-    runs-on: macos-latest
+    runs-on: macos-11
 
     steps:
-    - uses: actions/checkout@v2
-      with:
-        submodules: true
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
 
-    - name: Install Vulkan
-      run: .github/tools/macos-install-vulkan.sh
+      - name: Cache macOS downloads
+        id: cache-mac-vulkan
+        uses: actions/cache@v3
+        with:
+          path: .cache/vulkan
+          key: macos-cuda-vulkan-${{ env.VULKAN_MAC }}
+      - name: Download Vulkan SDK
+        if: ${{ steps.cache-mac-vulkan.outputs.cache-hit != 'true' }}
+        env:
+          file-url: "https://sdk.lunarg.com/sdk/download/${{ env.VULKAN_MAC }}/mac/vulkansdk-macos-${{ env.VULKAN_MAC }}.dmg"
+          file-name: vulkansdk-macos-${{ env.VULKAN_MAC }}.dmg
+          location: .cache/vulkan
+          sha256: "ee63c647eb5108dfb663b701fd3d5e976e9826f991cbe4aaaf43b5bb01971db5"
+        run: go run .github/tools/download.go
+      - name: Install vulkan SDK
+        run: |
+          sudo hdiutil attach .cache/vulkan/vulkansdk-macos-${{ env.VULKAN_MAC }}.dmg
 
-    - run: cmake -DSPACEMESHCUDA=OFF .
+          cd /Volumes/vulkansdk-macos-${{ env.VULKAN_MAC }}
+          ./InstallVulkan.app/Contents/MacOS/InstallVulkan --accept-licenses --default-answer --confirm-command install
 
-    - run: make
+          cd /Users/runner/VulkanSDK/${{ env.VULKAN_MAC }}
+          python install_vulkan.py
 
-    - name: Copy library
-      run: cp src/libgpu-setup.dylib test/libgpu-setup.dylib
+          VULKAN_ROOT_LOCATION=$PWD
+          VULKAN_SDK=${VULKAN_ROOT_LOCATION}/macOS
+          echo "VULKAN_ROOT_LOCATION=$VULKAN_ROOT_LOCATION" >> $GITHUB_ENV
+          echo "VULKAN_SDK_VERSION=${{ env.VULKAN_MAC }}" >> $GITHUB_ENV
+          echo "VULKAN_SDK=$VULKAN_SDK" >> $GITHUB_ENV
+          echo "VK_ICD_FILENAMES=${VULKAN_SDK}/etc/vulkan/icd.d/MoltenVK_icd.json" >> $GITHUB_ENV
+          echo "VK_LAYER_PATH=${VULKAN_SDK}/etc/vulkan/explicit_layers.d" >> $GITHUB_ENV
+          echo "PATH=${VULKAN_SDK}/bin:$PATH" >> $GITHUB_ENV
+          echo "DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:${VULKAN_SDK}/lib" >> $GITHUB_ENV
 
-    - name: Fix library import paths
-      run: install_name_tool -add_rpath @loader_path test/libgpu-setup.dylib
+      - run: cmake -DSPACEMESHCUDA=OFF .
+      - run: make
 
-    - name: Unit tests - Golden vectors
-      run: test/gpu-setup-test --test-vector-check
+      - name: Copy library
+        run: cp src/libgpu-setup.dylib test/libgpu-setup.dylib
+      - name: Fix library import paths
+        run: install_name_tool -add_rpath @loader_path test/libgpu-setup.dylib
 
-    - name: Unit tests - hash and bitstream
-      run: test/gpu-setup-test --unit-tests
+      - name: Unit tests - Golden vectors
+        run: test/gpu-setup-test --test-vector-check
+      - name: Unit tests - hash and bitstream
+        run: test/gpu-setup-test --unit-tests
+      - name: Unit tests - PoW
+        run: test/gpu-setup-test -tp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
+      - name: Unit tests - label lengths
+        run: test/gpu-setup-test -il
+      - name: Unit tests - labels count
+        run: test/gpu-setup-test -in
+      - name: Integration tests - concurrency test
+        run: test/gpu-setup-test -ip
+      - name: Integration tests - cancellation test
+        run: test/gpu-setup-test -ic
 
-    - name: Unit tests - PoW
-      run: test/gpu-setup-test -tp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
-
-    - name: Unit tests - label lengths
-      run: test/gpu-setup-test -il
-
-    - name: Unit tests - labels count
-      run: test/gpu-setup-test -in
-
-    - name: Integration tests - concurrency test
-      run: test/gpu-setup-test -ip
-
-    - name: Integration tests - cancelation test
-      run: test/gpu-setup-test -ic
-
-    - name: Upload library
-      uses: actions/upload-artifact@v2
-      with:
-        name: macos
-        path: src/libgpu-setup.dylib
-
-    - name: Upload test app
-      uses: actions/upload-artifact@v2
-      with:
-        name: macos
-        path: test/gpu-setup-test
-
-    - name: Upload api.h
-      uses: actions/upload-artifact@v2
-      with:
-        name: macos
-        path: include/api.h
-
-    - name: Upload MoltenVK
-      uses: actions/upload-artifact@v2
-      with:
-        name: macos
-        path: ${{ env.VULKAN_ROOT_LOCATION }}/MoltenVK/dylib/macOS/libMoltenVK.dylib
-
-    - name: Upload MoltenVK config
-      uses: actions/upload-artifact@v2
-      with:
-        name: macos
-        path: ${{ env.VULKAN_ROOT_LOCATION }}/MoltenVK/dylib/macOS/MoltenVK_icd.json
-
-    - name: Upload Vulkan
-      uses: actions/upload-artifact@v2
-      with:
-        name: macos
-        path: ${{ env.VULKAN_ROOT_LOCATION }}/macOS/lib/libvulkan.1.dylib
+      - name: Upload library
+        uses: actions/upload-artifact@v2
+        with:
+          name: macos
+          path: src/libgpu-setup.dylib
+      - name: Upload test app
+        uses: actions/upload-artifact@v2
+        with:
+          name: macos
+          path: test/gpu-setup-test
+      - name: Upload api.h
+        uses: actions/upload-artifact@v2
+        with:
+          name: macos
+          path: include/api.h
+      - name: Upload Vulkan
+        uses: actions/upload-artifact@v2
+        with:
+          name: macos
+          path: ${{ env.VULKAN_ROOT_LOCATION }}/macOS/lib/libvulkan.1.dylib
 
   macos-m1:
     runs-on: [self-hosted, macos]
 
     steps:
-    - uses: actions/checkout@v2
-      with:
-        submodules: true
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
 
-    - name: Setup env
-      run: echo "VULKAN_ROOT_LOCATION=$VULKAN_ROOT_LOCATION" >> $GITHUB_ENV
+      - name: Setup env
+        run: echo "VULKAN_ROOT_LOCATION=$VULKAN_ROOT_LOCATION" >> $GITHUB_ENV
 
-    - run: arch -arm64 cmake -DSPACEMESHCUDA=OFF .
+      - name: Vulkan Info
+        run: vulkaninfo
 
-    - run: arch -arm64 make
+      - run: arch -arm64 cmake -DSPACEMESHCUDA=OFF .
+      - run: arch -arm64 make
 
-    - name: Copy library
-      run: cp src/libgpu-setup.dylib test/libgpu-setup.dylib
+      - name: Copy library
+        run: cp src/libgpu-setup.dylib test/libgpu-setup.dylib
 
-    - name: Fix library import paths
-      run: arch -arm64 install_name_tool -add_rpath @loader_path test/libgpu-setup.dylib
+      - name: Fix library import paths
+        run: arch -arm64 install_name_tool -add_rpath @loader_path test/libgpu-setup.dylib
+      - name: Unit tests - Golden vectors
+        run: arch -arm64 test/gpu-setup-test --test-vector-check
+      - name: Unit tests - hash and bitstream
+        run: arch -arm64 test/gpu-setup-test --unit-tests
+      - name: Unit tests - PoW
+        run: arch -arm64 test/gpu-setup-test -tp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
+      - name: Unit tests - label lengths
+        run: arch -arm64 test/gpu-setup-test -il
+      - name: Unit tests - labels count
+        run: arch -arm64 test/gpu-setup-test -in
+      - name: Integration tests - concurrency test
+        run: arch -arm64 test/gpu-setup-test -ip
+      - name: Integration tests - cancellation test
+        run: arch -arm64 test/gpu-setup-test -ic
 
-    - name: Unit tests - Golden vectors
-      run: arch -arm64 test/gpu-setup-test --test-vector-check
+      - name: Upload library
+        uses: actions/upload-artifact@v2
+        with:
+          name: macos-m1
+          path: src/libgpu-setup.dylib
+      - name: Upload test app
+        uses: actions/upload-artifact@v2
+        with:
+          name: macos-m1
+          path: test/gpu-setup-test
+      - name: Upload api.h
+        uses: actions/upload-artifact@v2
+        with:
+          name: macos-m1
+          path: include/api.h
+      - name: Upload MoltenVK
+        uses: actions/upload-artifact@v2
+        with:
+          name: macos-m1
+          path: ${{ env.VULKAN_ROOT_LOCATION }}/MoltenVK/dylib/macOS/libMoltenVK.dylib
+      - name: Upload MoltenVK config
+        uses: actions/upload-artifact@v2
+        with:
+          name: macos-m1
+          path: ${{ env.VULKAN_ROOT_LOCATION }}/MoltenVK/dylib/macOS/MoltenVK_icd.json
+      - name: Upload Vulkan
+        uses: actions/upload-artifact@v2
+        with:
+          name: macos-m1
+          path: ${{ env.VULKAN_ROOT_LOCATION }}/macOS/lib/libvulkan.1.dylib
 
-    - name: Unit tests - hash and bitstream
-      run: arch -arm64 test/gpu-setup-test --unit-tests
+  ## Temporarily disabled until VM becomes available again
+  #
+  # linux-arm64:
+  #   runs-on: [self-hosted, linux]
 
-    - name: Unit tests - PoW
-      run: arch -arm64 test/gpu-setup-test -tp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
+  #   steps:
+  #   - uses: actions/checkout@v3
+  #     with:
+  #       submodules: true
 
-    - name: Unit tests - label lengths
-      run: arch -arm64 test/gpu-setup-test -il
+  #   - run: cmake -DSPACEMESH_ARCH_ARM64=ON .
+  #   - run: make
 
-    - name: Unit tests - labels count
-      run: arch -arm64 test/gpu-setup-test -in
+  #   - name: Copy library
+  #     run: cp src/libgpu-setup.so test/libgpu-setup.so
 
-    - name: Integration tests - concurrency test
-      run: arch -arm64 test/gpu-setup-test -ip
+  #   - name: Unit tests - Golden vectors
+  #     run: test/gpu-setup-test --test-vector-check
+  #   - name: Unit tests - hash and bitstream
+  #     run: test/gpu-setup-test --unit-tests
+  #   - name: Unit tests - PoW
+  #     run: test/gpu-setup-test -tp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
+  #   - name: Unit tests - label lengths
+  #     run: test/gpu-setup-test -il
+  #   - name: Unit tests - labels count
+  #     run: test/gpu-setup-test -in
+  #   - name: Integration tests - concurrency test
+  #     run: test/gpu-setup-test -ip
+  #   - name: Integration tests - cancellation test
+  #     run: test/gpu-setup-test -ic
 
-    - name: Integration tests - cancelation test
-      run: arch -arm64 test/gpu-setup-test -ic
-
-    - name: Upload library
-      uses: actions/upload-artifact@v2
-      with:
-        name: macos-m1
-        path: src/libgpu-setup.dylib
-
-    - name: Upload test app
-      uses: actions/upload-artifact@v2
-      with:
-        name: macos-m1
-        path: test/gpu-setup-test
-
-    - name: Upload api.h
-      uses: actions/upload-artifact@v2
-      with:
-        name: macos-m1
-        path: include/api.h
-
-    - name: Upload MoltenVK
-      uses: actions/upload-artifact@v2
-      with:
-        name: macos-m1
-        path: ${{ env.VULKAN_ROOT_LOCATION }}/MoltenVK/dylib/macOS/libMoltenVK.dylib
-
-    - name: Upload MoltenVK config
-      uses: actions/upload-artifact@v2
-      with:
-        name: macos-m1
-        path: ${{ env.VULKAN_ROOT_LOCATION }}/MoltenVK/dylib/macOS/MoltenVK_icd.json
-
-    - name: Upload Vulkan
-      uses: actions/upload-artifact@v2
-      with:
-        name: macos-m1
-        path: ${{ env.VULKAN_ROOT_LOCATION }}/macOS/lib/libvulkan.1.dylib
-
-  linux-arm64:
-    runs-on: [self-hosted, linux]
-
-    steps:
-    - uses: actions/checkout@v2
-      with:
-        submodules: true
-
-    - run: cmake -DSPACEMESH_ARCH_ARM64=ON .
-
-    - run: make
-
-    - name: Copy library
-      run: cp src/libgpu-setup.so test/libgpu-setup.so
-
-    - name: Unit tests - Golden vectors
-      run: test/gpu-setup-test --test-vector-check
-
-    - name: Unit tests - hash and bitstream
-      run: test/gpu-setup-test --unit-tests
-
-    - name: Unit tests - PoW
-      run: test/gpu-setup-test -tp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
-
-    - name: Unit tests - label lengths
-      run: test/gpu-setup-test -il
-
-    - name: Unit tests - labels count
-      run: test/gpu-setup-test -in
-
-    - name: Integration tests - concurrency test
-      run: test/gpu-setup-test -ip
-
-    - name: Integration tests - cancelation test
-      run: test/gpu-setup-test -ic
-
-    - uses: actions/upload-artifact@v2
-      with:
-        name: linux-arm64
-        path: src/libgpu-setup.so
-
-    - uses: actions/upload-artifact@v2
-      with:
-        name: linux-arm64
-        path: test/gpu-setup-test
-
-    - uses: actions/upload-artifact@v2
-      with:
-        name: linux-arm64
-        path: include/api.h
+  #   - name: Upload lib
+  #     uses: actions/upload-artifact@v2
+  #     with:
+  #       name: linux-arm64
+  #       path: src/libgpu-setup.so
+  #   - name: Upload test-app
+  #     uses: actions/upload-artifact@v2
+  #     with:
+  #       name: linux-arm64
+  #       path: test/gpu-setup-test
+  #   - name: Upload api.h
+  #     uses: actions/upload-artifact@v2
+  #     with:
+  #       name: linux-arm64
+  #       path: include/api.h
 
   release:
     runs-on: ubuntu-latest
-    needs: [linux, windows, macos, macos-m1, linux-arm64]
+    # needs: [linux, windows, macos, macos-m1, linux-arm64]
+    needs: [linux, windows, macos, macos-m1]
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     if: startsWith(github.ref, 'refs/tags/v')
 
     steps:
-    #   - id: release
-    #     uses: release-drafter/release-drafter@v5
-
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
 
       - run: |
           VER="${{ github.ref }}"
@@ -377,42 +391,14 @@ jobs:
 
       - name: Archive Linux Library
         run: zip --junk-paths libgpu-setup-linux-${{ env.VERSION }}.zip linux/*
-
-    #   - name: Upload Linux Library
-    #     uses: actions/upload-release-asset@v1
-    #     with:
-    #       upload_url: ${{ steps.release.outputs.upload_url }}
-    #       asset_path: ./libgpu-setup-linux-${{ env.VERSION }}.zip
-    #       asset_name: libgpu-setup-linux-${{ env.VERSION }}.zip
-    #       asset_content_type: application/zip
-
       - name: Archive Windows Library
         run: zip --junk-paths libgpu-setup-windows-${{ env.VERSION }}.zip windows/*
-
-    #   - name: Upload Windows Library
-    #     uses: actions/upload-release-asset@v1
-    #     with:
-    #       upload_url: ${{ steps.release.outputs.upload_url }}
-    #       asset_path: ./libgpu-setup-windows-${{ env.VERSION }}.zip
-    #       asset_name: libgpu-setup-windows-${{ env.VERSION }}.zip
-    #       asset_content_type: application/zip
-
       - name: Archive MacOS Library
         run: zip --junk-paths libgpu-setup-macos-${{ env.VERSION }}.zip macos/*
-
-    #   - name: Upload MacOS Library
-    #     uses: actions/upload-release-asset@v1
-    #     with:
-    #       upload_url: ${{ steps.release.outputs.upload_url }}
-    #       asset_path: ./libgpu-setup-macos-${{ env.VERSION }}.zip
-    #       asset_name: libgpu-setup-macos-${{ env.VERSION }}.zip
-    #       asset_content_type: application/zip
-
       - name: Archive MacOS-M1 Library
         run: zip --junk-paths libgpu-setup-macos-m1-${{ env.VERSION }}.zip macos-m1/*
-
-      - name: Archive Linux ARM64 Library
-        run: zip --junk-paths libgpu-setup-linux-arm64-${{ env.VERSION }}.zip linux-arm64/*
+      # - name: Archive Linux ARM64 Library
+      #   run: zip --junk-paths libgpu-setup-linux-arm64-${{ env.VERSION }}.zip linux-arm64/*
 
       - name: Release
         uses: softprops/action-gh-release@v1
@@ -423,6 +409,6 @@ jobs:
             libgpu-setup-windows-${{ env.VERSION }}.zip
             libgpu-setup-macos-${{ env.VERSION }}.zip
             libgpu-setup-macos-m1-${{ env.VERSION }}.zip
-            libgpu-setup-linux-arm64-${{ env.VERSION }}.zip
+          #  libgpu-setup-linux-arm64-${{ env.VERSION }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

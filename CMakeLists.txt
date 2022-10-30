@@ -1,5 +1,3 @@
-# cmake .. -DCMAKE_C_COMPILER=gcc-6 -DCMAKE_CXX_COMPILER=g++-6 -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-9.0
-
 cmake_minimum_required(VERSION 3.1)
 
 project(spacemesh)
