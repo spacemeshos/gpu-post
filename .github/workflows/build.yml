@@ -177,6 +177,114 @@ jobs:
           name: windows
           path: include/api.h
 
+  windows-mingw64:
+    runs-on: windows-2022
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - name: Cache Windows Vulkan downloads
+        uses: actions/cache@v3
+        id: cache-win-vulkan
+        with:
+          path: .cache/vulkan
+          key: win-vulkan-${{ env.VULKAN_WINDOWS }}
+
+      - name: Cache Windows CUDA downloads
+        uses: actions/cache@v3
+        id: cache-win-cuda
+        with:
+          path: .cache/cuda
+          key: win-cuda-${{ env.CUDA_WINDOWS }}
+
+      - name: Download Vulkan SDK
+        if: ${{ steps.cache-win-vulkan.outputs.cache-hit != 'true' }}
+        env:
+          file-url: "https://sdk.lunarg.com/sdk/download/${{ env.VULKAN_WINDOWS }}/windows/VulkanSDK-${{ env.VULKAN_WINDOWS }}-Installer.exe"
+          file-name: VulkanSDK-${{ env.VULKAN_WINDOWS }}-Installer.exe
+          location: .cache/vulkan
+          sha256: "ffdf442893761a453499d612d86534a02573c3d2b2442b40311b69a4b2518bf2"
+        run: go run .github/tools/download.go
+      - name: Install vulkan SDK
+        run: |
+          Start-Process .cache/vulkan/VulkanSDK-${{ env.VULKAN_WINDOWS }}-Installer.exe -Wait -ArgumentList "--accept-licenses","--default-answer","--confirm-command install"
+
+          "VULKAN_SDK_VERSION=${{ env.VULKAN_WINDOWS }}" >> $env:GITHUB_ENV
+          "VULKAN_SDK=C:\VulkanSDK\${{ env.VULKAN_WINDOWS }}" >> $env:GITHUB_ENV
+          "PATH=C:\VulkanSDK\${{ env.VULKAN_WINDOWS }}\bin;$env:PATH" >> $env:GITHUB_ENV
+
+      - name: Setup CUDA env variables
+        shell: bash
+        run: |
+          CUDA_SHORT="$(cut -d '.' -f 1 <<< ${{ env.CUDA_WINDOWS }})"."$(cut -d '.' -f 2 <<< ${{ env.CUDA_WINDOWS }})"
+          echo "CUDA_WINDOWS_SHORT=$CUDA_SHORT" >> $GITHUB_ENV
+
+          CUDA_URL=${CUDA_WINDOWS/_*/}
+          echo "CUDA_WINDOWS_URL=$CUDA_URL" >> $GITHUB_ENV
+
+      - name: Download CUDA
+        if: ${{ steps.cache-win-cuda.outputs.cache-hit != 'true' }}
+        env:
+          file-url: "https://developer.download.nvidia.com/compute/cuda/${{ env.CUDA_WINDOWS_URL }}/local_installers/cuda_${{ env.CUDA_WINDOWS }}_windows.exe"
+          file-name: cuda_${{ env.CUDA_WINDOWS }}_windows.exe
+          location: .cache/cuda
+          md5: "894c61ba173d26dc667e95ee734d3c5a"
+        run: go run .github/tools/download.go
+      - name: Install CUDA
+        run: Start-Process .cache/cuda/cuda_${{ env.CUDA_WINDOWS }}_windows.exe -Wait -ArgumentList "-s","-n"
+
+      - name: Build
+        run: |
+          mkdir build
+          cd build
+          cmake -DCMAKE_BUILD_TYPE="Release" -DCMAKE_IGNORE_PATH="C:/Strawberry/c/bin;C:/ProgramData/chocolatey/bin" -DCUDA_TOOLKIT_ROOT_DIR="C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v${{ env.CUDA_WINDOWS_SHORT }}" ..
+          cmake --build .
+        shell: cmd
+
+      - name: Copy library
+        shell: bash
+        run: cp build/src/libgpu-setup.dll build/test/libgpu-setup.dll
+
+      - name: Unit tests - Golden vectors
+        run: build/test/gpu-setup-test --test-vector-check
+      - name: Unit tests - hash and bitstream
+        run: build/test/gpu-setup-test --unit-tests
+      - name: Unit tests - PoW
+        run: build/test/gpu-setup-test -tp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
+      - name: Unit tests - PoW and Leafs
+        run: build/test/gpu-setup-test -tlp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
+      - name: Unit tests - label lengths
+        run: build/test/gpu-setup-test -il
+      - name: Unit tests - labels count
+        run: build/test/gpu-setup-test -in
+      - name: Integration tests - concurrency test
+        run: build/test/gpu-setup-test -ip
+      - name: Integration tests - cancellation test
+        run: build/test/gpu-setup-test -ic
+
+      - name: Upload DLL
+        uses: actions/upload-artifact@v2
+        with:
+          name: windows
+          path: build/src/libgpu-setup.dll
+      - name: Upload lib
+        uses: actions/upload-artifact@v2
+        with:
+          name: windows
+          path: build/src/libgpu-setup.so
+      - name: Upload test app
+        uses: actions/upload-artifact@v2
+        with:
+          name: windows
+          path: build/test/gpu-setup-test.exe
+      - name: Upload api.h
+        uses: actions/upload-artifact@v2
+        with:
+          name: windows
+          path: include/api.h
+
   macos:
     runs-on: macos-11
 
