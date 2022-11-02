@@ -237,13 +237,19 @@ jobs:
       
       - name: Setup msys2
         uses: msys2/setup-msys2@v2
+        with:
+          msystem: mingw64
+          install: >-
+            git
+            make
+          pacboy: >-
+            toolchain:p
+            cmake:p
 
       - name: Build
         run: |
-          mkdir build
-          cd build
-          cmake -DCMAKE_BUILD_TYPE="Release" -DCMAKE_IGNORE_PATH="C:/Strawberry/c/bin;C:/ProgramData/chocolatey/bin" -DCUDA_TOOLKIT_ROOT_DIR="C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v${{ env.CUDA_WINDOWS_SHORT }}" ..
-          cmake --build .
+          cmake -G "MinGW Makefiles" -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_IGNORE_PATH="C:/Strawberry/c/bin;C:/ProgramData/chocolatey/bin" -DCUDA_TOOLKIT_ROOT_DIR="C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v${{ env.CUDA_WINDOWS_SHORT }}"
+          cmake --build build
         shell: msys2 {0}
 
       - name: Copy library
