@@ -390,7 +390,6 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 					} else {
 						printf("error: no pow solution found");
 					}
-
 				}
 			}
 		}
@@ -462,7 +461,7 @@ int do_test_pow(uint64_t aStartPos, int aLabelsCount, unsigned aDiff, unsigned a
 						printf("%u hashes, %u h/s, solution at %u\n", (uint32_t)hashes_computed, (uint32_t)hashes_per_sec, (uint32_t)idx_solution);
 						if (-1 != cpu_id) {
 							uint8_t hash[32];
-							scryptPositions(cpu_id, s_id, idx_solution, idx_solution, 256, s_salt, SPACEMESH_API_COMPUTE_LEAFS, hash, 512, 1, 1, NULL, NULL, &hashes_computed, &hashes_per_sec);
+							scryptPositions(cpu_id, s_id, idx_solution, idx_solution, 256, s_salt, SPACEMESH_API_COMPUTE_POW, hash, 512, 1, 1, NULL, NULL, &hashes_computed, &hashes_per_sec);
 							printf("id: ");
 							print_hex32(s_id);
 							printf("\n");
@@ -486,6 +485,102 @@ int do_test_pow(uint64_t aStartPos, int aLabelsCount, unsigned aDiff, unsigned a
 					if (aSolutionIdx != 0xffffffffffffffffull) {
 						if (idx_solution != aSolutionIdx) {
 							printf("WRONG solution index %llu, expected %llu\n", idx_solution, aSolutionIdx);
+							return 1;
+						}
+					}
+				}
+			}
+
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
+/* this test verifies that scryptPositions correctly calculates Pow and Leafs when asked to do both */
+int do_test_leafs_and_pow(uint64_t aStartPos, int labelSize, int aLabelsCount, unsigned aDiff, unsigned aSeed, int aProviderId, uint64_t aSolutionIdx)
+{
+	int providersCount = spacemesh_api_get_providers(NULL, 0);
+
+	if (aSeed) {
+		if (aSeed == -1) {
+			srand(time(nullptr));
+		}
+		else {
+			srand(aSeed);
+		}
+
+		for (int i = 0; i < sizeof(s_id); i++) {
+			s_id[i] = rand();
+		}
+		for (int i = 0; i < sizeof(s_salt); i++) {
+			s_salt[i] = rand();
+		}
+	}
+
+	if (providersCount > 0) {
+		std::unique_ptr<PostComputeProvider> providers_holder((PostComputeProvider *)malloc(providersCount * sizeof(PostComputeProvider)));
+		PostComputeProvider *providers = providers_holder.get();
+
+		if (spacemesh_api_get_providers(providers, providersCount) == providersCount) {
+			uint64_t idx_solution = -1;
+			uint8_t D[32] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+			if (aDiff) {
+				int i = 0;
+				while (aDiff >= 8) {
+					D[i] = 0;
+					i++;
+					aDiff -= 8;
+				}
+				if (aDiff) {
+					D[i] = (1 << (8 - aDiff)) - 1;
+				}
+			}
+			printf("Target D: ");
+			print_hex32(D);
+			printf("\n");
+			uint32_t cpu_id = -1;
+			for (int i = 0; i < providersCount; i++) {
+				if (providers[i].compute_api == COMPUTE_API_CLASS_CPU) {
+					cpu_id = providers[i].id;
+					break;
+				}
+			}
+			for (int i = 0; i < providersCount; i++) {
+				if (providersCount == 1 || providers[i].compute_api != COMPUTE_API_CLASS_CPU)
+				{
+					if (-1 != aProviderId && aProviderId != providers[i].id) {
+						continue;
+					}
+
+					const uint64_t labelsBufferSize = (uint64_t(aLabelsCount) * uint64_t(labelSize) + 7ull) / 8ull;
+					uint8_t *out = (uint8_t *)malloc(labelsBufferSize);
+
+					printf("buffer size: %0.1f MiB\n", labelsBufferSize / (1024.0*1024));
+
+					uint64_t hashes_computed;
+					uint64_t hashes_per_sec;
+					printf("%s: ", providers[i].model);
+					int status = scryptPositions(providers[i].id, s_id, aStartPos, aStartPos + aLabelsCount - 1, 8, s_salt, SPACEMESH_API_COMPUTE_LEAFS | SPACEMESH_API_COMPUTE_POW, out, 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
+					free(out);
+					switch (status) {
+					case SPACEMESH_API_POW_SOLUTION_FOUND:
+						printf("%u hashes, %u h/s, solution at %u\n", (uint32_t)hashes_computed, (uint32_t)hashes_per_sec, (uint32_t)idx_solution);
+						if (-1 != cpu_id) {
+							uint8_t hash[32];
+							scryptPositions(cpu_id, s_id, idx_solution, idx_solution, 256, s_salt, SPACEMESH_API_COMPUTE_POW, hash, 512, 1, 1, NULL, NULL, &hashes_computed, &hashes_per_sec);
+						}
+						break;
+					case SPACEMESH_API_ERROR_NONE:
+						printf("%u hashes, %u h/s, solution not found\n", (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
+						break;
+					default:
+						printf("error %d, %u hashes, %u h/s\n", status, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
+					}
+					if (aSolutionIdx != 0xffffffffffffffffull) {
+						if (idx_solution != aSolutionIdx) {
+							printf("WRONG solution index %ull, expected %ull\n", idx_solution, aSolutionIdx);
 							return 1;
 						}
 					}
@@ -658,6 +753,7 @@ void print_usage() {
 	printf("--test               or -t                 run basic test\n");
 	printf("--test-vector-check                        run a CPU test and compare with test-vector\n");
 	printf("--test-pow           or -tp                test pow computation\n");
+	printf("--test-leafs-pow     or -tlp               test pow computation while computing leafs\n");
 	printf("--unit-tests         or -u                 run unit tests\n");
 	printf("--integration-tests  or -i                 run integration tests\n");
 	printf("--label-size         or -s <1-256>         set label size [1-256]\n");
@@ -674,6 +770,7 @@ int main(int argc, char **argv)
 	bool runBenchmark = false;
 	bool runTest = false;
 	bool runTestPow = false;
+	bool runTestLeafsAndPow = false;
 	bool runTestCore = false;
 	bool createTestVector = false;
 	bool checkTestVector = false;
@@ -699,6 +796,9 @@ int main(int argc, char **argv)
 		}
 		else if (0 == strcmp(argv[i], "--test-pow") || 0 == strcmp(argv[i], "-tp")) {
 			runTestPow = true;
+		}
+		else if (0 == strcmp(argv[i], "--test-leafs-pow") || 0 == strcmp(argv[i], "-tlp")) {
+			runTestLeafsAndPow = true;
 		}
 		else if (0 == strcmp(argv[i], "--core") || 0 == strcmp(argv[i], "-c")) {
 			runTestCore = true;
@@ -844,6 +944,10 @@ int main(int argc, char **argv)
 	if (runTestPow) {
 		printf("Test POW: count %u\n", labelsCount);
 		return do_test_pow(startPos, labelsCount, powDiff, srand_seed, referenceProvider, solutionIdx);
+	}
+	if (runTestLeafsAndPow) {
+		printf("Test LEAFS and POW: Label size: %u, count %u, buffer %.1fM\n", labelSize, labelsCount);
+		return do_test_leafs_and_pow(startPos, labelSize, labelsCount, powDiff, srand_seed, referenceProvider, solutionIdx);
 	}
 	if (runTestCore) {
 		printf("Test POS+POW core use case: count %u\n", labelsCount);
