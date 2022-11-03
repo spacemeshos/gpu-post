@@ -366,24 +366,24 @@ jobs:
   #   - run: cmake --build build
 
   #   - name: Copy library
-  #     run: cp src/libgpu-setup.so test/libgpu-setup.so
+  #     run: cp build/src/libgpu-setup.so build/test/libgpu-setup.so
 
   #   - name: Unit tests - Golden vectors
-  #     run: test/gpu-setup-test --test-vector-check
+  #     run: build/test/gpu-setup-test --test-vector-check
   #   - name: Unit tests - hash and bitstream
-  #     run: test/gpu-setup-test --unit-tests
+  #     run: build/test/gpu-setup-test --unit-tests
   #   - name: Unit tests - PoW
-  #     run: test/gpu-setup-test -tp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
+  #     run: build/test/gpu-setup-test -tp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
   #   - name: Unit tests - PoW and Leafs
-  #     run: test/gpu-setup-test -tlp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
+  #     run: build/test/gpu-setup-test -tlp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
   #   - name: Unit tests - label lengths
-  #     run: test/gpu-setup-test -il
+  #     run: build/test/gpu-setup-test -il
   #   - name: Unit tests - labels count
-  #     run: test/gpu-setup-test -in
+  #     run: build/test/gpu-setup-test -in
   #   - name: Integration tests - concurrency test
-  #     run: test/gpu-setup-test -ip
+  #     run: build/test/gpu-setup-test -ip
   #   - name: Integration tests - cancellation test
-  #     run: test/gpu-setup-test -ic
+  #     run: build/test/gpu-setup-test -ic
 
   #   - name: Upload lib
   #     uses: actions/upload-artifact@v2
