@@ -289,6 +289,8 @@ jobs:
 
   macos-m1:
     runs-on: [self-hosted, macos]
+    environment:
+      name: m1-self-hosted
 
     steps:
       - uses: actions/checkout@v3
