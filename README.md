@@ -40,7 +40,7 @@ One or more of the following processors:
 ### Windows
 
 - Windows 10 Pro.
-- Microsoft Visual Studio 2017 (any edition). Visual Studio 2019 is NOT supported.
+- Microsoft Visual Studio 2022
 - You may also need to install specific versions of the Windows SDK when prompted when attempting to build the library for the first time.
 
 ### Ubuntu
@@ -107,44 +107,36 @@ To build the library with full support for both CUDA and Vulkan on Windows or on
 
 ### Ubuntu or macOS
 
-Create a build directory:
-
-```bash
-cd gpu-post
-mkdir build
-cd build
-```
-
 Configure your build using the default configuration:
 
 ```bash
-cmake ..
+cmake -B build
 ```
 
 To disable CUDA use:
 
 ```bash
-cmake .. -DSPACEMESHCUDA=OFF
+cmake -B build -DSPACEMESHCUDA=OFF
 ```
 
 To disable VULKAN use:
 
 ```bash
-cmake .. -DSPACEMESHVULKAN=OFF
+cmake -B build -DSPACEMESHVULKAN=OFF
 ```
 
 Build the project:
 
 ```bash
-make
+cmake --build build
 ```
 
 Run the tests:
 
 ```bash
-./test/gpu-setup-test -t
-./test/gpu-setup-test -u
-./test/gpu-setup-test -b
+./build/test/gpu-setup-test -t
+./build/test/gpu-setup-test -u
+./build/test/gpu-setup-test -b
 ```
 
 ## Running the Test App
@@ -165,20 +157,22 @@ Run from the console to print usage:
 ```bash
 $ gpu-setup-test
 Usage:
---list               or -l print available providers
---benchmark          or -b run benchmark
---core               or -c test the core library use case
---test               or -t run basic test
---test-vector-check  run a CPU test and compare with test-vector
---test-pow           or -tp  test pow computation
---unit-tests         or -u  run unit tests
---integration-tests  or -i   run integration tests
---label-size         or -s <1-256> set label size [1-256]
---labels-count       or -n <1-32M> set labels count [up to 32M]
---reference-provider or -r <id> the result of this provider will be used as a reference [default - CPU]
---print              or -p print detailed data comparison report for incorrect results
---pow-diff           or -d  <0-256> count of leading zero bits in target D value [default - 16]
+--list               or -l                 print available providers
+--benchmark          or -b                 run benchmark
+--core               or -c                 test the core library use case
+--test               or -t                 run basic test
+--test-vector-check                        run a CPU test and compare with test-vector
+--test-pow           or -tp                test pow computation
+--test-leafs-pow     or -tlp               test pow computation while computing leafs
+--unit-tests         or -u                 run unit tests
+--integration-tests  or -i                 run integration tests
+--label-size         or -s <1-256>         set label size [1-256]
+--labels-count       or -n <1-32M>         set labels count [up to 32M]
+--reference-provider or -r <id>            the result of this provider will be used as a reference [default - CPU]
+--print              or -p                 print detailed data comparison report for incorrect results
+--pow-diff           or -d <0-256>         count of leading zero bits in target D value [default - 16]
 --srand-seed         or -ss <unsigned int> set srand seed value for POW test: 0 - use zero id/seed [default], -1 - use random value
+--solution-idx       or -si <unsigned int> set solution index for POW test: index will be compared to be the found solution for Pow [default - unset]
 ```
 
 ## Mixing CUDA and Vulkan
