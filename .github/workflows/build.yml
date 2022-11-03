@@ -289,8 +289,6 @@ jobs:
 
   macos-m1:
     runs-on: [self-hosted, macos]
-    environment:
-      name: m1-self-hosted
 
     steps:
       - uses: actions/checkout@v3
@@ -360,48 +358,48 @@ jobs:
     runs-on: [self-hosted, linux]
 
     steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: true
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
 
-    - run: cmake -DSPACEMESH_ARCH_ARM64=ON -B build
-    - run: cmake --build build
+      - run: cmake -DSPACEMESH_ARCH_ARM64=ON -B build
+      - run: cmake --build build
 
-    - name: Copy library
-      run: cp build/src/libgpu-setup.so build/test/libgpu-setup.so
+      - name: Copy library
+        run: cp build/src/libgpu-setup.so build/test/libgpu-setup.so
 
-    - name: Unit tests - Golden vectors
-      run: build/test/gpu-setup-test --test-vector-check
-    - name: Unit tests - hash and bitstream
-      run: build/test/gpu-setup-test --unit-tests
-    - name: Unit tests - PoW
-      run: build/test/gpu-setup-test -tp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
-    - name: Unit tests - PoW and Leafs
-      run: build/test/gpu-setup-test -tlp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
-    - name: Unit tests - label lengths
-      run: build/test/gpu-setup-test -il
-    - name: Unit tests - labels count
-      run: build/test/gpu-setup-test -in
-    - name: Integration tests - concurrency test
-      run: build/test/gpu-setup-test -ip
-    - name: Integration tests - cancellation test
-      run: build/test/gpu-setup-test -ic
+      - name: Unit tests - Golden vectors
+        run: build/test/gpu-setup-test --test-vector-check
+      - name: Unit tests - hash and bitstream
+        run: build/test/gpu-setup-test --unit-tests
+      - name: Unit tests - PoW
+        run: build/test/gpu-setup-test -tp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
+      - name: Unit tests - PoW and Leafs
+        run: build/test/gpu-setup-test -tlp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
+      - name: Unit tests - label lengths
+        run: build/test/gpu-setup-test -il
+      - name: Unit tests - labels count
+        run: build/test/gpu-setup-test -in
+      - name: Integration tests - concurrency test
+        run: build/test/gpu-setup-test -ip
+      - name: Integration tests - cancellation test
+        run: build/test/gpu-setup-test -ic
 
-    - name: Upload lib
-      uses: actions/upload-artifact@v2
-      with:
-        name: linux-arm64
-        path: build/src/libgpu-setup.so
-    - name: Upload test-app
-      uses: actions/upload-artifact@v2
-      with:
-        name: linux-arm64
-        path: build/test/gpu-setup-test
-    - name: Upload api.h
-      uses: actions/upload-artifact@v2
-      with:
-        name: linux-arm64
-        path: include/api.h
+      - name: Upload lib
+        uses: actions/upload-artifact@v2
+        with:
+          name: linux-arm64
+          path: build/src/libgpu-setup.so
+      - name: Upload test-app
+        uses: actions/upload-artifact@v2
+        with:
+          name: linux-arm64
+          path: build/test/gpu-setup-test
+      - name: Upload api.h
+        uses: actions/upload-artifact@v2
+        with:
+          name: linux-arm64
+          path: include/api.h
 
   release:
     runs-on: ubuntu-latest
