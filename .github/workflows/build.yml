@@ -293,7 +293,7 @@ jobs:
           path: ${{ env.VULKAN_ROOT_LOCATION }}/macOS/lib/libvulkan.1.dylib
 
   macos-m1:
-    runs-on: [self-hosted, macos]
+    runs-on: [self-hosted, macos, arm64]
 
     steps:
       - uses: actions/checkout@v3
