@@ -295,6 +295,9 @@ jobs:
         with:
           submodules: true
 
+      - name: Setup env
+        run: echo "VULKAN_ROOT_LOCATION=$VULKAN_ROOT_LOCATION" >> $GITHUB_ENV
+
       - name: Vulkan Info
         run: vulkaninfo
 
