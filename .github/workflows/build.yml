@@ -293,7 +293,7 @@ jobs:
           path: ${{ env.VULKAN_ROOT_LOCATION }}/macOS/lib/libvulkan.1.dylib
 
   macos-m1:
-    runs-on: [self-hosted, macos]
+    runs-on: [self-hosted, macos, arm64]
 
     steps:
       - uses: actions/checkout@v3
@@ -362,59 +362,58 @@ jobs:
           name: macos-m1
           path: ${{ env.VULKAN_ROOT_LOCATION }}/macOS/lib/libvulkan.1.dylib
 
-  # Temporarily disabled until linux arm64 VM becomes available again
-  #
-  # linux-arm64:
-  #   runs-on: [self-hosted, linux]
+  linux-arm64:
+    runs-on: [self-hosted, linux, arm64]
 
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #       with:
-  #         submodules: true
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
 
-  #     - run: cmake -DSPACEMESH_ARCH_ARM64=ON -B build
-  #     - run: cmake --build build
+      - run: cmake -DSPACEMESH_ARCH_ARM64=ON -B build
+      - run: cmake --build build
 
-  #     - name: Copy library
-  #       run: cp build/src/libgpu-setup.so build/test/libgpu-setup.so
+      - name: Copy library
+        run: cp build/src/libgpu-setup.so build/test/libgpu-setup.so
 
-  #     - name: Unit tests - Golden vectors
-  #       run: build/test/gpu-setup-test --test-vector-check
-  #     - name: Unit tests - hash and bitstream
-  #       run: build/test/gpu-setup-test --unit-tests
-  #     - name: Unit tests - PoW
-  #       run: build/test/gpu-setup-test -tp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
-  #     - name: Unit tests - PoW and Leafs
-  #       run: build/test/gpu-setup-test -tlp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
-  #     - name: Unit tests - label lengths
-  #       run: build/test/gpu-setup-test -il
-  #     - name: Unit tests - labels count
-  #       run: build/test/gpu-setup-test -in
-  #     - name: Integration tests - concurrency test
-  #       run: build/test/gpu-setup-test -ip
-  #     - name: Integration tests - cancellation test
-  #       run: build/test/gpu-setup-test -ic
+      - name: Unit tests - Golden vectors
+        run: build/test/gpu-setup-test --test-vector-check
+#         # Disabled because it's super slow on lavapipe
+#       - name: Unit tests - hash and bitstream
+#         run: build/test/gpu-setup-test --unit-tests
+      - name: Unit tests - PoW
+        run: build/test/gpu-setup-test -tp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
+      - name: Unit tests - PoW and Leafs
+        run: build/test/gpu-setup-test -tlp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
+#         # Disabled because it's super slow on lavapipe
+#       - name: Unit tests - label lengths
+#         run: build/test/gpu-setup-test -il
+#       - name: Unit tests - labels count
+#         run: build/test/gpu-setup-test -in
+      - name: Integration tests - concurrency test
+        run: build/test/gpu-setup-test -ip
+      - name: Integration tests - cancellation test
+        run: build/test/gpu-setup-test -ic
 
-  #     - name: Upload lib
-  #       uses: actions/upload-artifact@v3
-  #       with:
-  #         name: linux-arm64
-  #         path: build/src/libgpu-setup.so
-  #     - name: Upload test-app
-  #       uses: actions/upload-artifact@v3
-  #       with:
-  #         name: linux-arm64
-  #         path: build/test/gpu-setup-test
-  #     - name: Upload api.h
-  #       uses: actions/upload-artifact@v3
-  #       with:
-  #         name: linux-arm64
-  #         path: include/api.h
+      - name: Upload lib
+        uses: actions/upload-artifact@v3
+        with:
+          name: linux-arm64
+          path: build/src/libgpu-setup.so
+      - name: Upload test-app
+        uses: actions/upload-artifact@v3
+        with:
+          name: linux-arm64
+          path: build/test/gpu-setup-test
+      - name: Upload api.h
+        uses: actions/upload-artifact@v3
+        with:
+          name: linux-arm64
+          path: include/api.h
 
   release:
     runs-on: ubuntu-latest
-    # needs: [linux, windows, macos, macos-m1, linux-arm64]
-    needs: [linux, windows, macos, macos-m1]
+    needs: [linux, windows, macos, macos-m1, linux-arm64]
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     if: startsWith(github.ref, 'refs/tags/v')
@@ -434,8 +433,8 @@ jobs:
         run: zip --junk-paths libgpu-setup-macos-${{ env.VERSION }}.zip macos/*
       - name: Archive MacOS-M1 Library
         run: zip --junk-paths libgpu-setup-macos-m1-${{ env.VERSION }}.zip macos-m1/*
-      # - name: Archive Linux ARM64 Library
-      #   run: zip --junk-paths libgpu-setup-linux-arm64-${{ env.VERSION }}.zip linux-arm64/*
+      - name: Archive Linux ARM64 Library
+        run: zip --junk-paths libgpu-setup-linux-arm64-${{ env.VERSION }}.zip linux-arm64/*
 
       - name: Release
         uses: softprops/action-gh-release@v1
@@ -446,6 +445,6 @@ jobs:
             libgpu-setup-windows-${{ env.VERSION }}.zip
             libgpu-setup-macos-${{ env.VERSION }}.zip
             libgpu-setup-macos-m1-${{ env.VERSION }}.zip
-          # libgpu-setup-linux-arm64-${{ env.VERSION }}.zip
+            libgpu-setup-linux-arm64-${{ env.VERSION }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
