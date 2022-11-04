@@ -281,6 +281,11 @@ jobs:
         with:
           name: macos
           path: ${{ env.VULKAN_ROOT_LOCATION }}/MoltenVK/dylib/macOS/libMoltenVK.dylib
+      - name: Upload MoltenVK config
+        uses: actions/upload-artifact@v3
+        with:
+          name: macos
+          path: ${{ env.VULKAN_ROOT_LOCATION }}/MoltenVK/dylib/macOS/MoltenVK_icd.json
       - name: Upload Vulkan
         uses: actions/upload-artifact@v3
         with:
