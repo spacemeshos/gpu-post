@@ -50,17 +50,17 @@ jobs:
         run: build/test/gpu-setup-test -ic
 
       - name: Upload lib
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: linux
           path: build/src/libgpu-setup.so
       - name: Upload test-app
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: linux
           path: build/test/gpu-setup-test
       - name: Upload api.h
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: linux
           path: include/api.h
@@ -169,27 +169,27 @@ jobs:
         run: build/test/gpu-setup-test -ic
 
       - name: Upload DLL
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: windows
           path: build/src/gpu-setup.dll
       - name: Upload lib
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: windows
           path: build/src/gpu-setup.lib
       - name: Upload gnu lib
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: windows
           path: build/src/libgpu-setup.a
       - name: Upload test app
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: windows
           path: build/test/gpu-setup-test.exe
       - name: Upload api.h
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: windows
           path: include/api.h
@@ -262,27 +262,27 @@ jobs:
         run: build/test/gpu-setup-test -ic
 
       - name: Upload library
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: macos
           path: build/src/libgpu-setup.dylib
       - name: Upload test app
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: macos
           path: build/test/gpu-setup-test
       - name: Upload api.h
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: macos
           path: include/api.h
       - name: Upload MoltenVK
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: macos
           path: ${{ env.VULKAN_ROOT_LOCATION }}/MoltenVK/dylib/macOS/libMoltenVK.dylib
       - name: Upload Vulkan
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: macos
           path: ${{ env.VULKAN_ROOT_LOCATION }}/macOS/lib/libvulkan.1.dylib
@@ -327,32 +327,32 @@ jobs:
         run: arch -arm64 build/test/gpu-setup-test -ic
 
       - name: Upload library
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: macos-m1
           path: build/src/libgpu-setup.dylib
       - name: Upload test app
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: macos-m1
           path: build/test/gpu-setup-test
       - name: Upload api.h
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: macos-m1
           path: include/api.h
       - name: Upload MoltenVK
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: macos-m1
           path: ${{ env.VULKAN_ROOT_LOCATION }}/MoltenVK/dylib/macOS/libMoltenVK.dylib
       - name: Upload MoltenVK config
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: macos-m1
           path: ${{ env.VULKAN_ROOT_LOCATION }}/MoltenVK/dylib/macOS/MoltenVK_icd.json
       - name: Upload Vulkan
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: macos-m1
           path: ${{ env.VULKAN_ROOT_LOCATION }}/macOS/lib/libvulkan.1.dylib
@@ -391,17 +391,17 @@ jobs:
   #       run: build/test/gpu-setup-test -ic
 
   #     - name: Upload lib
-  #       uses: actions/upload-artifact@v2
+  #       uses: actions/upload-artifact@v3
   #       with:
   #         name: linux-arm64
   #         path: build/src/libgpu-setup.so
   #     - name: Upload test-app
-  #       uses: actions/upload-artifact@v2
+  #       uses: actions/upload-artifact@v3
   #       with:
   #         name: linux-arm64
   #         path: build/test/gpu-setup-test
   #     - name: Upload api.h
-  #       uses: actions/upload-artifact@v2
+  #       uses: actions/upload-artifact@v3
   #       with:
   #         name: linux-arm64
   #         path: include/api.h
