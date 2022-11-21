@@ -32,6 +32,8 @@ jobs:
       - name: Copy library
         run: cp build/src/libgpu-setup.so build/test/libgpu-setup.so
 
+      - name: Unit tests - List providers
+        run: build/test/gpu-setup-test --list
       - name: Unit tests - Golden vectors
         run: build/test/gpu-setup-test --test-vector-check
       - name: Unit tests - hash and bitstream
@@ -151,6 +153,8 @@ jobs:
         shell: bash
         run: cp build/src/gpu-setup.dll build/test/gpu-setup.dll
 
+      - name: Unit tests - List providers
+        run: build/test/gpu-setup-test --list
       - name: Unit tests - Golden vectors
         run: build/test/gpu-setup-test --test-vector-check
       - name: Unit tests - hash and bitstream
@@ -244,6 +248,8 @@ jobs:
       - name: Fix library import paths
         run: install_name_tool -add_rpath @loader_path build/test/libgpu-setup.dylib
 
+      - name: Unit tests - List providers
+        run: build/test/gpu-setup-test --list
       - name: Unit tests - Golden vectors
         run: build/test/gpu-setup-test --test-vector-check
       - name: Unit tests - hash and bitstream
@@ -314,6 +320,9 @@ jobs:
 
       - name: Fix library import paths
         run: arch -arm64 install_name_tool -add_rpath @loader_path build/test/libgpu-setup.dylib
+      
+      - name: Unit tests - List providers
+        run: arch -arm64 build/test/gpu-setup-test --list
       - name: Unit tests - Golden vectors
         run: arch -arm64 build/test/gpu-setup-test --test-vector-check
       - name: Unit tests - hash and bitstream
@@ -376,20 +385,22 @@ jobs:
       - name: Copy library
         run: cp build/src/libgpu-setup.so build/test/libgpu-setup.so
 
+      - name: Unit tests - List providers
+        run: build/test/gpu-setup-test --list
       - name: Unit tests - Golden vectors
         run: build/test/gpu-setup-test --test-vector-check
-#         # Disabled because it's super slow on lavapipe
-#       - name: Unit tests - hash and bitstream
-#         run: build/test/gpu-setup-test --unit-tests
+      # # Disabled because it's super slow on lavapipe
+      # - name: Unit tests - hash and bitstream
+      #   run: build/test/gpu-setup-test --unit-tests
       - name: Unit tests - PoW
         run: build/test/gpu-setup-test -tp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
       - name: Unit tests - PoW and Leafs
         run: build/test/gpu-setup-test -tlp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
-#         # Disabled because it's super slow on lavapipe
-#       - name: Unit tests - label lengths
-#         run: build/test/gpu-setup-test -il
-#       - name: Unit tests - labels count
-#         run: build/test/gpu-setup-test -in
+      # # Disabled because it's super slow on lavapipe
+      # - name: Unit tests - label lengths
+      #   run: build/test/gpu-setup-test -il
+      # - name: Unit tests - labels count
+      #   run: build/test/gpu-setup-test -in
       - name: Integration tests - concurrency test
         run: build/test/gpu-setup-test -ip
       - name: Integration tests - cancellation test
