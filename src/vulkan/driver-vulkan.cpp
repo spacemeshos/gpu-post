@@ -269,7 +269,7 @@ static int vulkan_detect(struct cgpu_info *gpus, int *active)
 	const VkInstanceCreateInfo instanceCreateInfo = {
 		VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
 		0,
-		0,
+        VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR,
 		&applicationInfo,
 		0,
 		NULL,
