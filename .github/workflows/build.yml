@@ -365,12 +365,12 @@ jobs:
       - name: Upload MoltenVK
         uses: actions/upload-artifact@v3
         with:
-          name: macos
+          name: macos-m1
           path: build/test/libMoltenVK.dylib
       - name: Upload MoltenVK config
         uses: actions/upload-artifact@v3
         with:
-          name: macos
+          name: macos-m1
           path: build/test/MoltenVK_icd.json
       - name: Upload Vulkan
         uses: actions/upload-artifact@v3
