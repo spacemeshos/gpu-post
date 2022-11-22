@@ -254,17 +254,19 @@ static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameS
 
 static int vulkan_detect(struct cgpu_info *gpus, int *active)
 {
-	int most_devices = 0;
+  int most_devices = 0;
 
-	const VkApplicationInfo applicationInfo = {
-		VK_STRUCTURE_TYPE_APPLICATION_INFO,
-		0,
-		"spacemesh",
-		0,
-		"",
-		0,
-		VK_API_VERSION_1_2
-	};
+  const VkApplicationInfo applicationInfo = {
+      VK_STRUCTURE_TYPE_APPLICATION_INFO,
+      0,
+      "spacemesh",
+      0,
+      "",
+      0,
+      VK_API_VERSION_1_2
+};
+
+  const char* const foo[1] = {VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME};
 
 	const VkInstanceCreateInfo instanceCreateInfo = {
 		VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
@@ -273,8 +275,8 @@ static int vulkan_detect(struct cgpu_info *gpus, int *active)
 		&applicationInfo,
 		0,
 		NULL,
-		0,
-		NULL
+		1,
+        foo
 	};
 
 	if (initVulkanLibrary()) {
