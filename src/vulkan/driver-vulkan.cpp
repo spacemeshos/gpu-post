@@ -254,38 +254,39 @@ static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameS
 
 static int vulkan_detect(struct cgpu_info *gpus, int *active)
 {
-  int most_devices = 0;
+	int most_devices = 0;
 
-  const VkApplicationInfo applicationInfo = {
-      VK_STRUCTURE_TYPE_APPLICATION_INFO,
-      0,
-      "spacemesh",
-      0,
-      "",
-      0,
-      VK_API_VERSION_1_2
-};
+  
+	const VkApplicationInfo applicationInfo = {
+	      VK_STRUCTURE_TYPE_APPLICATION_INFO,
+	      0,
+	      "spacemesh",
+	      0,
+	      "",
+	      0,
+	      VK_API_VERSION_1_2
+	};
 #ifdef SPACEMESH_ARCH_ARM64
-   const char* const extensions[1] = {VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME};
+	const char* const extensions[1] = {VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME};
 #endif
    
 	const VkInstanceCreateInfo instanceCreateInfo = {
 		VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
 		0,
 #ifdef SPACEMESH_ARCH_ARM64
-        VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR,
+		VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR,
 #else
-        0,
+		0,
 #endif
 		&applicationInfo,
 		0,
 		NULL,
 #ifdef SPACEMESH_ARCH_ARM64
 		1,
-   {VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME}
+		{VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME}
 #else
-        0,
-        NULL
+		0,
+		NULL
 #endif
 	};
 
