@@ -246,14 +246,14 @@ jobs:
       - name: Copy library
         run: cp build/src/libgpu-setup.dylib build/test/libgpu-setup.dylib
       - name: Copy ICD file
-        run: jq 'del(.ICD.is_portability_driver)' ${{ env.VULKAN_ROOT_LOCATION }}/MoltenVK/dylib/macOS/MoltenVK_icd.json > build/test/MoltenVK_icd.json
+        run: cp ${{ env.VULKAN_ROOT_LOCATION }}/MoltenVK/dylib/macOS/MoltenVK_icd.json build/test/MoltenVK_icd.json
       - name: Copy libMoltenVK
         run: cp ${{ env.VULKAN_ROOT_LOCATION }}/MoltenVK/dylib/macOS/libMoltenVK.dylib build/test/libMoltenVK.dylib
       - name: Fix library import paths
         run: install_name_tool -add_rpath @loader_path build/test/libgpu-setup.dylib
 
       - name: Unit tests - List providers
-        run: build/test/gpu-setup-test --list
+        run: VK_LOADER_DEBUG=all build/test/gpu-setup-test --list
       - name: Unit tests - Golden vectors
         run: build/test/gpu-setup-test --test-vector-check
       - name: Unit tests - hash and bitstream
@@ -321,14 +321,12 @@ jobs:
 
       - name: Copy library
         run: cp build/src/libgpu-setup.dylib build/test/libgpu-setup.dylib
-#       - name: Copy ICD file
-#         run: jq 'del(.ICD.is_portability_driver)' ${{ env.VULKAN_ROOT_LOCATION }}/MoltenVK/dylib/macOS/MoltenVK_icd.json > build/test/MoltenVK_icd.json
       - name: Copy ICD file
         run: cp ${{ env.VULKAN_ROOT_LOCATION }}/MoltenVK/dylib/macOS/MoltenVK_icd.json build/test/MoltenVK_icd.json
       - name: Copy libMoltenVK
         run: cp ${{ env.VULKAN_ROOT_LOCATION }}/MoltenVK/dylib/macOS/libMoltenVK.dylib build/test/libMoltenVK.dylib
       - name: Fix library import paths
-        run: arch -arm64 install_name_tool -add_rpath @loader_path build/test/libgpu-setup.dylib
+        run: install_name_tool -add_rpath @loader_path build/test/libgpu-setup.dylib
       
       - name: Unit tests - List providers
         run: VK_LOADER_DEBUG=all build/test/gpu-setup-test --list
