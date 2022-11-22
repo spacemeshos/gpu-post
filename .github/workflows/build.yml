@@ -245,6 +245,10 @@ jobs:
 
       - name: Copy library
         run: cp build/src/libgpu-setup.dylib build/test/libgpu-setup.dylib
+      - name: Copy ICD file
+        run: jq 'del(.ICD.is_portability_driver)' ${{ env.VULKAN_ROOT_LOCATION }}/MoltenVK/dylib/macOS/MoltenVK_icd.json > build/test/MoltenVK_icd.json
+      - name: Copy libMoltenVK
+        run: cp ${{ env.VULKAN_ROOT_LOCATION }}/MoltenVK/dylib/macOS/libMoltenVK.dylib build/test/libMoltenVK.dylib
       - name: Fix library import paths
         run: install_name_tool -add_rpath @loader_path build/test/libgpu-setup.dylib
 
@@ -286,12 +290,12 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: macos
-          path: ${{ env.VULKAN_ROOT_LOCATION }}/MoltenVK/dylib/macOS/libMoltenVK.dylib
+          path: build/test/libMoltenVK.dylib
       - name: Upload MoltenVK config
         uses: actions/upload-artifact@v3
         with:
           name: macos
-          path: ${{ env.VULKAN_ROOT_LOCATION }}/MoltenVK/dylib/macOS/MoltenVK_icd.json
+          path: build/test/MoltenVK_icd.json
       - name: Upload Vulkan
         uses: actions/upload-artifact@v3
         with:
@@ -317,7 +321,10 @@ jobs:
 
       - name: Copy library
         run: cp build/src/libgpu-setup.dylib build/test/libgpu-setup.dylib
-
+      - name: Copy ICD file
+        run: jq 'del(.ICD.is_portability_driver)' ${{ env.VULKAN_ROOT_LOCATION }}/MoltenVK/dylib/macOS/MoltenVK_icd.json > build/test/MoltenVK_icd.json
+      - name: Copy libMoltenVK
+        run: cp ${{ env.VULKAN_ROOT_LOCATION }}/MoltenVK/dylib/macOS/libMoltenVK.dylib build/test/libMoltenVK.dylib
       - name: Fix library import paths
         run: arch -arm64 install_name_tool -add_rpath @loader_path build/test/libgpu-setup.dylib
       
@@ -358,13 +365,13 @@ jobs:
       - name: Upload MoltenVK
         uses: actions/upload-artifact@v3
         with:
-          name: macos-m1
-          path: ${{ env.VULKAN_ROOT_LOCATION }}/MoltenVK/dylib/macOS/libMoltenVK.dylib
+          name: macos
+          path: build/test/libMoltenVK.dylib
       - name: Upload MoltenVK config
         uses: actions/upload-artifact@v3
         with:
-          name: macos-m1
-          path: ${{ env.VULKAN_ROOT_LOCATION }}/MoltenVK/dylib/macOS/MoltenVK_icd.json
+          name: macos
+          path: build/test/MoltenVK_icd.json
       - name: Upload Vulkan
         uses: actions/upload-artifact@v3
         with:
