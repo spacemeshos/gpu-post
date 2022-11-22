@@ -326,6 +326,8 @@ jobs:
         run: cp build/src/libgpu-setup.dylib testrun/libgpu-setup.dylib
       - name: Copy ICD file
         run: jq 'del(.ICD.is_portability_driver)' ${{ env.VULKAN_ROOT_LOCATION }}/MoltenVK/dylib/macOS/MoltenVK_icd.json > testrun/MoltenVK_icd.json
+      - name: Temp fix with paths for m1
+        run: contents="$(jq ".ICD.library_path = \"/Users/aviv/actions-runner/_work/gpu-post/gpu-post/testrun/libMoltenVK.dylib\"" testrun/MoltenVK_icd.json)" && echo -E "${contents}" > testrun/MoltenVK_icd.json
       - name: Copy libMoltenVK
         run: cp ${{ env.VULKAN_ROOT_LOCATION }}/MoltenVK/dylib/macOS/libMoltenVK.dylib testrun/libMoltenVK.dylib
       - name: Copy libvulkan
