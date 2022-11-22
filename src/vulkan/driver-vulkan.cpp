@@ -266,8 +266,8 @@ static int vulkan_detect(struct cgpu_info *gpus, int *active)
 		VK_API_VERSION_1_2
 	};
 
-#ifndef LINUX_ARM64
-	const char* const extensions[1] = {VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME};
+#ifdef VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME
+	const char* const extensions[1] = { VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME };
 
 	const VkInstanceCreateInfo instanceCreateInfo = {
 		VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
