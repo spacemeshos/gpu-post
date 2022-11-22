@@ -329,7 +329,7 @@ jobs:
         run: arch -arm64 install_name_tool -add_rpath @loader_path build/test/libgpu-setup.dylib
       
       - name: Unit tests - List providers
-        run: build/test/gpu-setup-test --list
+        run: VK_LOADER_DEBUG=all build/test/gpu-setup-test --list
       - name: Unit tests - Golden vectors
         run: build/test/gpu-setup-test --test-vector-check
       - name: Unit tests - hash and bitstream
