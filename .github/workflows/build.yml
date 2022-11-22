@@ -321,8 +321,10 @@ jobs:
 
       - name: Copy library
         run: cp build/src/libgpu-setup.dylib build/test/libgpu-setup.dylib
+#       - name: Copy ICD file
+#         run: jq 'del(.ICD.is_portability_driver)' ${{ env.VULKAN_ROOT_LOCATION }}/MoltenVK/dylib/macOS/MoltenVK_icd.json > build/test/MoltenVK_icd.json
       - name: Copy ICD file
-        run: jq 'del(.ICD.is_portability_driver)' ${{ env.VULKAN_ROOT_LOCATION }}/MoltenVK/dylib/macOS/MoltenVK_icd.json > build/test/MoltenVK_icd.json
+        run: cp ${{ env.VULKAN_ROOT_LOCATION }}/MoltenVK/dylib/macOS/MoltenVK_icd.json build/test/MoltenVK_icd.json
       - name: Copy libMoltenVK
         run: cp ${{ env.VULKAN_ROOT_LOCATION }}/MoltenVK/dylib/macOS/libMoltenVK.dylib build/test/libMoltenVK.dylib
       - name: Fix library import paths
