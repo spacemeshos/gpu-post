@@ -319,53 +319,44 @@ jobs:
       - run: arch -arm64 cmake -DSPACEMESHCUDA=OFF -B build
       - run: arch -arm64 cmake --build build
 
-      - name: Prepare test directory
-        run: rm -fr testrun && mkdir testrun
-
       - name: Copy library
-        run: cp build/src/libgpu-setup.dylib testrun/libgpu-setup.dylib
+        run: cp build/src/libgpu-setup.dylib build/test/libgpu-setup.dylib
       - name: Copy ICD file
-        run: jq 'del(.ICD.is_portability_driver)' ${{ env.VULKAN_ROOT_LOCATION }}/MoltenVK/dylib/macOS/MoltenVK_icd.json > testrun/MoltenVK_icd.json
-      - name: Temp fix with paths for m1
-        run: contents="$(jq ".ICD.library_path = \"/Users/aviv/actions-runner/_work/gpu-post/gpu-post/testrun/libMoltenVK.dylib\"" testrun/MoltenVK_icd.json)" && echo -E "${contents}" > testrun/MoltenVK_icd.json
+        run: jq 'del(.ICD.is_portability_driver)' ${{ env.VULKAN_ROOT_LOCATION }}/MoltenVK/dylib/macOS/MoltenVK_icd.json > build/test/MoltenVK_icd.json
       - name: Copy libMoltenVK
-        run: cp ${{ env.VULKAN_ROOT_LOCATION }}/MoltenVK/dylib/macOS/libMoltenVK.dylib testrun/libMoltenVK.dylib
-      - name: Copy libvulkan
-        run: cp ${{ env.VULKAN_ROOT_LOCATION }}/macOS/lib/libvulkan.1.dylib testrun/libvulkan.1.dylib
+        run: cp ${{ env.VULKAN_ROOT_LOCATION }}/MoltenVK/dylib/macOS/libMoltenVK.dylib build/test/libMoltenVK.dylib
       - name: Fix library import paths
-        run: arch -arm64 install_name_tool -add_rpath @loader_path testrun/libgpu-setup.dylib
-      - name: Copy test binary
-        run: cp build/test/gpu-setup-test testrun/gpu-setup-test && chmod +x testrun/gpu-setup-test
+        run: arch -arm64 install_name_tool -add_rpath @loader_path build/test/libgpu-setup.dylib
       
       - name: Unit tests - List providers
-        run: cd testrun && ./gpu-setup-test --list
+        run: build/test/gpu-setup-test --list
       - name: Unit tests - Golden vectors
-        run: cd testrun && ./gpu-setup-test --test-vector-check
+        run: build/test/gpu-setup-test --test-vector-check
       - name: Unit tests - hash and bitstream
-        run: cd testrun && ./gpu-setup-test --unit-tests
+        run: build/test/gpu-setup-test --unit-tests
       - name: Unit tests - PoW
-        run: cd testrun && ./gpu-setup-test -tp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
+        run: build/test/gpu-setup-test -tp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
       - name: Unit tests - PoW and Leafs
-        run: cd testrun && ./gpu-setup-test -tlp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
+        run: build/test/gpu-setup-test -tlp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
       - name: Unit tests - label lengths
-        run: cd testrun && ./gpu-setup-test -il
+        run: build/test/gpu-setup-test -il
       - name: Unit tests - labels count
-        run: cd testrun && ./gpu-setup-test -in
+        run: build/test/gpu-setup-test -in
       - name: Integration tests - concurrency test
-        run: cd testrun &&  ./gpu-setup-test -ip
+        run: build/test/gpu-setup-test -ip
       - name: Integration tests - cancellation test
-        run: cd testrun && ./gpu-setup-test -ic
+        run: build/test/gpu-setup-test -ic
 
       - name: Upload library
         uses: actions/upload-artifact@v3
         with:
           name: macos-m1
-          path: testrun/libgpu-setup.dylib
+          path: build/src/libgpu-setup.dylib
       - name: Upload test app
         uses: actions/upload-artifact@v3
         with:
           name: macos-m1
-          path: testrun/gpu-setup-test
+          path: build/test/gpu-setup-test
       - name: Upload api.h
         uses: actions/upload-artifact@v3
         with:
@@ -375,12 +366,12 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: macos-m1
-          path: testrun/libMoltenVK.dylib
+          path: build/test/libMoltenVK.dylib
       - name: Upload MoltenVK config
         uses: actions/upload-artifact@v3
         with:
           name: macos-m1
-          path: testrun/MoltenVK_icd.json
+          path: build/test/MoltenVK_icd.json
       - name: Upload Vulkan
         uses: actions/upload-artifact@v3
         with:
