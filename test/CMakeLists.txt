@@ -9,9 +9,7 @@ add_executable(gpu-setup-test ${SOURCES})
 
 target_include_directories(gpu-setup-test PRIVATE ..)
 target_link_libraries(gpu-setup-test gpu-setup)
-if(APPLE)
-    target_link_libraries(gpu-setup-test -ldl)
-elseif(UNIX)
+if(APPLE OR UNIX)
     target_link_libraries(gpu-setup-test -ldl)
 endif()
 

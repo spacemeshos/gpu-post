@@ -149,6 +149,10 @@ if (SPACEMESHVULKAN)
 endif()
 
 if (SPACEMESH_LIB_SHARED)
+    if(UNIX AND NOT APPLE)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -pthread")
+    endif()
+
     if (SPACEMESHCUDA)
         cuda_add_library(gpu-setup SHARED ${SOURCES})
     else()
@@ -166,6 +170,10 @@ if (SPACEMESH_LIB_SHARED)
 
 	if (SPACEMESHVULKAN)
 	    target_link_libraries(gpu-setup zlibstatic)
+    endif()
+
+    if(APPLE OR UNIX)
+        target_link_libraries(gpu-setup -ldl)
     endif()
 else()
     if (SPACEMESHCUDA)
