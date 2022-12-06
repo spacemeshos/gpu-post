@@ -31,6 +31,11 @@ else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 endif()
 
+if (APPLE)
+    # we should check here for ARM / Intel too
+    add_compile_definitions(SPACEMESH_VULKAN_COMPATIBILITY_NEEDED=1)
+endif()
+
 include_directories(.)
 include_directories(../include)
 

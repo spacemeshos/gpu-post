@@ -266,7 +266,7 @@ static int vulkan_detect(struct cgpu_info *gpus, int *active)
 		VK_API_VERSION_1_2
 	};
 
-#ifdef VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME
+#ifdef SPACEMESH_VULKAN_COMPATIBILITY_NEEDED
 	const char* const extensions[1] = { VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME };
 
 	const VkInstanceCreateInfo instanceCreateInfo = {
