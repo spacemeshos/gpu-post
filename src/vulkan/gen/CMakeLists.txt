@@ -28,8 +28,6 @@ add_executable(shaders-gen ${SOURCES})
 if(WIN32)
     target_link_libraries(shaders-gen "$ENV{VULKAN_SDK}/Lib/vulkan-1.lib" "$ENV{VULKAN_SDK}/Lib/shaderc_combined.lib")
 elseif(APPLE)
-    # we should check for M1 vs Intel here too
-    add_compile_definitions(SPACEMESH_VULKAN_COMPATIBILITY_NEEDED=1)
     target_link_libraries(shaders-gen -L$ENV{VULKAN_SDK}/lib -lvulkan shaderc_combined)
 elseif(UNIX)
     if (SPACEMESH_ARCH_ARM64)
