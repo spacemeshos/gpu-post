@@ -12,6 +12,9 @@ endif ()
 
 if (APPLE)
     option(SPACEMESHCUDA   "Build with CUDA support"   OFF)
+
+    # we should check here for ARM / Intel too
+    add_compile_definitions(SPACEMESH_VULKAN_COMPATIBILITY_NEEDED=1)
 else()
     option(SPACEMESHCUDA   "Build with CUDA support"   ON)
 endif()
