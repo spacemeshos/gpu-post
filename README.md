@@ -8,14 +8,14 @@ A c library implementing the POST API setup method for general-purpose CPUs and 
 
 ## Runtime System Requirements
 
-Windows 10/11, macOS or Ubuntu.
+Windows 10/11, macOS or Linux.
 One or more of the following processors:
 
 - A GPU and drivers with CUDA support (minimum compute compatibility 5.0, maximum compute compatibility 9), such as a modern Nvidia GPU and Nvidia drivers version R525 or newer.
 - A GPU and drivers with Vulkan 1.3 support such as a modern AMD, Apple M1 processor, and Intel GPUs.
 - A x86-64 cpu such as AMD or Intel CPUs.
 - Both discrete and on-board GPUs are supported as long as they support the minimum CUDA or Vulkan runtime version.
-- We currently provide release binaries and build instructions for Ubuntu 20.04 but the library can be built on other Linux distros for usage on these systems.
+- We currently provide release binaries and build instructions for Ubuntu 22.04 but the library can be built on other Linux distros for usage on these systems.
 
 ## GPU Memory Requirements
 
@@ -30,7 +30,7 @@ One or more of the following processors:
 
 ### Runtime linux requirements
 
-On Linux platforms with hybrid Nvidia GPU setup please use Nvidia driver R525 or newer. Older ones are known to have compatibility issues. Non hybrid cards are confirmed to be working with R520 and older versions.
+On Linux platforms with [Hybrid](https://wiki.archlinux.org/title/hybrid_graphics) Nvidia GPU setup please use Nvidia driver R525 or newer. Older ones are known to have compatibility issues. Non hybrid cards are confirmed to be working with R520 and older versions.
 
 ---
 
@@ -38,18 +38,23 @@ On Linux platforms with hybrid Nvidia GPU setup please use Nvidia driver R525 or
 
 ### All Platforms
 
-- For building CUDA support: NVIDIA Cuda Toolkit 11, an NVIDIA GPU with CUDA support, and an Nvdia driver version R525 or newer.
+- For building CUDA support: NVIDIA [Cuda Toolkit 11](https://developer.nvidia.com/cuda-11.0-download-archive), an NVIDIA GPU with CUDA support, and an [Nvdia driver](https://www.nvidia.com/Download/driverResults.aspx/194278/en-us/) version R525 or newer.
+  - If building on Linux you should refer to the distribution preffered method installation if available
 - For building Vulkan support: Vulkan SDK 1.3 and a GPU with Vulkan 1.3 runtime support.
 
 ### Windows
 
-- Windows 10/11 Pro.
+- Windows 10/11.
 - Microsoft Visual Studio 2022
 - You may also need to install specific versions of the Windows SDK when prompted when attempting to build the library for the first time.
 
 ### Ubuntu
 
 - Ubuntu 22.04
+- Cmake, GCC 11+
+
+### Other linux distributions
+
 - Cmake, GCC 11+
 
 ### macOS
