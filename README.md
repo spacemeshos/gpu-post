@@ -42,7 +42,7 @@ On Linux platforms with [Hybrid](https://wiki.archlinux.org/title/hybrid_graphic
 
 - For building CUDA support: NVIDIA [Cuda Toolkit 11](https://developer.nvidia.com/cuda-11.0-download-archive), an NVIDIA GPU with CUDA support, and an [Nvdia driver](https://www.cyberciti.biz/faq/ubuntu-linux-install-nvidia-driver-latest-proprietary-driver/) version R525 or newer.
   - If building on Linux you should refer to the distribution preferred method installation if available
-- For building Vulkan support: Vulkan SDK 1.3 and a GPU with Vulkan 1.3 runtime support.
+- For building Vulkan support: [Vulkan SDK 1.3](https://vulkan.lunarg.com/sdk/home) and a GPU with Vulkan 1.3 runtime support.
 
 ### Windows
 
