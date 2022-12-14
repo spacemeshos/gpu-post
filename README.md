@@ -107,6 +107,12 @@ To build the library with full support for both CUDA and Vulkan on Windows or on
 
 ### Ubuntu or macOS
 
+If using VULKAN, make sure to clone the zlib submodule:
+
+```bash
+git submodule update --init
+```
+
 Configure your build using the default configuration:
 
 ```bash
