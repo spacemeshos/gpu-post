@@ -126,7 +126,7 @@ void vulkan_library_shutdown()
 	}
 }
 
-int getComputeQueueFamillyIndex(uint32_t index)
+int getComputeQueueFamilyIndex(uint32_t index)
 {
 	if (index >= gPhysicalDeviceCount) {
 		applog(LOG_ERR, "Card index %u not found\n", index);
@@ -146,14 +146,14 @@ int getComputeQueueFamillyIndex(uint32_t index)
 	return ret;
 }
 
-VkDevice createDevice(int index, uint32_t computeQueueFamillyIndex)
+VkDevice createDevice(int index, uint32_t computeQueueFamilyIndex)
 {
 	const float queuePrioritory = 1.0f;
 	const VkDeviceQueueCreateInfo deviceQueueCreateInfo = {
 		VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
 		0,
 		0,
-		computeQueueFamillyIndex,
+		computeQueueFamilyIndex,
 		1,
 		&queuePrioritory
 	};
@@ -227,7 +227,7 @@ VkDeviceMemory allocateGPUMemory(int index,  VkDevice vkDevice, const VkDeviceSi
 	return memory;
 }
 
-VkBuffer createBuffer(VkDevice vkDevice, uint32_t computeQueueFamillyIndex, VkDeviceMemory memory, VkDeviceSize bufferSize, VkDeviceSize offset)
+VkBuffer createBuffer(VkDevice vkDevice, uint32_t computeQueueFamilyIndex, VkDeviceMemory memory, VkDeviceSize bufferSize, VkDeviceSize offset)
 {
 	// 4Gb limit on AMD and Nvidia
 	if (bufferSize >= 0x100000000) bufferSize = 0xffffffff;
@@ -240,7 +240,7 @@ VkBuffer createBuffer(VkDevice vkDevice, uint32_t computeQueueFamillyIndex, VkDe
 		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 		VK_SHARING_MODE_EXCLUSIVE,
 		1,
-		&computeQueueFamillyIndex
+		&computeQueueFamilyIndex
 	};
 
 	VkBuffer buffer;

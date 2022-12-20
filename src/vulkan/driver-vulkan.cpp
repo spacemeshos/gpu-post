@@ -115,21 +115,21 @@ static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameS
 
 	uint32_t scrypt_mem = 128 * cgpu->r;
 
-	uint32_t computeQueueFamillyIndex = getComputeQueueFamillyIndex(cgpu->driver_id);
-	if (computeQueueFamillyIndex < 0) {
-		applog(LOG_ERR, "GPU %d: Compute query familly not found\n", cgpu->driver_id);
+	uint32_t computeQueueFamilyIndex = getComputeQueueFamilyIndex(cgpu->driver_id);
+	if (computeQueueFamilyIndex < 0) {
+		applog(LOG_ERR, "GPU %d: Compute query family not found\n", cgpu->driver_id);
 		return NULL;
 	}
 
 	state->deviceId = cgpu->driver_id;
-	state->vkDevice = createDevice(cgpu->driver_id, computeQueueFamillyIndex);
+	state->vkDevice = createDevice(cgpu->driver_id, computeQueueFamilyIndex);
 	if (NULL == state->vkDevice) {
 		applog(LOG_NOTICE, "GPU %d: Create Vulkan device instance failed", cgpu->driver_id);
 		return NULL;
 	}
 
 	VkDeviceMemory tmpMem = allocateGPUMemory(state->deviceId, state->vkDevice, 1024, true, true);
-	VkBuffer tmpBuf = createBuffer(state->vkDevice, computeQueueFamillyIndex, tmpMem, 256, 0);
+	VkBuffer tmpBuf = createBuffer(state->vkDevice, computeQueueFamilyIndex, tmpMem, 256, 0);
 	state->alignment = (uint32_t)getBufferMemoryRequirements(state->vkDevice, tmpBuf);
 	gVulkan.vkDestroyBuffer(state->vkDevice, tmpBuf, NULL);
 	gVulkan.vkFreeMemory(state->vkDevice, tmpMem, NULL);
@@ -170,20 +170,20 @@ static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameS
 	state->gpuLocalMemory = allocateGPUMemory(state->deviceId, state->vkDevice, state->bufSize, true, true);
 	state->gpuSharedMemory = allocateGPUMemory(state->deviceId, state->vkDevice, state->sharedMemorySize, false, true);
 
-	state->padbuffer8 = createBuffer(state->vkDevice, computeQueueFamillyIndex, state->gpuLocalMemory, state->bufSize, 0);
+	state->padbuffer8 = createBuffer(state->vkDevice, computeQueueFamilyIndex, state->gpuLocalMemory, state->bufSize, 0);
 
 	uint64_t o = 0;
-	state->gpu_constants = createBuffer(state->vkDevice, computeQueueFamillyIndex, state->gpuSharedMemory, state->memConstantSize, o);
+	state->gpu_constants = createBuffer(state->vkDevice, computeQueueFamilyIndex, state->gpuSharedMemory, state->memConstantSize, o);
 	o += state->memConstantSize;
-	state->gpu_params = createBuffer(state->vkDevice, computeQueueFamillyIndex, state->gpuSharedMemory, state->memParamsSize, o);
+	state->gpu_params = createBuffer(state->vkDevice, computeQueueFamilyIndex, state->gpuSharedMemory, state->memParamsSize, o);
 	o += state->memParamsSize;
-	state->CLbuffer0 = createBuffer(state->vkDevice, computeQueueFamillyIndex, state->gpuSharedMemory, state->memInputSize, o);
+	state->CLbuffer0 = createBuffer(state->vkDevice, computeQueueFamilyIndex, state->gpuSharedMemory, state->memInputSize, o);
 	o += state->memInputSize;
-	state->outputBuffer[0] = createBuffer(state->vkDevice, computeQueueFamillyIndex, state->gpuSharedMemory, state->memOutputSize, o);
+	state->outputBuffer[0] = createBuffer(state->vkDevice, computeQueueFamilyIndex, state->gpuSharedMemory, state->memOutputSize, o);
 	o += state->memOutputSize;
-	state->outputBuffer[1] = createBuffer(state->vkDevice, computeQueueFamillyIndex, state->gpuSharedMemory, state->memOutputSize, o);
+	state->outputBuffer[1] = createBuffer(state->vkDevice, computeQueueFamilyIndex, state->gpuSharedMemory, state->memOutputSize, o);
 
-	gVulkan.vkGetDeviceQueue(state->vkDevice, computeQueueFamillyIndex, 0, &state->queue);
+	gVulkan.vkGetDeviceQueue(state->vkDevice, computeQueueFamilyIndex, 0, &state->queue);
 
 	state->pipelineLayout = bindBuffers(state->vkDevice, &state->descriptorSet, &state->descriptorPool, &state->descriptorSetLayout,
 		state->padbuffer8, state->gpu_constants, state->gpu_params, state->CLbuffer0, state->outputBuffer[0], state->outputBuffer[1]
@@ -198,7 +198,7 @@ static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameS
 		VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
 		0,
 		VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-		computeQueueFamillyIndex
+		computeQueueFamilyIndex
 	};
 	CHECK_RESULT(gVulkan.vkCreateCommandPool(state->vkDevice, &commandPoolCreateInfo, 0, &state->commandPool), "vkCreateCommandPool", NULL);
 
