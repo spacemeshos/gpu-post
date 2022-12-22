@@ -315,6 +315,7 @@ gpu-setup-test -b -n 2000000
 | 07/01/2021  | shanyaa   | v0.1.21 | Intel Iris Xe (integrated graphics)                                            | Windows 10 / Intel core i7 1165G7                                                  | Vulkan | Intel 27.20.100.9565       | 0.28 |
 | 07/03/2021  | neodied   | v0.1.21 | Radeon 5700XT @ 1333 MHz core, 1824 MHz mem                                    | Windows 10 / Intel core i7 9700K                                                   | Vulkan | AMD Radeon Software 21.6.1 | 1.38 |
 | 07/03/2021  | neodied   | v0.1.21 | Radeon 5700XT @ 2016 MHz core, 1748 MHz mem                                    | Windows 10 / Intel core i7 9700K                                                   | Vulkan | AMD Radeon Software 21.6.1 | 1.87 |
+| 12/21/2022  | lane      | v0.1.28 | Apple M1 (built-in, 8 cores, Metal 3)     | macOS 13.1                          | Vulkan | N/A | 0.15 |
 
 ## Prerelease Benchmarks
 
