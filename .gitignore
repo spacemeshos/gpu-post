@@ -18,6 +18,7 @@ x86/
 
 # Linux build directory
 build/
+cmake-build-*/
 
 # Visual Studo cache/options directory
 .vs/
