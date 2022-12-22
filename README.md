@@ -4,7 +4,7 @@
 
 ## Current functionality
 
-A c library implementing the POST API setup method for general-purpose CPUs and for CUDA and Vulkan compute processors.
+A C library implementing the POST API setup method for general-purpose CPUs and for CUDA and Vulkan compute processors.
 
 ## Runtime System Requirements
 
@@ -149,14 +149,14 @@ Run the tests:
 
 ### macOS Configuration
 
-1. Since the test app is not notarized, you need to enable it via `spctl --add /path/to/gpu-setup-test` or by right-click-open it and click `open`.
-2. Set execute permissions. e.g. `chmod a+x gpu-setup-test`
-3. Add the test app's path to the dynamic lib search path, e.g. `export DYLD_LIBRARY_PATH=.`
+1. Since the test app is not notarized, you may need to enable it via `spctl --add /path/to/gpu-setup-test` or by right-click-open it and click `open`.
+2. Set execute permissions if not already set, e.g., `chmod a+x gpu-setup-test`
+3. Add the test app's path to the dynamic lib search path, e.g., `export DYLD_LIBRARY_PATH=.`
 
 ### Linux Configuration
 
-1. Set execute permissions. e.g. `chmod a+x gpu-setup-test`
-2. Add the test app's path to the dynamic lib search path, e.g. `export LD_LIBRARY_PATH=.`
+1. Set execute permissions if not already set, e.g., `chmod a+x gpu-setup-test`
+2. Add the test app's path to the dynamic lib search path, e.g., `export LD_LIBRARY_PATH=.`
 
 Run from the console to print usage:
 
