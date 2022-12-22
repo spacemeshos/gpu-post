@@ -87,7 +87,7 @@ int hex2bin(const char *aSrc, unsigned char *aDst, size_t aDstLen)
 	return -1;
 }
 
-/* do  providers benchmark */
+/* do providers benchmark */
 void do_benchmark(int aLabelSize, int aLabelsCount)
 {
 	uint8_t id[32];

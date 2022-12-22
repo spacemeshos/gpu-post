@@ -57,7 +57,7 @@ int scryptPositions(
 	}
 
 	if (0 == (options & (SPACEMESH_API_COMPUTE_LEAFS | SPACEMESH_API_COMPUTE_POW))) {
-		return SPACEMESH_API_ERROR_NO_COMPOTE_OPTIONS;
+		return SPACEMESH_API_ERROR_NO_COMPUTE_OPTIONS;
 	}
 
 	cgpu = spacemesh_api_get_gpu(provider_id);
