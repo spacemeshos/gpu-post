@@ -8,14 +8,16 @@ A C library implementing the POST API setup method for general-purpose CPUs and 
 
 ## Runtime System Requirements
 
-Windows 10, macOS or Ubuntu.
-One or more of the following processors:
+Windows 10/11, macOS or Linux.
+One or more of the following:
 
-- A GPU and drivers with CUDA support (minimum compute compatibility 5.0, maximum compute compatibility 8.6), such as a modern Nvidia GPU and Nvidia drivers version R450 or newer.
+- A GPU and drivers with CUDA support (minimum compute compatibility 5.0, maximum compute compatibility 9), such as a modern Nvidia GPU and Nvidia drivers version R525 or newer.
 - A GPU and drivers with Vulkan 1.3 support such as a modern AMD, Apple M1 processor, and Intel GPUs.
 - A x86-64 cpu such as AMD or Intel CPUs.
+- A ARM 64 bit cpu such as Apple Silicon or Ampere Altra
 - Both discrete and on-board GPUs are supported as long as they support the minimum CUDA or Vulkan runtime version.
-- We currently provide release binaries and build instructions for Ubuntu 20.04 but the library can be built on other Linux distros for usage on these systems.
+
+We currently provide release binaries and build instructions for Windows, Mac and Ubuntu 22.04 but the library can be built on other Linux distros for usage on these systems.
 
 ## GPU Memory Requirements
 
@@ -28,31 +30,40 @@ One or more of the following processors:
 
 - 2080 MiB
 
+### Runtime linux requirements
+
+On Linux platforms with [Hybrid](https://wiki.archlinux.org/title/hybrid_graphics) Nvidia GPU setup please use Nvidia driver R525 or newer. Older ones are known to have compatibility issues. Non hybrid cards are confirmed to be working with R520 and older versions.
+
 ---
 
 ## Build System Requirements
 
 ### All Platforms
 
-- For building CUDA support: NVIDIA Cuda Toolkit 11, an NVIDIA GPU with CUDA support, and an Nvdia driver version R450 or newer.
-- For building Vulkan support: Vulkan SDK 1.3 and a GPU with Vulkan 1.3 runtime support.
+- For building CUDA support: NVIDIA [Cuda Toolkit 11](https://developer.nvidia.com/cuda-11.0-download-archive), an NVIDIA GPU with CUDA support, and an [Nvdia driver](https://www.cyberciti.biz/faq/ubuntu-linux-install-nvidia-driver-latest-proprietary-driver/) version R525 or newer.
+  - If building on Linux you should refer to the distribution preferred method installation if available
+- For building Vulkan support: [Vulkan SDK 1.3](https://vulkan.lunarg.com/sdk/home) and a GPU with Vulkan 1.3 runtime support.
 
 ### Windows
 
-- Windows 10 Pro.
+- Windows 10/11.
 - Microsoft Visual Studio 2022
 - You may also need to install specific versions of the Windows SDK when prompted when attempting to build the library for the first time.
 
 ### Ubuntu
 
 - Ubuntu 22.04
-- Cmake, GCC 7
+- Cmake, GCC 11+
+
+### Other linux distributions
+
+- Cmake, GCC 11+
 
 ### macOS
 
 - Xcode
 - Xcode Command Line Dev Tools
-- Cmake, GCC 7
+- Cmake, GCC 11+
 
 ### macOS Dev Env Setup
 
@@ -100,7 +111,7 @@ To build the library with full support for both CUDA and Vulkan on Windows or on
 
 ### Building on Windows
 
-1. Open project folder into Visual Studio 2017: `File -> Open -> Folder`.
+1. Open project folder into Visual Studio 2022: `File -> Open -> Folder`.
 2. Set `x64-Release` Project Settings.
 3. Build: `CMake -> Rebuild All`.
 4. Run test: `CMake -> Debug from Build Folder -> gpu-setup-test.exe`
