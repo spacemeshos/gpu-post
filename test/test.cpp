@@ -117,7 +117,7 @@ void do_benchmark(int aLabelSize, int aLabelsCount)
 				{
 					uint64_t hashes_computed;
 					uint64_t hashes_per_sec;
-					int status = scryptPositions(providers[i].id, id, 0, aLabelsCount - 1, aLabelSize, salt, SPACEMESH_API_COMPUTE_LEAFS, out, 512, 1, 1, NULL, NULL, &hashes_computed, &hashes_per_sec);
+					int status = scryptPositions(providers[i].id, id, 0, aLabelsCount - 1, aLabelSize, salt, SPACEMESH_API_COMPUTE_LEAFS, out, 8192, 1, 1, NULL, NULL, &hashes_computed, &hashes_per_sec);
 					printf("%s: status %d, %u hashes, %u h/s\n", providers[i].model, status, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
 				}
 			}
@@ -775,7 +775,7 @@ int main(int argc, char **argv)
 	bool runTestCore = false;
 	bool createTestVector = false;
 	bool checkTestVector = false;
-	int labelSize = 8;
+	int labelSize = 128;
 	int labelsCount = MAX_CPU_LABELS_COUNT;
 	int powDiff = 16;
 	int referenceProvider = -1;
