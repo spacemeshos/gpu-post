@@ -118,7 +118,7 @@ void do_benchmark(int aLabelSize, int aLabelsCount)
 					uint64_t labels_computed;
 					uint64_t labels_per_sec;
 					int status = scryptPositions(providers[i].id, id, 0, aLabelsCount - 1, aLabelSize, salt, SPACEMESH_API_COMPUTE_LEAFS, out, 8192, 1, 1, NULL, NULL, &labels_computed, &labels_per_sec);
-					printf("%s: status %d, %u labels, %u labels/s\n", providers[i].model, status, (uint32_t)labels_computed, (uint32_t)labels_per_sec);
+					printf("%s: status %d, %u labels, %u labels/s, %0.2f MiB/s\n", providers[i].model, status, (uint32_t)labels_computed, (uint32_t)labels_per_sec, (labels_per_sec*aLabelSize/8.0) / 1024 / 1024);
 				}
 			}
 			free(out);
