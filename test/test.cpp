@@ -455,13 +455,13 @@ int do_test_pow(uint64_t aStartPos, int aLabelsCount, unsigned aDiff, unsigned a
 					uint64_t hashes_computed;
 					uint64_t hashes_per_sec;
 					printf("%s: ", providers[i].model);
-					int status = scryptPositions(providers[i].id, s_id, aStartPos, aStartPos + aLabelsCount - 1, 8, s_salt, SPACEMESH_API_COMPUTE_POW, NULL, 8192, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
+					int status = scryptPositions(providers[i].id, s_id, aStartPos, aStartPos + aLabelsCount - 1, 8, s_salt, SPACEMESH_API_COMPUTE_POW, NULL, 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
 					switch (status) {
 					case SPACEMESH_API_POW_SOLUTION_FOUND:
 						printf("%u hashes, %u h/s, solution at %u\n", (uint32_t)hashes_computed, (uint32_t)hashes_per_sec, (uint32_t)idx_solution);
 						if (-1 != cpu_id) {
 							uint8_t hash[32];
-							scryptPositions(cpu_id, s_id, idx_solution, idx_solution, 256, s_salt, SPACEMESH_API_COMPUTE_POW, hash, 8192, 1, 1, NULL, NULL, &hashes_computed, &hashes_per_sec);
+							scryptPositions(cpu_id, s_id, idx_solution, idx_solution, 256, s_salt, SPACEMESH_API_COMPUTE_POW, hash, 512, 1, 1, NULL, NULL, &hashes_computed, &hashes_per_sec);
 							printf("id: ");
 							print_hex32(s_id);
 							printf("\n");
