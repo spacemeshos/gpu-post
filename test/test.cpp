@@ -115,10 +115,10 @@ void do_benchmark(int aLabelSize, int aLabelsCount)
 			for (int i = 0; i < providersCount; i++) {
 				if (providers[i].compute_api != COMPUTE_API_CLASS_CPU)
 				{
-					uint64_t hashes_computed;
-					uint64_t hashes_per_sec;
-					int status = scryptPositions(providers[i].id, id, 0, aLabelsCount - 1, aLabelSize, salt, SPACEMESH_API_COMPUTE_LEAFS, out, 8192, 1, 1, NULL, NULL, &hashes_computed, &hashes_per_sec);
-					printf("%s: status %d, %u hashes, %u h/s\n", providers[i].model, status, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
+					uint64_t labels_computed;
+					uint64_t labels_per_sec;
+					int status = scryptPositions(providers[i].id, id, 0, aLabelsCount - 1, aLabelSize, salt, SPACEMESH_API_COMPUTE_LEAFS, out, 8192, 1, 1, NULL, NULL, &labels_computed, &labels_per_sec);
+					printf("%s: status %d, %u labels, %u labels/s\n", providers[i].model, status, (uint32_t)labels_computed, (uint32_t)labels_per_sec);
 				}
 			}
 			free(out);
@@ -152,8 +152,8 @@ void do_test(int aLabelSize, int aLabelsCount, int aReferenceProvider, bool aPri
 			size_t labelsBufferAlignedSize = ((labelsBufferSize + 31ull) / 32ull) * 32ull;
 			uint8_t *out = (uint8_t *)malloc(providersCount * labelsBufferAlignedSize);
 			uint8_t *referenceLabels = nullptr;
-			uint64_t hashes_computed;
-			uint64_t hashes_per_sec;
+			uint64_t labels_computed;
+			uint64_t labels_per_sec;
 			bool checkOutput = false;
 
 			if (aReferenceProvider < 0 || aReferenceProvider >= providersCount) {
@@ -167,8 +167,8 @@ void do_test(int aLabelSize, int aLabelsCount, int aReferenceProvider, bool aPri
 						uint8_t D[32] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 						referenceLabels = out + i * labelsBufferAlignedSize;
 						memset(referenceLabels, 0, labelsBufferSize);
-						scryptPositions(providers[i].id, id, 0, referenceLabelsCount - 1, aLabelSize, salt, SPACEMESH_API_COMPUTE_LEAFS, referenceLabels, 8192, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
-						printf("%s: %u hashes, %u h/s\n", providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
+						scryptPositions(providers[i].id, id, 0, referenceLabelsCount - 1, aLabelSize, salt, SPACEMESH_API_COMPUTE_LEAFS, referenceLabels, 8192, 1, 1, D, &idx_solution, &labels_computed, &labels_per_sec);
+						printf("%s: %u labels, %u labels/s\n", providers[i].model, (uint32_t)labels_computed, (uint32_t)labels_per_sec);
 						aReferenceProvider = i;
 						checkOutput = true;
 						break;
@@ -180,8 +180,8 @@ void do_test(int aLabelSize, int aLabelsCount, int aReferenceProvider, bool aPri
 				uint8_t D[32] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 				referenceLabels = out + aReferenceProvider * labelsBufferAlignedSize;
 				memset(referenceLabels, 0, labelsBufferSize);
-				scryptPositions(providers[aReferenceProvider].id, id, 0, referenceLabelsCount - 1, aLabelSize, salt, SPACEMESH_API_COMPUTE_LEAFS, referenceLabels, 8192, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
-				printf("%s: %u hashes, %u h/s\n", providers[aReferenceProvider].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
+				scryptPositions(providers[aReferenceProvider].id, id, 0, referenceLabelsCount - 1, aLabelSize, salt, SPACEMESH_API_COMPUTE_LEAFS, referenceLabels, 8192, 1, 1, D, &idx_solution, &labels_computed, &labels_per_sec);
+				printf("%s: %u labels, %u labels/s\n", providers[aReferenceProvider].model, (uint32_t)labels_computed, (uint32_t)labels_per_sec);
 				checkOutput = true;
 			}
 
@@ -191,8 +191,8 @@ void do_test(int aLabelSize, int aLabelsCount, int aReferenceProvider, bool aPri
 					uint8_t D[32] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 					uint8_t *labels = out + i * labelsBufferAlignedSize;
 					memset(labels, 0, labelsBufferSize);
-					scryptPositions(providers[i].id, id, 0, aLabelsCount - 1, aLabelSize, salt, SPACEMESH_API_COMPUTE_LEAFS, labels, 8192, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
-					printf("%s: %u hashes, %u h/s\n", providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
+					scryptPositions(providers[i].id, id, 0, aLabelsCount - 1, aLabelSize, salt, SPACEMESH_API_COMPUTE_LEAFS, labels, 8192, 1, 1, D, &idx_solution, &labels_computed, &labels_per_sec);
+					printf("%s: %u labels, %u labels/s\n", providers[i].model, (uint32_t)labels_computed, (uint32_t)labels_per_sec);
 					if (memstr(labels, labelsBufferSize, zeros, 8)) {
 						printf("ZEROS result\n");
 					}
@@ -299,27 +299,27 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 
 					uint64_t idx = 0;
 					uint64_t idx_solution = -1ull;
-					uint64_t hashes_computed;
-					uint64_t hashes_per_sec;
+					uint64_t labels_computed;
+					uint64_t labels_per_sec;
 
 					for (int j=0; j < iters; j++) {
 
-						hashes_computed = 0;
-						hashes_per_sec = 0;
+						labels_computed = 0;
+						labels_per_sec = 0;
 
 						if (idx_solution == -1ull) {
 							printf("Compute labels and look for a pow solution... Iteration: %d\n", j);
-							int status = scryptPositions(providers[i].id, id, idx, idx + labels_per_iter - 1, labelSize, salt, SPACEMESH_API_COMPUTE_LEAFS | SPACEMESH_API_COMPUTE_POW, out, 8192, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
+							int status = scryptPositions(providers[i].id, id, idx, idx + labels_per_iter - 1, labelSize, salt, SPACEMESH_API_COMPUTE_LEAFS | SPACEMESH_API_COMPUTE_POW, out, 8192, 1, 1, D, &idx_solution, &labels_computed, &labels_per_sec);
 
 							if (status != SPACEMESH_API_ERROR_NONE && status != SPACEMESH_API_POW_SOLUTION_FOUND) {
 								printf("Compute error: %u\n", status);
 							}
 
-							if (hashes_computed != labels_per_iter) {
-								printf ("Compute error: hashes computed: %llu, hashes expected: %llu\n", hashes_computed, labels_per_iter);
+							if (labels_computed != labels_per_iter) {
+								printf ("Compute error: labels computed: %llu, labels expected: %llu\n", labels_computed, labels_per_iter);
 							}
 
-							printf("Labels + pow: requested %llu labels at index %llu. Computed hashes: %llu, (%llu h/s)\n", labels_per_iter, idx, hashes_computed, hashes_per_sec);
+							printf("Labels + pow: requested %llu labels at index %llu. Computed labels: %llu, (%llu labels/s)\n", labels_per_iter, idx, labels_computed, labels_per_sec);
 
 							if (idx_solution != -1ull) {
 								printf("Found pow solution at index %llu\n", idx_solution);
@@ -331,13 +331,13 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 							printf("Compute labels only... Iteration: %d\n", j);
 
 							uint64_t idx_temp = -1;
-							int status = scryptPositions(providers[i].id, id, idx, idx + labels_per_iter - 1, labelSize, salt, SPACEMESH_API_COMPUTE_LEAFS, out, 8192, 1, 1, D, &idx_temp, &hashes_computed, &hashes_per_sec);
+							int status = scryptPositions(providers[i].id, id, idx, idx + labels_per_iter - 1, labelSize, salt, SPACEMESH_API_COMPUTE_LEAFS, out, 8192, 1, 1, D, &idx_temp, &labels_computed, &labels_per_sec);
 
 							if (status != SPACEMESH_API_ERROR_NONE && status != SPACEMESH_API_POW_SOLUTION_FOUND) {
 								printf("Compute returned an error: %u", status);
 							}
 
-							printf("Compute labels only. Requested: %llu labels at index %llu. hashes computed: %llu. (%llu h/s). Solution index:  %llu\n", labels_per_iter, idx, hashes_computed, hashes_per_sec, idx_solution);
+							printf("Compute labels only. Requested: %llu labels at index %llu. labels computed: %llu. (%llu labels/s). Solution index:  %llu\n", labels_per_iter, idx, labels_computed, labels_per_sec, idx_solution);
 						}
 
 						// start index of next iteration
@@ -346,26 +346,26 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 
 					// finished leaves computation - we need to continue look for a pow solution until one is found, if was not found yet
 					while (idx_solution == -1ull) {
-						hashes_computed = 0;
-						hashes_per_sec = 0;
+						labels_computed = 0;
+						labels_per_sec = 0;
 
 						printf("Calling pow compute...\n");
 
-						int status = scryptPositions(providers[i].id, id, idx, idx + labels_per_iter - 1, labelSize, salt, SPACEMESH_API_COMPUTE_POW, out, 8192, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
+						int status = scryptPositions(providers[i].id, id, idx, idx + labels_per_iter - 1, labelSize, salt, SPACEMESH_API_COMPUTE_POW, out, 8192, 1, 1, D, &idx_solution, &labels_computed, &labels_per_sec);
 
-						printf("Compute pow only at index: %llu. hashes computed: %llu (%llu h/s)\n", idx, hashes_computed, hashes_per_sec);
+						printf("Compute pow only at index: %llu. labels computed: %llu (%llu labels/s)\n", idx, labels_computed, labels_per_sec);
 
 						switch(status) {
 						case SPACEMESH_API_POW_SOLUTION_FOUND:
 							break;
 
 						case SPACEMESH_API_ERROR_NONE:
-							if (hashes_computed != labels_per_iter) {
-								printf("Error: compute diff than expected: hashes computed: %llu, labels requested: %llu\n", hashes_computed, labels_per_iter);
+							if (labels_computed != labels_per_iter) {
+								printf("Error: compute diff than expected: labels computed: %llu, labels requested: %llu\n", labels_computed, labels_per_iter);
 							}
 							break;
 						default:
-							printf("Error %d. Hashes computed: %llu, (%llu h/s)\n", status, hashes_computed, hashes_per_sec);
+							printf("Error %d. labels computed: %llu, (%llu labels/s)\n", status, labels_computed, labels_per_sec);
 							break;
 						}
 
@@ -379,7 +379,7 @@ void test_core(int aLabelsCount, unsigned aDiff, unsigned aSeed, int labelSize)
 
 						// compute 256 hash at solution index:
 						uint8_t hash[32];
-						scryptPositions(cpu_id, id, idx_solution, idx_solution, 256, salt, SPACEMESH_API_COMPUTE_LEAFS, hash, 8192, 1, 1, NULL, NULL, &hashes_computed, &hashes_per_sec);
+						scryptPositions(cpu_id, id, idx_solution, idx_solution, 256, salt, SPACEMESH_API_COMPUTE_LEAFS, hash, 8192, 1, 1, NULL, NULL, &labels_computed, &labels_per_sec);
 
 						printf("D: ");
 						print_hex32(D);
@@ -452,16 +452,16 @@ int do_test_pow(uint64_t aStartPos, int aLabelsCount, unsigned aDiff, unsigned a
 					if (-1 != aProviderId && aProviderId != providers[i].id) {
 						continue;
 					}
-					uint64_t hashes_computed;
-					uint64_t hashes_per_sec;
+					uint64_t labels_computed;
+					uint64_t labels_per_sec;
 					printf("%s: ", providers[i].model);
-					int status = scryptPositions(providers[i].id, s_id, aStartPos, aStartPos + aLabelsCount - 1, 8, s_salt, SPACEMESH_API_COMPUTE_POW, NULL, 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
+					int status = scryptPositions(providers[i].id, s_id, aStartPos, aStartPos + aLabelsCount - 1, 8, s_salt, SPACEMESH_API_COMPUTE_POW, NULL, 8192, 1, 1, D, &idx_solution, &labels_computed, &labels_per_sec);
 					switch (status) {
 					case SPACEMESH_API_POW_SOLUTION_FOUND:
-						printf("%u hashes, %u h/s, solution at %u\n", (uint32_t)hashes_computed, (uint32_t)hashes_per_sec, (uint32_t)idx_solution);
+						printf("%u labels, %u labels/s, solution at %u\n", (uint32_t)labels_computed, (uint32_t)labels_per_sec, (uint32_t)idx_solution);
 						if (-1 != cpu_id) {
 							uint8_t hash[32];
-							scryptPositions(cpu_id, s_id, idx_solution, idx_solution, 256, s_salt, SPACEMESH_API_COMPUTE_POW, hash, 512, 1, 1, NULL, NULL, &hashes_computed, &hashes_per_sec);
+							scryptPositions(cpu_id, s_id, idx_solution, idx_solution, 256, s_salt, SPACEMESH_API_COMPUTE_POW, hash, 8192, 1, 1, NULL, NULL, &labels_computed, &labels_per_sec);
 							printf("id: ");
 							print_hex32(s_id);
 							printf("\n");
@@ -477,10 +477,10 @@ int do_test_pow(uint64_t aStartPos, int aLabelsCount, unsigned aDiff, unsigned a
 						}
 						break;
 					case SPACEMESH_API_ERROR_NONE:
-						printf("%u hashes, %u h/s, solution not found\n", (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
+						printf("%u labels, %u labels/s, solution not found\n", (uint32_t)labels_computed, (uint32_t)labels_per_sec);
 						break;
 					default:
-						printf("error %d, %u hashes, %u h/s\n", status, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
+						printf("error %d, %u labels, %u labels/s\n", status, (uint32_t)labels_computed, (uint32_t)labels_per_sec);
 					}
 					if (aSolutionIdx != 0xffffffffffffffffull) {
 						if (idx_solution != aSolutionIdx) {
@@ -559,24 +559,24 @@ int do_test_leafs_and_pow(uint64_t aStartPos, int labelSize, int aLabelsCount, u
 
 					printf("buffer size: %0.1f MiB\n", labelsBufferSize / (1024.0*1024));
 
-					uint64_t hashes_computed;
-					uint64_t hashes_per_sec;
+					uint64_t labels_computed;
+					uint64_t labels_per_sec;
 					printf("%s: ", providers[i].model);
-					int status = scryptPositions(providers[i].id, s_id, aStartPos, aStartPos + aLabelsCount - 1, 8, s_salt, SPACEMESH_API_COMPUTE_LEAFS | SPACEMESH_API_COMPUTE_POW, out, 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
+					int status = scryptPositions(providers[i].id, s_id, aStartPos, aStartPos + aLabelsCount - 1, 8, s_salt, SPACEMESH_API_COMPUTE_LEAFS | SPACEMESH_API_COMPUTE_POW, out, 8192, 1, 1, D, &idx_solution, &labels_computed, &labels_per_sec);
 					free(out);
 					switch (status) {
 					case SPACEMESH_API_POW_SOLUTION_FOUND:
-						printf("%u hashes, %u h/s, solution at %u\n", (uint32_t)hashes_computed, (uint32_t)hashes_per_sec, (uint32_t)idx_solution);
+						printf("%u labels, %u labels/s, solution at %u\n", (uint32_t)labels_computed, (uint32_t)labels_per_sec, (uint32_t)idx_solution);
 						if (-1 != cpu_id) {
 							uint8_t hash[32];
-							scryptPositions(cpu_id, s_id, idx_solution, idx_solution, 256, s_salt, SPACEMESH_API_COMPUTE_POW, hash, 512, 1, 1, NULL, NULL, &hashes_computed, &hashes_per_sec);
+							scryptPositions(cpu_id, s_id, idx_solution, idx_solution, 256, s_salt, SPACEMESH_API_COMPUTE_POW, hash, 8192, 1, 1, NULL, NULL, &labels_computed, &labels_per_sec);
 						}
 						break;
 					case SPACEMESH_API_ERROR_NONE:
-						printf("%u hashes, %u h/s, solution not found\n", (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
+						printf("%u labels, %u labels/s, solution not found\n", (uint32_t)labels_computed, (uint32_t)labels_per_sec);
 						break;
 					default:
-						printf("error %d, %u hashes, %u h/s\n", status, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
+						printf("error %d, %u labels, %u labels/s\n", status, (uint32_t)labels_computed, (uint32_t)labels_per_sec);
 					}
 					if (aSolutionIdx != 0xffffffffffffffffull) {
 						if (idx_solution != aSolutionIdx) {
@@ -649,15 +649,15 @@ bool do_test_vector(const TestVector *aTestVector, bool aPrintResult)
 			for (int i = 0; i < providersCount; i++) {
 				if (providers[i].compute_api == COMPUTE_API_CLASS_CPU) {
 					const size_t labelsBufferSize = (size_t(aTestVector->labelsCount) * size_t(aTestVector->labelSize) + 7ull) / 8ull;
-					uint64_t hashes_computed;
-					uint64_t hashes_per_sec;
+					uint64_t labels_computed;
+					uint64_t labels_per_sec;
 					uint64_t idx_solution = -1;
 					uint8_t D[32] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 					std::unique_ptr<uint8_t> out((uint8_t*)calloc(1, labelsBufferSize));
 
-					scryptPositions(providers[i].id, aTestVector->id, 0, aTestVector->labelsCount - 1, aTestVector->labelSize, aTestVector->salt, SPACEMESH_API_COMPUTE_LEAFS, out.get(), 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
-					printf("Test vector: %s: %u hashes, %u h/s\n", providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
+					scryptPositions(providers[i].id, aTestVector->id, 0, aTestVector->labelsCount - 1, aTestVector->labelSize, aTestVector->salt, SPACEMESH_API_COMPUTE_LEAFS, out.get(), 8192, 1, 1, D, &idx_solution, &labels_computed, &labels_per_sec);
+					printf("Test vector: %s: %u labels, %u labels/s\n", providers[i].model, (uint32_t)labels_computed, (uint32_t)labels_per_sec);
 
 					if (0 != memcmp(aTestVector->result, out.get(), labelsBufferSize)) {
 						printf("WRONG result for label size %d from provider %d [%s]\n", aTestVector->labelSize, i, providers[i].model);
@@ -713,8 +713,8 @@ void create_test_vector()
 					uint8_t id[32];
 					uint8_t salt[32];
 					uint8_t vector[labelsBufferSize];
-					uint64_t hashes_computed;
-					uint64_t hashes_per_sec;
+					uint64_t labels_computed;
+					uint64_t labels_per_sec;
 					uint64_t idx_solution = -1;
 					uint8_t D[32] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
@@ -722,8 +722,8 @@ void create_test_vector()
 					memset(salt, 0, sizeof(salt));
 					memset(vector, 0, sizeof(vector));
 
-					scryptPositions(providers[i].id, id, 0, testLabelsCount - 1, labelSize, salt, SPACEMESH_API_COMPUTE_LEAFS, vector, 8192, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
-					printf("Test vector: %s: %u hashes, %u h/s\n", providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
+					scryptPositions(providers[i].id, id, 0, testLabelsCount - 1, labelSize, salt, SPACEMESH_API_COMPUTE_LEAFS, vector, 8192, 1, 1, D, &idx_solution, &labels_computed, &labels_per_sec);
+					printf("Test vector: %s: %u labels, %u labels/s\n", providers[i].model, (uint32_t)labels_computed, (uint32_t)labels_per_sec);
 
 					const uint8_t *src = vector;
 

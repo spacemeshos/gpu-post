@@ -39,9 +39,9 @@ jobs:
       - name: Unit tests - hash and bitstream
         run: build/test/gpu-setup-test --unit-tests
       - name: Unit tests - PoW
-        run: build/test/gpu-setup-test -tp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
+        run: build/test/gpu-setup-test -tp -d 16 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 45962
       - name: Unit tests - PoW and Leafs
-        run: build/test/gpu-setup-test -tlp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
+        run: build/test/gpu-setup-test -tlp -d 16 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 45962
       - name: Unit tests - label lengths
         run: build/test/gpu-setup-test -il
       - name: Unit tests - labels count
@@ -160,9 +160,9 @@ jobs:
       - name: Unit tests - hash and bitstream
         run: build/test/gpu-setup-test --unit-tests
       - name: Unit tests - PoW
-        run: build/test/gpu-setup-test -tp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
+        run: build/test/gpu-setup-test -tp -d 16 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 45962
       - name: Unit tests - PoW and Leafs
-        run: build/test/gpu-setup-test -tlp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
+        run: build/test/gpu-setup-test -tlp -d 16 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 45962
       - name: Unit tests - label lengths
         run: build/test/gpu-setup-test -il
       - name: Unit tests - labels count
@@ -259,9 +259,9 @@ jobs:
       - name: Unit tests - hash and bitstream
         run: build/test/gpu-setup-test --unit-tests
       - name: Unit tests - PoW
-        run: build/test/gpu-setup-test -tp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
+        run: build/test/gpu-setup-test -tp -d 16 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 45962
       - name: Unit tests - PoW and Leafs
-        run: build/test/gpu-setup-test -tlp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
+        run: build/test/gpu-setup-test -tlp -d 16 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 45962
       - name: Unit tests - label lengths
         run: build/test/gpu-setup-test -il
       - name: Unit tests - labels count
@@ -335,9 +335,9 @@ jobs:
       - name: Unit tests - hash and bitstream
         run: build/test/gpu-setup-test --unit-tests
       - name: Unit tests - PoW
-        run: build/test/gpu-setup-test -tp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
+        run: build/test/gpu-setup-test -tp -d 16 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 45962
       - name: Unit tests - PoW and Leafs
-        run: build/test/gpu-setup-test -tlp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
+        run: build/test/gpu-setup-test -tlp -d 16 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 45962
       - name: Unit tests - label lengths
         run: build/test/gpu-setup-test -il
       - name: Unit tests - labels count
@@ -400,9 +400,9 @@ jobs:
       # - name: Unit tests - hash and bitstream
       #   run: build/test/gpu-setup-test --unit-tests
       - name: Unit tests - PoW
-        run: build/test/gpu-setup-test -tp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
+        run: build/test/gpu-setup-test -tp -d 16 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 45962
       - name: Unit tests - PoW and Leafs
-        run: build/test/gpu-setup-test -tlp -d 18 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 126202
+        run: build/test/gpu-setup-test -tlp -d 16 -id 0xe26b543725490682675f6f84ea7689601adeaf14caa7024ec1140c82754ca339 --salt 0x165310acce39719148915c356f25c5cb78e82203222cccdf3c15a9c3684e08cb -si 45962
       # # Disabled because it's super slow on lavapipe
       # - name: Unit tests - label lengths
       #   run: build/test/gpu-setup-test -il
