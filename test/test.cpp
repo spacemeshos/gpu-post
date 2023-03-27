@@ -656,7 +656,7 @@ bool do_test_vector(const TestVector *aTestVector, bool aPrintResult)
 
 					std::unique_ptr<uint8_t> out((uint8_t*)calloc(1, labelsBufferSize));
 
-					scryptPositions(providers[i].id, aTestVector->id, 0, aTestVector->labelsCount - 1, aTestVector->labelSize, aTestVector->salt, SPACEMESH_API_COMPUTE_LEAFS, out.get(), 8192, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
+					scryptPositions(providers[i].id, aTestVector->id, 0, aTestVector->labelsCount - 1, aTestVector->labelSize, aTestVector->salt, SPACEMESH_API_COMPUTE_LEAFS, out.get(), 512, 1, 1, D, &idx_solution, &hashes_computed, &hashes_per_sec);
 					printf("Test vector: %s: %u hashes, %u h/s\n", providers[i].model, (uint32_t)hashes_computed, (uint32_t)hashes_per_sec);
 
 					if (0 != memcmp(aTestVector->result, out.get(), labelsBufferSize)) {
