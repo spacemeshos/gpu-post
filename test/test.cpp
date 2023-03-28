@@ -461,7 +461,7 @@ int do_test_pow(uint64_t aStartPos, int aLabelsCount, unsigned aDiff, unsigned a
 						printf("%u labels, %u labels/s, solution at %u\n", (uint32_t)labels_computed, (uint32_t)labels_per_sec, (uint32_t)idx_solution);
 						if (-1 != cpu_id) {
 							uint8_t hash[32];
-							scryptPositions(cpu_id, s_id, idx_solution, idx_solution, 256, s_salt, SPACEMESH_API_COMPUTE_POW, hash, 8192, 1, 1, NULL, NULL, &labels_computed, &labels_per_sec);
+							scryptPositions(cpu_id, s_id, idx_solution, idx_solution, 256, s_salt, SPACEMESH_API_COMPUTE_LEAFS, hash, 8192, 1, 1, NULL, NULL, &labels_computed, &labels_per_sec);
 							printf("id: ");
 							print_hex32(s_id);
 							printf("\n");
@@ -569,7 +569,7 @@ int do_test_leafs_and_pow(uint64_t aStartPos, int labelSize, int aLabelsCount, u
 						printf("%u labels, %u labels/s, solution at %u\n", (uint32_t)labels_computed, (uint32_t)labels_per_sec, (uint32_t)idx_solution);
 						if (-1 != cpu_id) {
 							uint8_t hash[32];
-							scryptPositions(cpu_id, s_id, idx_solution, idx_solution, 256, s_salt, SPACEMESH_API_COMPUTE_POW, hash, 8192, 1, 1, NULL, NULL, &labels_computed, &labels_per_sec);
+							scryptPositions(cpu_id, s_id, idx_solution, idx_solution, 256, s_salt, SPACEMESH_API_COMPUTE_LEAFS, hash, 8192, 1, 1, NULL, NULL, &labels_computed, &labels_per_sec);
 						}
 						break;
 					case SPACEMESH_API_ERROR_NONE:
