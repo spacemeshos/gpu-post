@@ -26,7 +26,7 @@ jobs:
       - name: Install Vulkan
         run: .github/tools/linux-install-vulkan.sh
 
-      - run: cmake -B build
+      - run: cmake -B build -DSPACEMESHVULKAN=OFF 
       - run: cmake --build build
 
       - name: Copy library
@@ -240,7 +240,7 @@ jobs:
           echo "PATH=${VULKAN_SDK}/bin:$PATH" >> $GITHUB_ENV
           echo "DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:${VULKAN_SDK}/lib" >> $GITHUB_ENV
 
-      - run: cmake -DSPACEMESHCUDA=OFF -B build
+      - run: cmake -DSPACEMESHCUDA=OFF -DSPACEMESHVULKAN=OFF -B build
       - run: cmake --build build
 
       - name: Copy library
@@ -316,7 +316,7 @@ jobs:
       - name: Vulkan Info
         run: vulkaninfo
 
-      - run: arch -arm64 cmake -DSPACEMESHCUDA=OFF -B build
+      - run: arch -arm64 cmake -DSPACEMESHCUDA=OFF -DSPACEMESHVULKAN=OFF  -B build
       - run: arch -arm64 cmake --build build
 
       - name: Copy library
@@ -386,7 +386,7 @@ jobs:
         with:
           submodules: true
 
-      - run: cmake -DSPACEMESH_ARCH_ARM64=ON -B build
+      - run: cmake -DSPACEMESH_ARCH_ARM64=ON -DSPACEMESHVULKAN=OFF -B build
       - run: cmake --build build
 
       - name: Copy library
