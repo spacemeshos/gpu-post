@@ -443,15 +443,13 @@ static int vulkan_scrypt_positions(
 		// transfer input to GPU
 		char *ptr = NULL;
 		uint64_t tfxOrigin = state->memParamsSize + state->memConstantSize;
-		CHECK_RESULT(gVulkan.vkMapMemory(state->vkDevice, state->gpuSharedMemory, tfxOrigin, state->memInputSize, 0, (void **)&ptr), "vkMapMemory", 0);
+		CHECK_RESULT(gVulkan.vkMapMemory(state->vkDevice, state->gpuSharedMemory, tfxOrigin, state->memInputSize, 0, (void **)&ptr), "vkMapMemory", SPACEMESH_API_ERROR);
 		memcpy(ptr, (const void*)pdata, PREIMAGE_SIZE);
 		gVulkan.vkUnmapMemory(state->vkDevice, state->gpuSharedMemory);
 
 		params.N = N;
 		params.hash_len_bits = hash_len_bits;
 		params.concurrent_threads = cgpu->thread_concurrency;
-
-		const uint64_t delay = 5ULL * 1000ULL * 1000ULL * 1000ULL;
 
 		tfxOrigin = state->memParamsSize + state->memConstantSize + state->memInputSize;
 
@@ -470,15 +468,16 @@ static int vulkan_scrypt_positions(
 			CHECK_RESULT(gVulkan.vkQueueSubmit(state->queue, 1, &submitInfo, VK_NULL_HANDLE), "vkQueueSubmit", 0);
 			CHECK_RESULT(gVulkan.vkQueueWaitIdle(state->queue), "vkQueueWaitIdle", 0);
 #else
-			CHECK_RESULT(gVulkan.vkResetFences(state->vkDevice, 1, &state->fence), "vkResetFences", 0);
-			VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO, 0, 0, 0, 0, 1, &state->commandBuffer, 0, 0 };
-			CHECK_RESULT(gVulkan.vkQueueSubmit(state->queue, 1, &submitInfo, state->fence), "vkQueueSubmit", 0);
+			CHECK_RESULT(gVulkan.vkResetFences(state->vkDevice, 1, &state->fence), "vkResetFences", SPACEMESH_API_ERROR);
+			VkSubmitInfo submitInfo = {VK_STRUCTURE_TYPE_SUBMIT_INFO, 0, 0, 0, 0, 1, &state->commandBuffer, 0, 0};
+			CHECK_RESULT(gVulkan.vkQueueSubmit(state->queue, 1, &submitInfo, state->fence), "vkQueueSubmit", SPACEMESH_API_ERROR);
 			VkResult res;
 			do {
 				uint64_t delay = 5ULL * 1000ULL * 1000ULL * 1000ULL;
 				res = gVulkan.vkWaitForFences(state->vkDevice, 1, &state->fence, VK_TRUE, delay);
 			} while (res == VK_TIMEOUT);
-			gVulkan.vkResetFences(state->vkDevice, 1, &state->fence);
+			CHECK_RESULT(res, "vkWaitForFences", SPACEMESH_API_ERROR);
+			CHECK_RESULT(gVulkan.vkResetFences(state->vkDevice, 1, &state->fence), "vkResetFences", SPACEMESH_API_ERROR);
 #endif
 
 			if (computePow) {
@@ -499,7 +498,8 @@ static int vulkan_scrypt_positions(
 			if (computeLeafs) {
 				uint32_t length = (uint32_t)min(chunkSize, outLength);
 
-				CHECK_RESULT(gVulkan.vkMapMemory(state->vkDevice, state->gpuSharedMemory, tfxOrigin, state->memOutputSize, 0, (void **)&ptr), "vkMapMemory", 0);
+				CHECK_RESULT(gVulkan.vkMapMemory(state->vkDevice, state->gpuSharedMemory, tfxOrigin, state->memOutputSize, 0, (void **)&ptr), "vkMapMemory", SPACEMESH_API_ERROR);
+
 				memcpy(out, ptr, length);
 				gVulkan.vkUnmapMemory(state->vkDevice, state->gpuSharedMemory);
 				out += length;
