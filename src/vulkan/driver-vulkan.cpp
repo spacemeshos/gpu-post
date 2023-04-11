@@ -136,10 +136,10 @@ static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameS
 
 	cgpu->work_size = 64;
 
-	applog(LOG_NOTICE, "GPU %d: selecting lookup gap of 4", cgpu->driver_id);
 	cgpu->lookup_gap = 4;
+	applog(LOG_NOTICE, "GPU %d: selecting lookup gap of %d", cgpu->driver_id, cgpu->lookup_gap);
 
-	unsigned int bsize = 1024;
+	unsigned int bsize = 8192;
 	size_t ipt = (bsize / cgpu->lookup_gap + (bsize % cgpu->lookup_gap > 0));
 
 	if (!cgpu->buffer_size) {

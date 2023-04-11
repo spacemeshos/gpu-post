@@ -438,8 +438,9 @@ main()
 		Nfactor++;
 	}
 
-	const uint effective_concurrency = (concurrent_threads << 9) >> Nfactor;
-	
+	// const uint effective_concurrency = (concurrent_threads << 12) >> Nfactor;
+	const uint effective_concurrency = concurrent_threads;
+
 	password[0] = buffer0[0];
 	password[1] = buffer0[1];
 	password[2] = buffer0[2];
