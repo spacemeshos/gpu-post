@@ -168,26 +168,66 @@ static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameS
 	state->sharedMemorySize = state->memConstantSize + state->memParamsSize + state->memInputSize + 2 * state->memOutputSize;
 
 	state->gpuLocalMemory = allocateGPUMemory(state->deviceId, state->vkDevice, state->bufSize, true, true);
+	if (state->gpuLocalMemory == NULL) {
+		applog(LOG_ERR, "GPU %d: Failed to allocate local memory", cgpu->driver_id);
+		return NULL;
+	}
 	state->gpuSharedMemory = allocateGPUMemory(state->deviceId, state->vkDevice, state->sharedMemorySize, false, true);
+	if (state->gpuSharedMemory == NULL) {
+		applog(LOG_ERR, "GPU %d: Failed to allocate shared memory", cgpu->driver_id);
+		return NULL;
+	}
 
 	state->padbuffer8 = createBuffer(state->vkDevice, computeQueueFamilyIndex, state->gpuLocalMemory, state->bufSize, 0);
+	if (state->padbuffer8 == NULL) {
+		applog(LOG_ERR, "GPU %d: Failed to create padbuffer8", cgpu->driver_id);
+		return NULL;
+	}
 
 	uint64_t o = 0;
 	state->gpu_constants = createBuffer(state->vkDevice, computeQueueFamilyIndex, state->gpuSharedMemory, state->memConstantSize, o);
+	if (state->gpu_constants == NULL) {
+		applog(LOG_ERR, "GPU %d: Failed to create gpu constants buffer", cgpu->driver_id);
+		return NULL;
+	}
+	
 	o += state->memConstantSize;
 	state->gpu_params = createBuffer(state->vkDevice, computeQueueFamilyIndex, state->gpuSharedMemory, state->memParamsSize, o);
+	if (state->gpu_params == NULL) {
+		applog(LOG_ERR, "GPU %d: Failed to create gpu params buffer", cgpu->driver_id);
+		return NULL;
+	}
+
 	o += state->memParamsSize;
 	state->CLbuffer0 = createBuffer(state->vkDevice, computeQueueFamilyIndex, state->gpuSharedMemory, state->memInputSize, o);
+	if (state->CLbuffer0 == NULL) {
+		applog(LOG_ERR, "GPU %d: Failed to create CLbuffer0 buffer", cgpu->driver_id);
+		return NULL;
+	}
+
 	o += state->memInputSize;
 	state->outputBuffer[0] = createBuffer(state->vkDevice, computeQueueFamilyIndex, state->gpuSharedMemory, state->memOutputSize, o);
+	if (state->outputBuffer[0] == NULL) {
+		applog(LOG_ERR, "GPU %d: Failed to create output[0] buffer", cgpu->driver_id);
+		return NULL;
+	}
+	
 	o += state->memOutputSize;
 	state->outputBuffer[1] = createBuffer(state->vkDevice, computeQueueFamilyIndex, state->gpuSharedMemory, state->memOutputSize, o);
-
+	if (state->outputBuffer[1] == NULL) {
+		applog(LOG_ERR, "GPU %d: Failed to create output[1] buffer", cgpu->driver_id);
+		return NULL;
+	}
+	
 	gVulkan.vkGetDeviceQueue(state->vkDevice, computeQueueFamilyIndex, 0, &state->queue);
 
 	state->pipelineLayout = bindBuffers(state->vkDevice, &state->descriptorSet, &state->descriptorPool, &state->descriptorSetLayout,
 		state->padbuffer8, state->gpu_constants, state->gpu_params, state->CLbuffer0, state->outputBuffer[0], state->outputBuffer[1]
 	);
+	if (state->pipelineLayout == NULL) {
+		applog(LOG_ERR, "GPU %d: Failed to bind buffers and create pipeline layout", cgpu->driver_id);
+		return NULL;
+	}
 
 	void *ptr = NULL;
 	CHECK_RESULT(gVulkan.vkMapMemory(state->vkDevice, state->gpuSharedMemory, 0, state->memConstantSize, 0, (void **)&ptr), "vkMapMemory", NULL);
