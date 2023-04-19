@@ -172,7 +172,7 @@ bool compile_to_spirv(
 	VkShaderStageFlagBits stage,
 	const std::string &glsl_source,
 	const std::string &entry_point,
-	std::vector<std::uint32_t> &spirv,
+	std::vector<uint32_t> &spirv,
 	std::string &info_log)
 {
 	EShLanguage language = FindShaderLanguage(stage);
