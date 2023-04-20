@@ -129,7 +129,7 @@ void vulkan_library_shutdown()
 int getComputeQueueFamilyIndex(uint32_t index)
 {
 	if (index >= gPhysicalDeviceCount) {
-		applog(LOG_ERR, "Card index %u not found\n", index);
+		applog(LOG_ERR, "Card index %u not found", index);
 		return -1;
 	}
 	uint32_t queueFamilyPropertiesCount = 0;
@@ -210,7 +210,7 @@ VkDeviceMemory allocateGPUMemory(int index,  VkDevice vkDevice, const VkDeviceSi
 
 	VkResult ret = (memoryTypeIndex == VK_MAX_MEMORY_TYPES ? VK_ERROR_OUT_OF_HOST_MEMORY : VK_SUCCESS);
 	if (ret != VK_SUCCESS) {
-		applog(LOG_ERR,	"Cannot allocated %u kB GPU memory type for GPU index %u\n", (unsigned)(memorySize / 1024), index);
+		applog(LOG_ERR,	"Cannot allocated %u kB GPU memory type for GPU index %u", (unsigned)(memorySize / 1024), index);
 		return NULL;
 	}
 
@@ -345,7 +345,7 @@ VkPipeline loadShaderFromFile(VkDevice vkDevice, VkPipelineLayout pipelineLayout
 
 	FILE *fp = fopen(spirv_file_name, "rb");
 	if (fp == NULL) {
-		applog(LOG_ERR, "SPIR-V program %s not found\n", spirv_file_name);
+		applog(LOG_ERR, "SPIR-V program %s not found", spirv_file_name);
 		return NULL;
 	}
 	fseek(fp, 0, SEEK_END);
@@ -357,7 +357,7 @@ VkPipeline loadShaderFromFile(VkDevice vkDevice, VkPipelineLayout pipelineLayout
 	size_t read_size = fread(shader, sizeof(char), shader_size, fp);
 	if (read_size != shader_size) {
 		free(shader);
-		applog(LOG_ERR, "Failed to read shader %s!\n", spirv_file_name);
+		applog(LOG_ERR, "Failed to read shader %s!", spirv_file_name);
 		return NULL;
 	}
 
@@ -410,15 +410,15 @@ static uint32_t * getShader(uint32_t workSize, uint32_t labelSize, uint32_t *sha
 				if (vulkan_shaders_vault_header[0] == labelSize) {
 					uint32_t *shader = (uint32_t*)calloc(1, vulkan_shaders_vault_header[1]);
 					if (NULL == shader) {
-						applog(LOG_ERR, "Failed to allocate shader %u:%u %u\n", workSize, labelSize, vulkan_shaders_vault_header[1]);
+						applog(LOG_ERR, "Failed to allocate shader %u:%u %u", workSize, labelSize, vulkan_shaders_vault_header[1]);
 						return NULL;
 					}
-					applog(LOG_INFO, "64:%03u %u -> %u\n", vulkan_shaders_vault_header[0], vulkan_shaders_vault_header[2], vulkan_shaders_vault_header[1]);
+					applog(LOG_INFO, "64:%03u %u -> %u", vulkan_shaders_vault_header[0], vulkan_shaders_vault_header[2], vulkan_shaders_vault_header[1]);
 					*shader_size = vulkan_shaders_vault_header[1];
 					uint8_t *src = vulkan_shaders_vault + vulkan_shaders_vault_header[3];
 					uLongf shaderSize = vulkan_shaders_vault_header[1];
 					if (Z_OK != uncompress((uint8_t*)shader, &shaderSize, src, vulkan_shaders_vault_header[2])) {
-						applog(LOG_ERR, "Failed to uncompress shader %u:%u\n", workSize, labelSize);
+						applog(LOG_ERR, "Failed to uncompress shader %u:%u", workSize, labelSize);
 						free(shader);
 						return NULL;
 					}
@@ -437,11 +437,11 @@ VkPipeline loadShader(VkDevice vkDevice, VkPipelineLayout pipelineLayout, VkShad
 	uint32_t *shader = getShader(workSize, labelSize, &shader_size);
 
 	if (NULL == shader) {
-		applog(LOG_ERR, "SPIR-V program %d:%d not found\n", workSize, labelSize);
+		applog(LOG_ERR, "SPIR-V program %d:%d not found", workSize, labelSize);
 		return NULL;
 	}
 
-	applog(LOG_INFO, "SPIR-V program %u:%u %u bytes\n", workSize, labelSize, shader_size);
+	applog(LOG_INFO, "SPIR-V program %u:%u %u bytes", workSize, labelSize, shader_size);
 
 	VkShaderModuleCreateInfo shaderModuleCreateInfo = {
 		VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,

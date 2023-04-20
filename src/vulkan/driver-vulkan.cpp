@@ -113,7 +113,7 @@ static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameS
 {
 	_vulkanState *state = (_vulkanState *)calloc(1, sizeof(_vulkanState));
 
-	uint32_t scrypt_mem = 128 * cgpu->r;
+	uint32_t scrypt_mem = 128 * cgpu->r * cgpu->N;
 
 	uint32_t computeQueueFamilyIndex = getComputeQueueFamilyIndex(cgpu->driver_id);
 	if (computeQueueFamilyIndex < 0) {
@@ -135,32 +135,24 @@ static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameS
 	gVulkan.vkFreeMemory(state->vkDevice, tmpMem, NULL);
 
 	cgpu->work_size = 64;
-
-	applog(LOG_NOTICE, "GPU %d: selecting lookup gap of 4", cgpu->driver_id);
 	cgpu->lookup_gap = 4;
 
-	unsigned int bsize = 1024;
-	size_t ipt = (bsize / cgpu->lookup_gap + (bsize % cgpu->lookup_gap > 0));
+	size_t ipt = scrypt_mem / cgpu->lookup_gap;
 
 	if (!cgpu->buffer_size) {
-		unsigned int base_alloc = (int)(cgpu->gpu_max_alloc * 88 / 100 / 1024 / 1024 / 8) * 8 * 1024 * 1024;
-		cgpu->thread_concurrency = (uint32_t)(base_alloc / scrypt_mem / ipt);
+		unsigned int base_alloc = (int)(cgpu->gpu_max_alloc * 92 / 100 / 1024 / 1024 / 8) * 8 * 1024 * 1024;
+		cgpu->thread_concurrency = (uint32_t)(base_alloc / ipt);
 		cgpu->buffer_size = base_alloc / 1024 / 1024;
-		applog(LOG_DEBUG, "88%% Max Allocation: %u", base_alloc);
+		applog(LOG_DEBUG, "92%% Max Allocation: %u", base_alloc);
 		applog(LOG_NOTICE, "GPU %d: selecting buffer_size of %zu", cgpu->driver_id, cgpu->buffer_size);
 	}
 
-	if (cgpu->buffer_size) {
-		// use the buffer-size to overwrite the thread-concurrency
-		cgpu->thread_concurrency = (int)((cgpu->buffer_size * 1024 * 1024) / ipt / scrypt_mem);
-	}
-
-	cgpu->thread_concurrency = min(cgpu->thread_concurrency, /*cgpu->work_size*/ 32 * 1024);
+	cgpu->thread_concurrency = min(cgpu->thread_concurrency, 32 * 1024);
 	uint32_t chunkSize = copy_only ? (cgpu->thread_concurrency * 32) : ((cgpu->thread_concurrency * hash_len_bits + 7) / 8);
 
 	applog(LOG_DEBUG, "GPU %d: setting thread_concurrency to %d based on buffer size %d and lookup gap %d", cgpu->driver_id, (int)(cgpu->thread_concurrency), (int)(cgpu->buffer_size), (int)(cgpu->lookup_gap));
 
-	state->bufSize = alignBuffer(scrypt_mem * ipt * cgpu->thread_concurrency, state->alignment);
+	state->bufSize = alignBuffer(ipt * cgpu->thread_concurrency, state->alignment);
 	state->memConstantSize = alignBuffer(sizeof(AlgorithmConstants), state->alignment);
 	state->memParamsSize = alignBuffer(sizeof(AlgorithmParams), state->alignment);
 	state->memInputSize = alignBuffer(PREIMAGE_SIZE, state->alignment);

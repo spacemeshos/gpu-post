@@ -1,5 +1,7 @@
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
+set (CMAKE_CXX_FLAGS_DEBUG "/MD /Zi /O2 /Ob1 /DNDEBUG")
+
 # A custom command and target to turn the Vulkan kernel into a byte array header
 
 add_custom_command(
