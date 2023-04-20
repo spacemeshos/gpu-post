@@ -190,6 +190,7 @@ Usage:
 --pow-diff           or -d <0-256>         count of leading zero bits in target D value [default - 16]
 --srand-seed         or -ss <unsigned int> set srand seed value for POW test: 0 - use zero id/seed [default], -1 - use random value
 --solution-idx       or -si <unsigned int> set solution index for POW test: index will be compared to be the found solution for Pow [default - unset]
+                        -N <scrypt N>      set scrypt parameter N [default - 512]
 ```
 
 ## Mixing CUDA and Vulkan
