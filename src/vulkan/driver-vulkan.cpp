@@ -142,6 +142,7 @@ static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameS
 	if (!cgpu->buffer_size) {
 		unsigned int base_alloc = (int)(cgpu->gpu_max_alloc * 92 / 100 / 1024 / 1024 / 8) * 8 * 1024 * 1024;
 		cgpu->thread_concurrency = (uint32_t)(base_alloc / ipt);
+		cgpu->thread_concurrency = (cgpu->thread_concurrency / cgpu->work_size) * cgpu->work_size;
 		cgpu->buffer_size = base_alloc / 1024 / 1024;
 		applog(LOG_DEBUG, "92%% Max Allocation: %u", base_alloc);
 		applog(LOG_NOTICE, "GPU %d: selecting buffer_size of %zu", cgpu->driver_id, cgpu->buffer_size);
