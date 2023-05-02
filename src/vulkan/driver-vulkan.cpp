@@ -129,31 +129,29 @@ static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameS
 		return NULL;
 	}
 
-	VkDeviceMemory tmpMem = allocateGPUMemory(state.deviceId, state.vkDevice, 1024, true, true);
-	if (NULL == tmpMem) {
-		applog(LOG_ERR, "Cannot allocated tmpMem: %u kB GPU memory type for GPU index %u", (unsigned)(1024 / 1024), state.deviceId);
-		return NULL;
-	}
-	VkBuffer tmpBuf = createBuffer(state.vkDevice, computeQueueFamilyIndex, tmpMem, 256, 0);
-	state.alignment = (uint32_t)getBufferMemoryRequirements(state.vkDevice, tmpBuf);
-	gVulkan.vkDestroyBuffer(state.vkDevice, tmpBuf, NULL);
-	gVulkan.vkFreeMemory(state.vkDevice, tmpMem, NULL);
-
+	state.alignment = 256;
 	cgpu->work_size = 64;
 	cgpu->lookup_gap = 4;
 
 	size_t ipt = scrypt_mem / cgpu->lookup_gap;
+	size_t map = 88;
+	size_t gpu_max_alloc = cgpu->gpu_max_alloc;
+	unsigned max_threads = 32*1024;
+
+	if (cgpu->gpu_memory > 4ull*1024ull*1024ull*1024ull) {
+		map = 100;
+	}
 
 	if (!cgpu->buffer_size) {
-		unsigned int base_alloc = (int)(cgpu->gpu_max_alloc * 92 / 100 / 1024 / 1024 / 8) * 8 * 1024 * 1024;
+		size_t base_alloc = (gpu_max_alloc * map / 100 / 1024 / 1024 / 8) * 8 * 1024 * 1024;
 		cgpu->thread_concurrency = (uint32_t)(base_alloc / ipt);
 		cgpu->thread_concurrency = (cgpu->thread_concurrency / cgpu->work_size) * cgpu->work_size;
 		cgpu->buffer_size = base_alloc / 1024 / 1024;
-		applog(LOG_DEBUG, "92%% Max Allocation: %u", base_alloc);
+		applog(LOG_DEBUG, "%u%% Max Allocation: %u", (unsigned)map, (unsigned)base_alloc);
 		applog(LOG_NOTICE, "GPU %d: selecting buffer_size of %zu", cgpu->driver_id, cgpu->buffer_size);
 	}
 
-	cgpu->thread_concurrency = min(cgpu->thread_concurrency, 32 * 1024);
+	cgpu->thread_concurrency = min(cgpu->thread_concurrency, max_threads);
 	uint32_t chunkSize = copy_only ? (cgpu->thread_concurrency * 32) : ((cgpu->thread_concurrency * hash_len_bits + 7) / 8);
 
 	applog(LOG_DEBUG, "GPU %d: setting thread_concurrency to %d based on buffer size %d and lookup gap %d", cgpu->driver_id, (int)(cgpu->thread_concurrency), (int)(cgpu->buffer_size), (int)(cgpu->lookup_gap));
@@ -318,14 +316,19 @@ static int vulkan_detect(struct cgpu_info *gpus, int *active)
 			for (unsigned i = 0; i < gPhysicalDeviceCount; i++) {
 				struct cgpu_info *cgpu = &gpus[*active];
 
-				VkPhysicalDeviceProperties physicalDeviceProperties;
-				gVulkan.vkGetPhysicalDeviceProperties(gPhysicalDevices[i], &physicalDeviceProperties);
+				VkPhysicalDeviceMaintenance3Properties physicalDeviceProperties3;
+				physicalDeviceProperties3.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_3_PROPERTIES;
+				physicalDeviceProperties3.pNext = NULL;
+				VkPhysicalDeviceProperties2 physicalDeviceProperties2;
+				physicalDeviceProperties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+				physicalDeviceProperties2.pNext = &physicalDeviceProperties3;
+				gVulkan.vkGetPhysicalDeviceProperties2(gPhysicalDevices[i], &physicalDeviceProperties2);
 
-				if (0x10DE == physicalDeviceProperties.vendorID) {
+				if (0x10DE == physicalDeviceProperties2.properties.vendorID) {
 					continue;
 				}
 
-				memcpy(cgpu->name, physicalDeviceProperties.deviceName, min(sizeof(cgpu->name),sizeof(physicalDeviceProperties.deviceName)));
+				memcpy(cgpu->name, physicalDeviceProperties2.properties.deviceName, min(sizeof(cgpu->name),sizeof(physicalDeviceProperties2.properties.deviceName)));
 				cgpu->name[sizeof(cgpu->name) - 1] = 0;
 
 				VkPhysicalDeviceMemoryProperties memoryProperties;
@@ -342,11 +345,13 @@ static int vulkan_detect(struct cgpu_info *gpus, int *active)
 					VkMemoryType t = memoryProperties.memoryTypes[j];
 					if ((t.propertyFlags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) != 0) {
 						if (t.heapIndex < memoryProperties.memoryHeapCount) {
-							cgpu->gpu_max_alloc = memoryProperties.memoryHeaps[t.heapIndex].size;
+							cgpu->gpu_memory = memoryProperties.memoryHeaps[t.heapIndex].size;
 							break;
 						}
 					}
 				}
+
+				cgpu->gpu_max_alloc = physicalDeviceProperties3.maxMemoryAllocationSize;
 
 				*active += 1;
 				most_devices++;

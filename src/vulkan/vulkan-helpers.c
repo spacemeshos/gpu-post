@@ -80,6 +80,7 @@ int initVulkanLibrary()
 	LOAD_VULKAN_FUNCTION(vkEndCommandBuffer);
 	LOAD_VULKAN_FUNCTION(vkEnumeratePhysicalDevices);
 	LOAD_VULKAN_FUNCTION(vkGetPhysicalDeviceProperties);
+	LOAD_VULKAN_FUNCTION(vkGetPhysicalDeviceProperties2);
 	LOAD_VULKAN_FUNCTION(vkQueueSubmit);
 	LOAD_VULKAN_FUNCTION(vkQueueWaitIdle);
 	LOAD_VULKAN_FUNCTION(vkDestroyPipelineLayout);
