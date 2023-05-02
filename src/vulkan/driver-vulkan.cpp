@@ -130,7 +130,7 @@ static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameS
 	}
 
 	VkDeviceMemory tmpMem = allocateGPUMemory(state.deviceId, state.vkDevice, 1024, true, true);
-	if (NULL == state.gpuSharedMemory) {
+	if (NULL == tmpMem) {
 		applog(LOG_ERR, "Cannot allocated tmpMem: %u kB GPU memory type for GPU index %u", (unsigned)(1024 / 1024), state.deviceId);
 		return NULL;
 	}
