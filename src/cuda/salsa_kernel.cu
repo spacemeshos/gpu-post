@@ -217,7 +217,7 @@ int find_optimal_concurency(struct cgpu_info *cgpu, _cudaState *cudaState, Kerne
 		optimal_blocks--;
 	}
 
-	optimal_blocks &= 0xfffffffc;
+	optimal_blocks &= 0xffffff00;
 
 	applog(LOG_INFO, "GPU #%d: using launch configuration %c%dx%d", cgpu->driver_id, kernel->get_identifier(), optimal_blocks, WARPS_PER_BLOCK);
 
