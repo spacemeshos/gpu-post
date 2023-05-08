@@ -138,8 +138,14 @@ static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameS
 	size_t gpu_max_alloc = cgpu->gpu_max_alloc;
 	unsigned max_threads = 32*1024;
 
-	if (cgpu->gpu_memory > 4ull*1024ull*1024ull*1024ull) {
-		map = 100;
+	applog(LOG_DEBUG, "GPU %d: %u MB mem, %u MB max alloc", cgpu->driver_id, (unsigned)(cgpu->gpu_memory / 1024 / 1024), (unsigned)(cgpu->gpu_max_alloc / 1024 / 1024));
+
+	if (0 != gpu_max_alloc) {
+		if (cgpu->gpu_memory > 4ull*1024ull*1024ull*1024ull) {
+			map = 100;
+		}
+	} else {
+		gpu_max_alloc = cgpu->gpu_memory;
 	}
 
 	if (!cgpu->buffer_size) {
