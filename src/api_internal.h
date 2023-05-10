@@ -309,6 +309,7 @@ struct cgpu_info {
 	enum alive status;
 
 	uint32_t gpu_core_count;
+	uint64_t gpu_memory;
 	uint64_t gpu_max_alloc;
 
 	uint32_t hash_len_bits;
