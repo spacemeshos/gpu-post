@@ -140,6 +140,7 @@ int getComputeQueueFamilyIndex(uint32_t index)
 	for (unsigned int i = 0; i< queueFamilyPropertiesCount; i++) {
 		if (queueFamilyProperties[i].queueFlags & VK_QUEUE_COMPUTE_BIT) {
 			ret = i;
+			break;
 		}
 	}
 	free(queueFamilyProperties);
