@@ -1,3 +1,7 @@
+> [!WARNING]
+> This repository is deprecated. Please refer to [post-rs](https://github.com/spacemeshos/post-rs/tree/main/scrypt-ocl) for the most recent implementation.
+
+
 # GPU Proof of Spacemesh Time Init (aka Smeshing Setup) Library
 
 [![Build](https://github.com/spacemeshos/gpu-post/actions/workflows/build.yml/badge.svg)](https://github.com/spacemeshos/gpu-post/actions/workflows/build.yml)
