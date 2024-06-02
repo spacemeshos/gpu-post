@@ -230,7 +230,10 @@ VkDeviceMemory allocateGPUMemory(int index,  VkDevice vkDevice, const VkDeviceSi
 VkBuffer createBuffer(VkDevice vkDevice, uint32_t computeQueueFamilyIndex, VkDeviceMemory memory, VkDeviceSize bufferSize, VkDeviceSize offset)
 {
 	// 4Gb limit on AMD and Nvidia
-	if (bufferSize >= 0x100000000) bufferSize = 0xffffffff;
+	if (bufferSize >= 0x100000000) {
+		applog(LOG_ERR, "Buffer size too big, setting to 4Gb\n");
+		bufferSize = 0xffffffff;
+	}
 
 	const VkBufferCreateInfo bufferCreateInfo = {
 		VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
