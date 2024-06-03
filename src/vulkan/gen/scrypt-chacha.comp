@@ -413,8 +413,7 @@ main()
 	uvec4 X[8];
 	const uint lid = gl_LocalInvocationID.x;
 	const uint gid = gl_GlobalInvocationID.x;
-	uint Nfactor = 0;
-	uint tmp = N >> 1;
+	uint tmp;
 	uvec2 nonce;
 
 	scrypt_hmac_state hmac_pw, work;
@@ -432,14 +431,6 @@ main()
 		nonce.x = global_work_offset.x + gid;
 	}
 
-	/* Determine the Nfactor */
-	while ((tmp & 1) == 0) {
-		tmp >>= 1;
-		Nfactor++;
-	}
-
-	const uint effective_concurrency = (concurrent_threads << 9) >> Nfactor;
-	
 	password[0] = buffer0[0];
 	password[1] = buffer0[1];
 	password[2] = buffer0[2];
@@ -555,7 +546,7 @@ main()
 	}
 //////////////////////////////////////////////////
 	/* 2: X = ROMix(X) */
-	scrypt_ROMix(X, N, gid, effective_concurrency);
+	scrypt_ROMix(X, N, gid, concurrent_threads);
 
 	/* 3: Out = PBKDF2(password, X) */
 //////////////////////////////////////////////////

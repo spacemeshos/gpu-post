@@ -111,9 +111,10 @@ static uint64_t alignBuffer(uint64_t size, uint64_t align)
 
 static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameSize, uint32_t hash_len_bits, bool throttled, bool copy_only)
 {
-	_vulkanState *state = (_vulkanState *)calloc(1, sizeof(_vulkanState));
+	_vulkanState state;
+	memset(&state, 0, sizeof(_vulkanState));
 
-	uint32_t scrypt_mem = 128 * cgpu->r;
+	uint32_t scrypt_mem = 128 * cgpu->r * cgpu->N;
 
 	uint32_t computeQueueFamilyIndex = getComputeQueueFamilyIndex(cgpu->driver_id);
 	if (computeQueueFamilyIndex < 0) {
@@ -121,78 +122,87 @@ static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameS
 		return NULL;
 	}
 
-	state->deviceId = cgpu->driver_id;
-	state->vkDevice = createDevice(cgpu->driver_id, computeQueueFamilyIndex);
-	if (NULL == state->vkDevice) {
+	state.deviceId = cgpu->driver_id;
+	state.vkDevice = createDevice(cgpu->driver_id, computeQueueFamilyIndex);
+	if (NULL == state.vkDevice) {
 		applog(LOG_NOTICE, "GPU %d: Create Vulkan device instance failed", cgpu->driver_id);
 		return NULL;
 	}
 
-	VkDeviceMemory tmpMem = allocateGPUMemory(state->deviceId, state->vkDevice, 1024, true, true);
-	VkBuffer tmpBuf = createBuffer(state->vkDevice, computeQueueFamilyIndex, tmpMem, 256, 0);
-	state->alignment = (uint32_t)getBufferMemoryRequirements(state->vkDevice, tmpBuf);
-	gVulkan.vkDestroyBuffer(state->vkDevice, tmpBuf, NULL);
-	gVulkan.vkFreeMemory(state->vkDevice, tmpMem, NULL);
-
+	state.alignment = 256;
 	cgpu->work_size = 64;
-
-	applog(LOG_NOTICE, "GPU %d: selecting lookup gap of 4", cgpu->driver_id);
 	cgpu->lookup_gap = 4;
 
-	unsigned int bsize = 1024;
-	size_t ipt = (bsize / cgpu->lookup_gap + (bsize % cgpu->lookup_gap > 0));
+	size_t ipt = scrypt_mem / cgpu->lookup_gap;
+	size_t map = 88;
+	size_t gpu_max_alloc = cgpu->gpu_max_alloc;
+	unsigned max_threads = 32*1024;
+
+	applog(LOG_DEBUG, "GPU %d: %u MB mem, %u MB max alloc", cgpu->driver_id, (unsigned)(cgpu->gpu_memory / 1024 / 1024), (unsigned)(cgpu->gpu_max_alloc / 1024 / 1024));
+
+	if (0 != gpu_max_alloc) {
+		if (cgpu->gpu_memory > 4ull*1024ull*1024ull*1024ull) {
+			map = 100;
+		}
+	} else {
+		gpu_max_alloc = cgpu->gpu_memory;
+	}
 
 	if (!cgpu->buffer_size) {
-		unsigned int base_alloc = (int)(cgpu->gpu_max_alloc * 88 / 100 / 1024 / 1024 / 8) * 8 * 1024 * 1024;
-		cgpu->thread_concurrency = (uint32_t)(base_alloc / scrypt_mem / ipt);
+		size_t base_alloc = (gpu_max_alloc * map / 100 / 1024 / 1024 / 8) * 8 * 1024 * 1024;
+		cgpu->thread_concurrency = (uint32_t)(base_alloc / ipt);
+		cgpu->thread_concurrency = (cgpu->thread_concurrency / cgpu->work_size) * cgpu->work_size;
 		cgpu->buffer_size = base_alloc / 1024 / 1024;
-		applog(LOG_DEBUG, "88%% Max Allocation: %u", base_alloc);
+		applog(LOG_DEBUG, "%u%% Max Allocation: %u", (unsigned)map, (unsigned)base_alloc);
 		applog(LOG_NOTICE, "GPU %d: selecting buffer_size of %zu", cgpu->driver_id, cgpu->buffer_size);
 	}
 
-	if (cgpu->buffer_size) {
-		// use the buffer-size to overwrite the thread-concurrency
-		cgpu->thread_concurrency = (int)((cgpu->buffer_size * 1024 * 1024) / ipt / scrypt_mem);
-	}
-
-	cgpu->thread_concurrency = min(cgpu->thread_concurrency, /*cgpu->work_size*/ 32 * 1024);
+	cgpu->thread_concurrency = min(cgpu->thread_concurrency, max_threads);
 	uint32_t chunkSize = copy_only ? (cgpu->thread_concurrency * 32) : ((cgpu->thread_concurrency * hash_len_bits + 7) / 8);
 
 	applog(LOG_DEBUG, "GPU %d: setting thread_concurrency to %d based on buffer size %d and lookup gap %d", cgpu->driver_id, (int)(cgpu->thread_concurrency), (int)(cgpu->buffer_size), (int)(cgpu->lookup_gap));
 
-	state->bufSize = alignBuffer(scrypt_mem * ipt * cgpu->thread_concurrency, state->alignment);
-	state->memConstantSize = alignBuffer(sizeof(AlgorithmConstants), state->alignment);
-	state->memParamsSize = alignBuffer(sizeof(AlgorithmParams), state->alignment);
-	state->memInputSize = alignBuffer(PREIMAGE_SIZE, state->alignment);
-	state->memOutputSize = alignBuffer(chunkSize, state->alignment);
-	state->sharedMemorySize = state->memConstantSize + state->memParamsSize + state->memInputSize + 2 * state->memOutputSize;
+	state.bufSize = alignBuffer(ipt * cgpu->thread_concurrency, state.alignment);
+	state.memConstantSize = alignBuffer(sizeof(AlgorithmConstants), state.alignment);
+	state.memParamsSize = alignBuffer(sizeof(AlgorithmParams), state.alignment);
+	state.memInputSize = alignBuffer(PREIMAGE_SIZE, state.alignment);
+	state.memOutputSize = alignBuffer(chunkSize, state.alignment);
+	state.sharedMemorySize = state.memConstantSize + state.memParamsSize + state.memInputSize + 2 * state.memOutputSize;
 
-	state->gpuLocalMemory = allocateGPUMemory(state->deviceId, state->vkDevice, state->bufSize, true, true);
-	state->gpuSharedMemory = allocateGPUMemory(state->deviceId, state->vkDevice, state->sharedMemorySize, false, true);
+	state.gpuLocalMemory = allocateGPUMemory(state.deviceId, state.vkDevice, state.bufSize, true, true);
+	if (NULL == state.gpuLocalMemory) {
+		applog(LOG_ERR, "Cannot allocated gpuLocalMemory: %u kB GPU memory type for GPU index %u", (unsigned)(state.bufSize / 1024), state.deviceId);
+		return NULL;
+	}
+	state.gpuSharedMemory = allocateGPUMemory(state.deviceId, state.vkDevice, state.sharedMemorySize, false, true);
+	if (NULL == state.gpuSharedMemory) {
+		applog(LOG_ERR, "Cannot allocated gpuSharedMemory: %u kB GPU memory type for GPU index %u", (unsigned)(state.sharedMemorySize / 1024), state.deviceId);
+		return NULL;
+	}
 
-	state->padbuffer8 = createBuffer(state->vkDevice, computeQueueFamilyIndex, state->gpuLocalMemory, state->bufSize, 0);
+	state.padbuffer8 = createBuffer(state.vkDevice, computeQueueFamilyIndex, state.gpuLocalMemory, state.bufSize, 0);
 
 	uint64_t o = 0;
-	state->gpu_constants = createBuffer(state->vkDevice, computeQueueFamilyIndex, state->gpuSharedMemory, state->memConstantSize, o);
-	o += state->memConstantSize;
-	state->gpu_params = createBuffer(state->vkDevice, computeQueueFamilyIndex, state->gpuSharedMemory, state->memParamsSize, o);
-	o += state->memParamsSize;
-	state->CLbuffer0 = createBuffer(state->vkDevice, computeQueueFamilyIndex, state->gpuSharedMemory, state->memInputSize, o);
-	o += state->memInputSize;
-	state->outputBuffer[0] = createBuffer(state->vkDevice, computeQueueFamilyIndex, state->gpuSharedMemory, state->memOutputSize, o);
-	o += state->memOutputSize;
-	state->outputBuffer[1] = createBuffer(state->vkDevice, computeQueueFamilyIndex, state->gpuSharedMemory, state->memOutputSize, o);
+	state.gpu_constants = createBuffer(state.vkDevice, computeQueueFamilyIndex, state.gpuSharedMemory, state.memConstantSize, o);
+	o += state.memConstantSize;
+	state.gpu_params = createBuffer(state.vkDevice, computeQueueFamilyIndex, state.gpuSharedMemory, state.memParamsSize, o);
+	o += state.memParamsSize;
+	state.CLbuffer0 = createBuffer(state.vkDevice, computeQueueFamilyIndex, state.gpuSharedMemory, state.memInputSize, o);
+	o += state.memInputSize;
+	state.outputBuffer[0] = createBuffer(state.vkDevice, computeQueueFamilyIndex, state.gpuSharedMemory, state.memOutputSize, o);
+	o += state.memOutputSize;
+	state.outputBuffer[1] = createBuffer(state.vkDevice, computeQueueFamilyIndex, state.gpuSharedMemory, state.memOutputSize, o);
 
-	gVulkan.vkGetDeviceQueue(state->vkDevice, computeQueueFamilyIndex, 0, &state->queue);
+	gVulkan.vkGetDeviceQueue(state.vkDevice, computeQueueFamilyIndex, 0, &state.queue);
 
-	state->pipelineLayout = bindBuffers(state->vkDevice, &state->descriptorSet, &state->descriptorPool, &state->descriptorSetLayout,
-		state->padbuffer8, state->gpu_constants, state->gpu_params, state->CLbuffer0, state->outputBuffer[0], state->outputBuffer[1]
+	state.pipelineLayout = bindBuffers(state.vkDevice, &state.descriptorSet, &state.descriptorPool, &state.descriptorSetLayout,
+		state.padbuffer8, state.gpu_constants, state.gpu_params, state.CLbuffer0, state.outputBuffer[0], state.outputBuffer[1]
 	);
 
 	void *ptr = NULL;
-	CHECK_RESULT(gVulkan.vkMapMemory(state->vkDevice, state->gpuSharedMemory, 0, state->memConstantSize, 0, (void **)&ptr), "vkMapMemory", NULL);
+	CHECK_RESULT(gVulkan.vkMapMemory(state.vkDevice, state.gpuSharedMemory, 0, state.memConstantSize, 0, (void **)&ptr), "vkMapMemory", NULL);
 	memcpy(ptr, (const void*)&gpuConstants, sizeof(AlgorithmConstants));
-	gVulkan.vkUnmapMemory(state->vkDevice, state->gpuSharedMemory);
+	gVulkan.vkUnmapMemory(state.vkDevice, state.gpuSharedMemory);
 
 	VkCommandPoolCreateInfo commandPoolCreateInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
@@ -200,56 +210,60 @@ static _vulkanState *initVulkan(struct cgpu_info *cgpu, char *name, size_t nameS
 		VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
 		computeQueueFamilyIndex
 	};
-	CHECK_RESULT(gVulkan.vkCreateCommandPool(state->vkDevice, &commandPoolCreateInfo, 0, &state->commandPool), "vkCreateCommandPool", NULL);
+	CHECK_RESULT(gVulkan.vkCreateCommandPool(state.vkDevice, &commandPoolCreateInfo, 0, &state.commandPool), "vkCreateCommandPool", NULL);
 
 	VkCommandBufferAllocateInfo commandBufferAllocateInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
 		0,
-		state->commandPool,
+		state.commandPool,
 		VK_COMMAND_BUFFER_LEVEL_PRIMARY,
 		1
 	};
-	CHECK_RESULT(gVulkan.vkAllocateCommandBuffers(state->vkDevice, &commandBufferAllocateInfo, &state->commandBuffer), "vkAllocateCommandBuffers", NULL);
+	CHECK_RESULT(gVulkan.vkAllocateCommandBuffers(state.vkDevice, &commandBufferAllocateInfo, &state.commandBuffer), "vkAllocateCommandBuffers", NULL);
 
 	VkSemaphoreCreateInfo semaphoreCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
 	semaphoreCreateInfo.pNext = NULL;
 	semaphoreCreateInfo.flags = 0;
-	CHECK_RESULT(gVulkan.vkCreateSemaphore(state->vkDevice, &semaphoreCreateInfo, NULL, &state->semaphore), "vkCreateSemaphore", NULL);
+	CHECK_RESULT(gVulkan.vkCreateSemaphore(state.vkDevice, &semaphoreCreateInfo, NULL, &state.semaphore), "vkCreateSemaphore", NULL);
 
 	VkFenceCreateInfo fenceCreateInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
 	fenceCreateInfo.pNext = NULL;
 	fenceCreateInfo.flags = 0;
 
-	CHECK_RESULT(gVulkan.vkCreateFence(state->vkDevice, &fenceCreateInfo, NULL, &state->fence), "vkCreateFence", NULL);
+	CHECK_RESULT(gVulkan.vkCreateFence(state.vkDevice, &fenceCreateInfo, NULL, &state.fence), "vkCreateFence", NULL);
 
 #if 0
 	char options[256];
 	snprintf(options, sizeof(options), "#version 450\n#define LOOKUP_GAP %d\n#define WORKSIZE %d\n#define LABEL_SIZE %d\n",
 		cgpu->lookup_gap, (int)cgpu->work_size, hash_len_bits);
 
-	state->pipeline = compileShader(state->vkDevice, state->pipelineLayout, &state->shaderModule, scrypt_chacha_comp, options, (int)cgpu->work_size, hash_len_bits, copy_only);
+	state.pipeline = compileShader(state.vkDevice, state.pipelineLayout, &state.shaderModule, scrypt_chacha_comp, options, (int)cgpu->work_size, hash_len_bits, copy_only);
 #else
 //	char filename[64];
 //	snprintf(filename, sizeof(filename), "kernel-%02d-%03d.spirv", (int)cgpu->work_size, hash_len_bits);
-	state->pipeline = loadShader(state->vkDevice, state->pipelineLayout, &state->shaderModule, cgpu->work_size, hash_len_bits);
+	state.pipeline = loadShader(state.vkDevice, state.pipelineLayout, &state.shaderModule, cgpu->work_size, hash_len_bits);
 #endif
-	if (!state->pipeline) {
+	if (!state.pipeline) {
 		return NULL;
 	}
 
 	VkCommandBufferBeginInfo commandBufferBeginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, 0, 0, 0 };
-	CHECK_RESULT(gVulkan.vkBeginCommandBuffer(state->commandBuffer, &commandBufferBeginInfo), "vkBeginCommandBuffer", NULL);
+	CHECK_RESULT(gVulkan.vkBeginCommandBuffer(state.commandBuffer, &commandBufferBeginInfo), "vkBeginCommandBuffer", NULL);
 
-	gVulkan.vkCmdBindPipeline(state->commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, state->pipeline);
-	gVulkan.vkCmdBindDescriptorSets(state->commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, state->pipelineLayout, 0, 1, &state->descriptorSet, 0, 0);
+	gVulkan.vkCmdBindPipeline(state.commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, state.pipeline);
+	gVulkan.vkCmdBindDescriptorSets(state.commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, state.pipelineLayout, 0, 1, &state.descriptorSet, 0, 0);
 #if 1
-	gVulkan.vkCmdDispatch(state->commandBuffer, cgpu->thread_concurrency / cgpu->work_size, 1, 1);
+	gVulkan.vkCmdDispatch(state.commandBuffer, cgpu->thread_concurrency / cgpu->work_size, 1, 1);
 #else
-	gVulkan.vkCmdDispatch(state->commandBuffer, 1, 1, 1);
+	gVulkan.vkCmdDispatch(state.commandBuffer, 1, 1, 1);
 #endif
-	CHECK_RESULT(gVulkan.vkEndCommandBuffer(state->commandBuffer), "vkEndCommandBuffer", NULL);
+	CHECK_RESULT(gVulkan.vkEndCommandBuffer(state.commandBuffer), "vkEndCommandBuffer", NULL);
 
-	return state;
+	_vulkanState* pstate = (_vulkanState*)calloc(1, sizeof(_vulkanState));
+	if (nullptr != pstate) {
+		memcpy(pstate, &state, sizeof(_vulkanState));
+	}
+	return pstate;
 }
 
 static int vulkan_detect(struct cgpu_info *gpus, int *active)
@@ -308,14 +322,19 @@ static int vulkan_detect(struct cgpu_info *gpus, int *active)
 			for (unsigned i = 0; i < gPhysicalDeviceCount; i++) {
 				struct cgpu_info *cgpu = &gpus[*active];
 
-				VkPhysicalDeviceProperties physicalDeviceProperties;
-				gVulkan.vkGetPhysicalDeviceProperties(gPhysicalDevices[i], &physicalDeviceProperties);
+				VkPhysicalDeviceMaintenance3Properties physicalDeviceProperties3;
+				physicalDeviceProperties3.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_3_PROPERTIES;
+				physicalDeviceProperties3.pNext = NULL;
+				VkPhysicalDeviceProperties2 physicalDeviceProperties2;
+				physicalDeviceProperties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+				physicalDeviceProperties2.pNext = &physicalDeviceProperties3;
+				gVulkan.vkGetPhysicalDeviceProperties2(gPhysicalDevices[i], &physicalDeviceProperties2);
 
-				if (0x10DE == physicalDeviceProperties.vendorID) {
+				if (0x10DE == physicalDeviceProperties2.properties.vendorID) {
 					continue;
 				}
 
-				memcpy(cgpu->name, physicalDeviceProperties.deviceName, min(sizeof(cgpu->name),sizeof(physicalDeviceProperties.deviceName)));
+				memcpy(cgpu->name, physicalDeviceProperties2.properties.deviceName, min(sizeof(cgpu->name),sizeof(physicalDeviceProperties2.properties.deviceName)));
 				cgpu->name[sizeof(cgpu->name) - 1] = 0;
 
 				VkPhysicalDeviceMemoryProperties memoryProperties;
@@ -332,11 +351,13 @@ static int vulkan_detect(struct cgpu_info *gpus, int *active)
 					VkMemoryType t = memoryProperties.memoryTypes[j];
 					if ((t.propertyFlags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) != 0) {
 						if (t.heapIndex < memoryProperties.memoryHeapCount) {
-							cgpu->gpu_max_alloc = memoryProperties.memoryHeaps[t.heapIndex].size;
+							cgpu->gpu_memory = memoryProperties.memoryHeaps[t.heapIndex].size;
 							break;
 						}
 					}
 				}
+
+				cgpu->gpu_max_alloc = physicalDeviceProperties3.maxMemoryAllocationSize;
 
 				*active += 1;
 				most_devices++;

@@ -61,6 +61,7 @@ typedef struct _Vulkan {
 	DECLARE_VULKAN_FUNCTION(vkEndCommandBuffer);
 	DECLARE_VULKAN_FUNCTION(vkEnumeratePhysicalDevices);
 	DECLARE_VULKAN_FUNCTION(vkGetPhysicalDeviceProperties);
+	DECLARE_VULKAN_FUNCTION(vkGetPhysicalDeviceProperties2);
 	DECLARE_VULKAN_FUNCTION(vkQueueSubmit);
 	DECLARE_VULKAN_FUNCTION(vkQueueWaitIdle);
 	DECLARE_VULKAN_FUNCTION(vkDestroyPipelineLayout);
